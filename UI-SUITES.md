@@ -11,16 +11,51 @@ chevron is the document.
 **Logo — workspace scope.** What exists regardless of which storybook is open:
 
 ```
-New…
-Import file…
+New storybook…
 ─────────────
 ✓ SDM Design System    Library
   ACME                 Local
   Template             Library
 ─────────────
 Settings…              (later)
-About                  (later)
+About                  ← engine version, contract, open storybook
 ```
+
+The version does not belong under the logo: a line next to the name reads as
+part of the name, and the number is wanted rarely. It lives in About.
+
+## Creating a storybook
+
+One entry, because creating and importing are branches of the same intent, and
+the dialog that offers them is also the empty-start screen.
+
+| Branch | Input | What you get |
+|---|---|---|
+| From a storybook file | `.ds.json` | the whole package, as it was exported |
+| From a CSS file | any stylesheet with custom properties | a token-only storybook, parsed |
+| From the template | nothing | neutral tokens and one button |
+
+**From CSS is the branch that matters.** Most teams already have a stylesheet
+full of `--custom-properties`; that is a design system nobody can look at. The
+engine already parses exactly this — `parseVars` in `engine-specs.js` reads
+`:root`, the desktop media query and the mobile one — so the import is
+classification, not parsing:
+
+- `#hex` / `rgb()` / `hsl()` → colour swatches, grouped by name prefix
+  (`--brand-*`, `--text-*`, `--bg-*`) and by what the value is;
+- `px` / `rem` on a `--font-*`-ish name, or a value between 10 and 96 → type scale;
+- `--r-*`, or any `px` under 100 used with `radius` in the name → radii;
+- `0 … rgb()` shaped values → shadows;
+- everything else → a "Other tokens" table, listed rather than hidden.
+
+The guesswork is in the grouping, not the values, so the result is honest even
+when the grouping is wrong: every token appears somewhere, and the descriptor
+it produces is a plain `token-map.js` the user can correct by hand.
+
+What CSS cannot give is components: a stylesheet has rules, but nothing says
+which of them are worth showing or what markup demonstrates them. So a
+CSS-imported storybook starts as tokens only, and sections get added the normal
+way.
 
 **Chevron — active storybook scope:**
 

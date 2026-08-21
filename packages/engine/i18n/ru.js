@@ -3,6 +3,11 @@ window.ENGINE_I18N = window.ENGINE_I18N || {};
 window.ENGINE_I18N.ru = {
   /* Переключатель сторибуков */
   'menu.new':          'Новый сторибук…',
+  'menu.about':        'О программе',
+  'about.engine':      'Движок',
+  'about.contract':    'Контракт',
+  'about.storybook':   'Сторибук',
+  'about.http':        'Галерея работает только по <code>http://</code>: из файла браузер не отдаёт правила стилей.',
   'menu.storybooks':   'Сторибуки',
   'menu.export':       'Выгрузить файлом',
   'menu.copyLink':     'Скопировать ссылку',

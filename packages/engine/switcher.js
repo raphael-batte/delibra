@@ -87,6 +87,29 @@
   var del = document.getElementById('g-delete');
   if (del) del.title = t('menu.deleteLibrary');   // папку на диске браузер не удалит
 
+  /* About — версии движка, контракта и открытого сторибука. Раньше версия
+     висела подписью под логотипом: место рядом с названием читается как
+     часть названия, а нужна она изредка. */
+  var about = document.getElementById('g-about');
+  var aboutPanel = document.getElementById('g-about-panel');
+  if (about && aboutPanel) {
+    var M = window.BRAND_MANIFEST || {};
+    aboutPanel.innerHTML =
+      '<dl>' +
+        '<dt>' + t('about.engine') + '</dt><dd>' + B.version + '</dd>' +
+        '<dt>' + t('about.contract') + '</dt><dd>v' + B.contract + '</dd>' +
+        '<dt>' + t('about.storybook') + '</dt><dd class="js-suite-version"></dd>' +
+      '</dl><p>' + t('about.http') + '</p>';
+    /* Имя и версия бренда — данные, вставляем текстом. */
+    aboutPanel.querySelector('.js-suite-version').textContent =
+      (M.title || '—') + (M.version ? ' · ' + M.version : '');
+
+    about.addEventListener('click', function (e) {
+      e.stopPropagation();
+      aboutPanel.hidden = !aboutPanel.hidden;
+    });
+  }
+
   var copy = document.getElementById('g-copylink');
   if (copy) {
     copy.addEventListener('click', function () {

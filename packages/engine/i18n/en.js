@@ -5,6 +5,11 @@ window.ENGINE_I18N.en = {
   /* topbar */
   /* Переключатель сторибуков */
   'menu.new':          'New storybook…',
+  'menu.about':        'About',
+  'about.engine':      'Engine',
+  'about.contract':    'Contract',
+  'about.storybook':   'Storybook',
+  'about.http':        'The gallery only works over <code>http://</code>: opened as a file, the browser withholds stylesheet rules.',
   'menu.storybooks':   'Storybooks',
   'menu.export':       'Export as file',
   'menu.copyLink':     'Copy link',
