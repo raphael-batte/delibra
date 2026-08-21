@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+<title>SDM tests</title>
+<link rel="stylesheet" href="../../packages/engine/tests/harness.css">
+</head>
+<body>
+<h1>Тесты дизайн-системы SDM</h1>
+<p class="sub">Здесь только значения SDM: высоты, тинты, радиусы, геометрия блоков.
+Каркас галереи проверяют
+<a href="../../packages/engine/tests/engine.html">тесты движка</a>.
+<button id="rerun">Перезапустить</button></p>
+<div id="summary">Запускаю…</div>
+<div id="out"></div>
+<div id="stage"></div>
+
+<script>
+  /* Харнесс берёт бренд из ?brand= — по умолчанию у него шаблон,
+     поэтому подставляем свой до его загрузки. */
+  history.replaceState(null, '', location.pathname +
+    '?gallery=../../packages/engine/gallery.html&brand=../../brands/sdm' + location.hash);
+</script>
+<script src="../../packages/engine/tests/harness.js"></script>
+<script>
+(function () {
+  'use strict';
+  function D() { return H.gallery().doc; }
+  function G() { return H.gallery().win; }
+
+  H.g('Токены');
+  H.t('в палитре ровно 7 светлых тинтов', function () {
+    var names = [];
+    D().querySelectorAll('#colors .g-swatch').forEach(function (s) {
+      var n = s.querySelectorAll('.g-swatch-val')[1];
+      if (n && /^--card-(slate|blue|indigo|lilac|teal|peach|rose)$/.test(n.textContent.trim()))
+        names.push(n.textContent.trim());
+    });
+    H.eq(names.length, 7, 'нашлось ' + names.join(', '));
+  });
+  H.t('минта и sky в палитре нет', function () {
+    var txt = D().getElementById('colors').innerHTML;
+    H.ok(txt.indexOf('--card-mint') < 0, 'найден --card-mint');
+    H.ok(txt.indexOf('--card-sky') < 0, 'найден --card-sky');
+  });
+  H.t('радиус карточки 24 на десктопе и 16 на мобайле', function () {
+    H.eq(H.px(H.css('steps', 'desktop', '.step', 'borderTopLeftRadius')), 24, 'desktop');
+    H.eq(H.px(H.css('steps', 'mobile',  '.step', 'borderTopLeftRadius')), 16, 'mobile');
+  });
+
+  H.g('Кнопки');
+  H.t('высоты sm/med/lg на десктопе — 40/52/64', function () {
+    H.eq(H.px(H.css('buttons', 'desktop', '.btn-sm', 'height')), 40, 'sm');
+    H.eq(H.px(H.css('buttons', 'desktop', '.btn-primary:not(.btn-sm):not(.btn-lg)', 'height')), 52, 'med');
+    H.eq(H.px(H.css('buttons', 'desktop', '.btn-lg', 'height')), 64, 'lg');
+  });
+  H.t('на мобайле btn и btn-lg схлопываются в 48', function () {
+    H.eq(H.px(H.css('buttons', 'mobile', '.btn-primary:not(.btn-sm):not(.btn-lg)', 'height')), 48, 'btn');
+    H.eq(H.px(H.css('buttons', 'mobile', '.btn-lg', 'height')), 48, 'btn-lg');
+  });
+  H.t('мобильная кнопка НЕ крупнее десктопной', function () {
+    var m = H.px(H.css('buttons', 'mobile',  '.btn-primary:not(.btn-sm):not(.btn-lg)', 'height'));
+    var d = H.px(H.css('buttons', 'desktop', '.btn-primary:not(.btn-sm):not(.btn-lg)', 'height'));
+    H.ok(m <= d, 'mobile ' + m + ' > desktop ' + d);
+  });
+  H.t('радиус кнопки одинаков на обоих брейкпоинтах', function () {
+    H.eq(H.px(H.css('buttons', 'mobile',  '.btn-primary', 'borderTopLeftRadius')),
+       H.px(H.css('buttons', 'desktop', '.btn-primary', 'borderTopLeftRadius')), 'радиус');
+  });
+
+  H.g('Тёмный контекст');
+  H.t('карточка действительно тёмная', function () {
+    var bg = H.css('buttons', 'desktop', '.card--dark', 'backgroundColor');
+    var rgb = bg.match(/\d+/g).map(Number);
+    H.ok(rgb[0] + rgb[1] + rgb[2] < 240, 'фон светлый: ' + bg);
+  });
+  H.t('primary инвертируется в белую', function () {
+    H.eq(H.css('buttons', 'desktop', '.card--dark .btn-primary', 'backgroundColor'), 'rgb(255, 255, 255)');
+  });
+  H.t('outline на тёмном — сплошная белая рамка', function () {
+    var sh = H.css('buttons', 'desktop', '.card--dark .btn-outline', 'boxShadow');
+    H.ok(sh.indexOf('rgb(255, 255, 255)') >= 0, 'рамка не сплошная белая: ' + sh);
+  });
+  H.t('текст чек-листа белый', function () {
+    H.eq(H.css('check', 'desktop', '.card--dark .check', 'color'), 'rgb(255, 255, 255)');
+  });
+  H.t('иконка чек-листа белая', function () {
+    H.eq(H.css('check', 'desktop', '.card--dark .check .ic', 'backgroundColor'), 'rgb(255, 255, 255)');
+  });
+
+  H.g('Иконки');
+  /* Иконки нормализованы по ВЫСОТЕ: канвасы исходных SVG разные
+     (i-h02 37×50, i-sm04 47×37 …), поэтому ширина у каждой своя. */
+  H.t('высота иконки 24 на мобайле и 36 на десктопе', function () {
+    H.eq(H.px(H.css('icon-tiles', 'mobile',  '.icon', 'height')), 24, 'mobile');
+    H.eq(H.px(H.css('icon-tiles', 'desktop', '.icon', 'height')), 36, 'desktop');
+  });
+  H.t('высота иконок одинакова во всех секциях', function () {
+    var bad = {};
+    D().querySelectorAll('iframe').forEach(function (f) {
+      try {
+        var d = f.contentDocument;
+        var want = f.style.width === '1440px' ? 36 : 24;
+        d.querySelectorAll('.icon-tile img, img.icon').forEach(function (i) {
+          var h = Math.round(i.getBoundingClientRect().height);
+          if (h !== want) bad[i.getAttribute('src').split('/').pop() + ' = ' + h + ' вместо ' + want] = 1;
+        });
+      } catch (e) {}
+    });
+    var list = Object.keys(bad);
+    H.eq(list.length, 0, list.slice(0, 4).join('; '));
+  });
+  H.t('перк цветной и без тени', function () {
+    var p = H.pane('perks', 'desktop', '.perk');
+    H.ok(p.el, 'нет .perk');
+    var cs = p.win.getComputedStyle(p.el);
+    H.ok(cs.backgroundColor !== 'rgb(255, 255, 255)', 'перк белый — в ДС он всегда цветной');
+    H.eq(cs.boxShadow, 'none', 'у перка не должно быть тени');
+  });
+  H.t('перк есть на мобайле и шириной 250', function () {
+    var p = H.pane('perks', 'mobile', '.perk');
+    H.ok(p.el, 'на мобайле нет .perk');
+    H.eq(H.px(p.win.getComputedStyle(p.el).width), 250, 'ширина');
+  });
+  H.t('есть перк с металлическим плейсхолдером', function () {
+    var p = H.pane('perks', 'desktop', '.perk .icon-tile--metal');
+    H.ok(p.el, 'нет плитки .icon-tile--metal внутри перка');
+    H.ok(p.win.getComputedStyle(p.el).backgroundImage.indexOf('gradient') >= 0, 'у плитки нет градиента');
+  });
+
+  H.t('иконка внутри плитки той же высоты', function () {
+    H.eq(H.px(H.css('icon-tiles', 'mobile',  '.icon-tile:not(.num) img', 'height')), 24, 'mobile');
+    H.eq(H.px(H.css('icon-tiles', 'desktop', '.icon-tile:not(.num) img', 'height')), 36, 'desktop');
+  });
+  H.t('плитки: малая 44, обычная 52, числовая 56 (мобайл)', function () {
+    H.eq(H.px(H.css('icon-tiles', 'mobile', '.icon-tile--sm', 'width')), 44, 'малая');
+    H.eq(H.px(H.css('icon-tiles', 'mobile', '.icon-tile:not(.num):not(.icon-tile--sm):not(.icon-tile--metal)', 'width')), 52, 'обычная');
+    H.eq(H.px(H.css('icon-tiles', 'mobile', '.icon-tile.num', 'width')), 56, 'числовая');
+  });
+  H.t('плитка под иконку белая, металл только у числовой', function () {
+    var p = H.pane('icon-tiles', 'desktop');
+    var tile = p.doc.querySelector('.icon-tile:not(.num):not(.icon-tile--metal)');
+    var num  = p.doc.querySelector('.icon-tile.num');
+    H.eq(p.win.getComputedStyle(tile).backgroundColor, 'rgb(255, 255, 255)', 'плитка');
+    H.ok(p.win.getComputedStyle(num).backgroundImage.indexOf('gradient') >= 0, 'у числовой нет градиента');
+  });
+
+  H.g('Блоки');
+  H.t('кнопки обложки стоят в строку на обоих брейкпоинтах', function () {
+    ['mobile', 'desktop'].forEach(function (w) {
+      var p = H.pane('covers', w, '.hero-actions');
+      H.ok(p.el, 'нет .hero-actions');
+      var b = p.el.querySelectorAll('.btn');
+      H.eq(b[0].offsetTop, b[1].offsetTop, w + ': кнопки на разных строках');
+    });
+  });
+  H.t('обложка: высота 768 по центру и 664 у split', function () {
+    var c = H.pane('covers', 'desktop', '.hero:not(.hero--split)');
+    var s = H.pane('covers', 'desktop', '.hero--split');
+    H.eq(H.px(c.win.getComputedStyle(c.el).height), 768, 'обычная');
+    H.eq(H.px(s.win.getComputedStyle(s.el).height), 664, 'split');
+  });
+  H.t('открытый пункт FAQ белый с градиентной рамкой', function () {
+    var p = H.pane('faq', 'desktop', '.docs-acc__item.is-open');
+    H.ok(p.el, 'нет раскрытого пункта');
+    H.eq(p.win.getComputedStyle(p.el).backgroundColor, 'rgb(255, 255, 255)', 'фон');
+    var before = p.win.getComputedStyle(p.el, '::before');
+    H.ok(before.backgroundImage.indexOf('gradient') >= 0, 'рамка не градиентная');
+    H.eq(before.opacity, '1', 'рамка не показана');
+  });
+  H.t('в палитре есть группа градиентов', function () {
+    var html = D().getElementById('colors').innerHTML;
+    H.ok(html.indexOf('7. Градиенты') >= 0, 'нет группы градиентов');
+    ['--metal', '--lilac-grad', '--featured-pkg-border'].forEach(function (n) {
+      H.ok(html.indexOf(n) >= 0, 'нет ' + n);
+    });
+  });
+  H.t('снятые токены убраны из палитры', function () {
+    var html = D().getElementById('colors').innerHTML;
+    H.ok(html.indexOf('--purple-line') < 0, '--purple-line остался в палитре');
+    H.ok(!/>--green</.test(html), '--green остался в палитре');
+  });
+  H.t('баннер: строка на десктопе, колонка на мобайле', function () {
+    H.eq(H.css('banner', 'desktop', '.cta-band', 'flexDirection'), 'row');
+    H.eq(H.css('banner', 'mobile',  '.cta-band', 'flexDirection'), 'column');
+  });
+  H.t('тинт карточки продукта — из палитры', function () {
+    var p = H.pane('product-cards', 'desktop', '.product');
+    H.ok(p.el, 'нет .product');
+    // семь тинтов палитры; снятых mint/sky/blue-2 быть не должно
+    var palette = ['rgb(179, 192, 208)', 'rgb(211, 234, 253)', 'rgb(221, 232, 253)',
+                   'rgb(225, 216, 238)', 'rgb(171, 212, 210)', 'rgb(250, 228, 213)',
+                   'rgb(231, 185, 180)'];
+    var bg = p.win.getComputedStyle(p.el).backgroundColor;
+    H.ok(palette.indexOf(bg) >= 0, 'тинт вне палитры: ' + bg);
+  });
+  H.t('в примерах нет снятых тинтов', function () {
+    // mint и blue-2 сняты; #D6E2FB остаётся как заливка hero-карточки (--hero-card-2)
+    var bad = ['rgb(188, 227, 237)', 'rgb(204, 222, 240)'];
+    var hits = [];
+    D().querySelectorAll('iframe').forEach(function (f) {
+      try {
+        var d = f.contentDocument, w = d.defaultView;
+        d.querySelectorAll('[class]').forEach(function (e) {
+          var bg = w.getComputedStyle(e).backgroundColor;
+          if (bad.indexOf(bg) >= 0) hits.push(e.className + ' → ' + bg);
+        });
+      } catch (e) {}
+    });
+    H.eq(hits.length, 0, hits.slice(0, 3).join('; '));
+  });
+
+
+  /* ── Гигиена пакета ──────────────────────────────────────────────── */
+
+  H.g('Гигиена');
+  H.t('у каждого примера есть кликабельный узел', function () {
+    var without = [];
+    G().GALLERY.forEach(function (s) {
+      (s.examples || []).forEach(function (ex) {
+        var html = (ex.html || '') + (ex.htmlDesktop || '');
+        if (html && html.indexOf('data-pick') < 0) without.push(s.id + ' / ' + (ex.label || '?'));
+      });
+    });
+    H.eq(without.length, 0, 'без data-pick: ' + without.slice(0, 3).join(', '));
+  });
+
+  H.t('секции не ссылаются на вёрстку сайта', function () {
+    var bad = [];
+    G().GALLERY.forEach(function (s) {
+      (s.examples || []).forEach(function (ex) {
+        var html = (ex.html || '') + (ex.htmlDesktop || '');
+        if (/\.\.\/ui2026|\/ui2026\//.test(html)) bad.push(s.id);
+      });
+    });
+    H.eq(bad.length, 0, 'ссылки на ui2026 в секциях: ' + bad.join(', '));
+  });
+
+  H.run();
+})();
+</script>
+</body>
+</html>

@@ -60,8 +60,26 @@ function prop(rules,v,selRe,name,bp){
 
 /* Сверка типографики: sdm.css + tokens.css против боевого styles.css.
    Запуск:  node check-fonts.js   (из папки Design system) */
-const site=parse(fs.readFileSync('../ui2026/app/styles.css','utf8'));
-const ds=parse(fs.readFileSync('tokens.css','utf8')+'\n'+fs.readFileSync('sdm.css','utf8'));
+/* Путь к вёрстке сайта — аргументом: репозиторий дизайн-системы больше не
+   лежит рядом с сайтом, и жёсткий '../ui2026' здесь означал бы, что пакет
+   работает только на одной машине. Это миграционная сверка «ДС ↔ сайт»,
+   отдельная джоба, а не гейт: она сузится и умрёт, когда сайт переедет.
+
+   Запуск:  node check-fonts.js <путь к styles.css> */
+const path=require('path');
+const here=__dirname;
+const sitePath=process.argv[2];
+if(!sitePath){
+  console.error('нужен путь к styles.css сайта:\n  node check-fonts.js ../../../sdm/ui2026/app/styles.css');
+  process.exit(2);
+}
+if(!fs.existsSync(sitePath)){
+  console.error('файл не найден: '+sitePath);
+  process.exit(2);
+}
+const site=parse(fs.readFileSync(sitePath,'utf8'));
+const ds=parse(fs.readFileSync(path.join(here,'tokens.css'),'utf8')+'\n'+
+               fs.readFileSync(path.join(here,'sdm.css'),'utf8'));
 const vSite=vars(site), vDs=vars(ds);
 
 const targets=[

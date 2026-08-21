@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+<title>Engine tests</title>
+<link rel="stylesheet" href="harness.css">
+</head>
+<body>
+<h1>Тесты движка</h1>
+<p class="sub">Гоняются на <code>brands/_template</code>: движок обязан работать с любым брендом.
+Если они зелёные на SDM и красные на шаблоне — движок оброс зависимостью от SDM.
+<button id="rerun">Перезапустить</button></p>
+<div id="summary">Запускаю…</div>
+<div id="out"></div>
+<div id="stage"></div>
+
+<script src="harness.js"></script>
+<script src="contract.js"></script>
+<script>
+(function () {
+  'use strict';
+  function D() { return H.gallery().doc; }
+  function G() { return H.gallery().win; }
+
+  H.g('Каркас');
+  H.t('галерея отрисовала все секции', function () {
+    var drawn = D().querySelectorAll('.g-section').length;
+    var declared = G().GALLERY.length;
+    H.ok(drawn > 0, 'галерея не отрисовала ни одной секции');
+    H.eq(drawn, declared, 'отрисовано секций против объявленных');
+  });
+  H.t('нет ошибок в консоли галереи', function () {
+    H.eq((G().__errors || []).length, 0, 'ошибок ' + JSON.stringify(G().__errors || []));
+  });
+  H.t('все картинки во фреймах загрузились', function () {
+    var broken = [];
+    D().querySelectorAll('iframe').forEach(function (f) {
+      try {
+        f.contentDocument.querySelectorAll('img').forEach(function (i) {
+          if (i.naturalWidth === 0) broken.push(i.getAttribute('src'));
+        });
+      } catch (e) {}
+    });
+    H.eq(broken.length, 0, 'битые: ' + broken.slice(0, 3).join(', '));
+  });
+  H.t('обе панели в одном масштабе', function () {
+    var m = D().querySelector('.g-pane--mobile iframe');
+    var d = D().querySelector('.g-pane--desktop iframe');
+    H.eq(m.style.transform, d.style.transform, 'масштабы панелей');
+  });
+
+  H.g('Навигация');
+  H.t('наверху в шапке общий заголовок', function () {
+    var t1 = D().getElementById('g-current');
+    H.ok(t1, 'нет заголовка в шапке');
+    G().scrollTo(0, 0);
+    G().GALLERY_API.spy();
+    H.eq(t1.textContent.trim(), G().ENGINE_BRAND.t('topbar.defaultTitle'),
+       'в шапке не заголовок по умолчанию');
+  });
+  H.t('прокрутка меняет якорь, заголовок совпадает с ним', function () {
+    /* Проверяем согласованность, а не конкретную секцию: у короткого бренда
+       последняя секция физически не может доехать до верха вьюпорта, и
+       требовать именно её — значит проверять высоту страницы, а не спай. */
+    var before = G().location.hash;
+    var sections = D().querySelectorAll('.g-section');
+    sections[sections.length - 1].scrollIntoView();
+    // спай считает по скроллу; во фрейме, обрезанном родителем, события
+    // приходят с задержкой — просим пересчитать явно
+    G().GALLERY_API.spy();
+    return H.wait(400).then(function () {
+      var hash = G().location.hash;
+      H.ok(hash && hash !== before, 'якорь не изменился: ' + before + ' → ' + hash);
+      var current = D().querySelector(hash + ' .g-section-head h2');
+      H.ok(current, 'якорь указывает на несуществующую секцию ' + hash);
+      H.eq(D().getElementById('g-current').textContent.trim(),
+         current.textContent.trim(), 'заголовок в шапке не совпал с секцией из якоря');
+    });
+  });
+  H.t('переключателя CSS больше нет', function () {
+    H.eq(D().getElementById('g-switch'), null, '#g-switch остался в разметке');
+  });
+
+  H.g('Сравнить с кодом');
+  H.t('без приложенного CSS тоггл заблокирован', function () {
+    var b = D().getElementById('g-diff');
+    H.ok(b, 'нет тоггла');
+    H.eq(b.type, 'checkbox', 'это не переключатель');
+    H.eq(b.disabled, true, 'должен быть заблокирован, пока нет файла');
+    G().GALLERY_API.setDiff(true);
+    H.eq(b.checked, false, 'включился без файла');
+  });
+  H.t('после загрузки CSS тоггл разблокирован', function () {
+    /* Раньше тест тянул styles.css сайта — то есть движковый тест зависел от
+       чужого репозитория. Достаточно любого валидного CSS. */
+    return Promise.resolve('.t-btn { height: 41px }').then(function (text) {
+        G().GALLERY_API.setCompareCss(text, 'probe.css');
+        H.eq(D().getElementById('g-diff').disabled, false, 'остался заблокированным');
+        H.eq(G().GALLERY_API.hasCompareCss(), true, 'CSS не сохранён');
+        G().GALLERY_API.setDiff(true);
+        H.eq(D().getElementById('g-diff').checked, true, 'не включился');
+      });
+  });
+  H.t('панели различий считаются', function () {
+    // сборка ленивая и завязана на прокрутку — просим раздел посчитаться явно
+    H.ok(G().GALLERY_API, 'галерея не отдала GALLERY_API');
+    H.ok(G().GALLERY_API.diffSection('buttons') > 0, 'в разделе нет примеров');
+    return H.wait(9000).then(function () {
+      var boxes = D().querySelectorAll('#buttons .g-example');
+      var got = 0, stuck = 0, err = 0;
+      [].forEach.call(boxes, function (b) {
+        var d = b.querySelector('.g-diff');
+        if (!d) return;
+        got++;
+        var h = d.querySelector('.g-diff-head').textContent;
+        if (h.indexOf(G().ENGINE_BRAND.t('diff.computing')) >= 0) stuck++;
+        if (h.indexOf(G().ENGINE_BRAND.t('diff.failed')) >= 0) err++;
+      });
+      H.ok(got > 0, 'панелей в секции нет');
+      H.eq(stuck, 0, stuck + ' зависли на «Считаю различия…»');
+      H.eq(err, 0, err + ' завершились ошибкой');
+    });
+  });
+  H.t('выбор раздела сбрасывает режим', function () {
+    G().GALLERY_API.setDiff(true);
+    D().querySelector('#g-nav a[href^="#"]').click();
+    return H.wait(300).then(function () {
+      H.ok(!D().getElementById('g-diff').checked, 'тоггл остался включённым');
+      H.eq(D().querySelectorAll('.g-diff').length, 0, 'панели не убрались');
+    });
+  });
+
+
+  /* ── Проверки, которых раньше не было ────────────────────────────── */
+
+  H.g('Устойчивость');
+  H.t('токен-секции собраны по дескриптору бренда', function () {
+    var declared = Object.keys(G().BRAND_TOKENS || {}).length;
+    var drawn = G().GALLERY.filter(function (s) {
+      return ['colors', 'radii', 'shadows', 'blur', 'typography', 'sizes'].indexOf(s.id) >= 0;
+    }).length;
+    H.eq(drawn, declared, 'секций токенов против объявленных в token-map');
+  });
+
+  H.t('вкладка CSS в оверлее непустая', function () {
+    var pick = D().querySelector('[data-pick]') ||
+               (function () {
+                 var f = D().querySelector('iframe');
+                 try { return f.contentDocument.querySelector('[data-pick]'); } catch (e) { return null; }
+               })();
+    H.ok(pick, 'ни одного data-pick — не на чем открыть оверлей');
+    pick.click();
+    return H.wait(300).then(function () {
+      var body = D().getElementById('g-ov-body');
+      H.ok(body && body.textContent.trim().length > 0, 'оверлей пуст');
+      var close = D().getElementById('g-ov-close');
+      if (close) close.click();
+    });
+  });
+
+  H.t('mountFrame — единственный способ создать превью', function () {
+    /* Инвариант держался договорённостью. Любой iframe в галерее обязан быть
+       нашим фреймом с параметром brand: иначе кто-то смонтировал превью в
+       обход и оно не получит ни стилей бренда, ни сообщений. */
+    var bad = [];
+    D().querySelectorAll('iframe').forEach(function (f) {
+      if (f.src.indexOf('_frame.html') < 0 || f.src.indexOf('brand=') < 0) bad.push(f.src || '(без src)');
+    });
+    H.eq(bad.length, 0, 'мимо mountFrame: ' + bad.slice(0, 2).join(', '));
+  });
+
+  H.t('пустой файл токенов даёт подсказку, а не пустоту', function () {
+    /* Проверяем поведение, а не текст: движок обязан объяснить, почему пусто. */
+    var hint = G().ENGINE_BRAND.t('token.brokenTokens');
+    H.ok(hint && hint !== 'token.brokenTokens', 'нет строки подсказки в языковом паке');
+    H.ok(G().ENGINE_SPECS.vars.ready || G().ENGINE_SPECS.vars.broken,
+       'парсер не сообщил ни о готовности, ни о поломке');
+  });
+
+  H.g('Язык');
+  H.t('бренд без locale открывается по-английски', function () {
+    var m = G().BRAND_MANIFEST;
+    if (m.locale) { H.ok(true, 'у бренда задан locale — проверка не применима'); return; }
+    H.eq(D().querySelector('[data-i18n="topbar.attach"]').textContent, 'Attach CSS');
+  });
+  H.t('отсутствующий ключ падает на английский, а не в пустоту', function () {
+    var t = G().ENGINE_BRAND.t;
+    H.ok(t('overlay.copyHtml').length > 0, 'пустая строка вместо значения');
+    H.eq(t('no.such.key'), 'no.such.key', 'несуществующий ключ должен возвращать сам ключ');
+  });
+
+  /* Контракт: бренд обязан объявить токены, без которых не встаёт хром. */
+  H.contractTests();
+
+  H.run();
+})();
+</script>
+</body>
+</html>

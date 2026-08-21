@@ -34,3 +34,27 @@ server can reach it.
 
 Engine and brands version independently; a single contract integer gates
 compatibility. See [VERSIONING.md](VERSIONING.md).
+
+## Tests
+
+Three layers, each answering a different question:
+
+| Suite | Question | Run against |
+|---|---|---|
+| `packages/engine/tests/engine.html` | does the storybook work with any brand? | `_template`, and any brand via `?brand=` |
+| `brands/<id>/tests.html` | are this brand's values right? | that brand |
+| `contract.js` (inside the engine suite) | does the brand plug in correctly? | every brand |
+
+Open them in the browser with the server running. Engine tests default to
+`brands/_template` — that is the point: green on SDM and red on the template
+means the engine grew a dependency on SDM.
+
+Command-line checks:
+
+```bash
+node packages/engine/check-skill.js
+node brands/sdm/check-fonts.js <path-to-site-styles.css>
+```
+
+`check-fonts.js` is a migration check against the live site, not a gate. It
+narrows and eventually dies as the site moves onto the design system.
