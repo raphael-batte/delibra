@@ -19,6 +19,13 @@ Three transports, one contract:
 | `.ds.json` | deferred | `blob:` from memory | exchange between machines |
 | `.dsz` (zip) | deferred | `blob:` from memory | heavy assets, arbitrary payload |
 
+**Canonical form is the plain folder.** A brand lives unpacked — readable,
+diffable, editable in place — and that is the only form the engine reads at
+rest. An archive is an *exchange* artifact: produced on export, consumed on
+import, unpacked back into a folder. Nothing runs out of the archive, so the
+round trip must be lossless — export then import has to reproduce the folder
+byte for byte, including the opaque payload the engine never interprets.
+
 **Current decision: the folder is the only transport.** Export and import wait
 until the gallery can hold several design systems at once — until then there is
 no second slot to import into, and a bundle would only round-trip a folder to
