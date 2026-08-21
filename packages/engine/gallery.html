@@ -17,7 +17,7 @@
 /* ==========================================================================
    Хром галереи. Префикс g- — ничего отсюда не попадает в компоненты.
    ========================================================================== */
-:root { --g-sidebar-w: 232px; --g-gutter: 40px; }
+:root { --g-sidebar-w: 232px; --g-gutter: 40px; --g-scrollbar: 0px; }
 
 html { margin: 0; }
 body {
@@ -61,9 +61,12 @@ body {
   position: sticky; top: 0; z-index: 60;
   display: flex; align-items: center; gap: 16px;
   margin: -32px -40px 32px;
-  /* Один и тот же отступ слева и справа: заголовок и тоггл стоят на
-     симметричных краях шапки. */
-  padding: 12px var(--g-gutter);
+  /* Отступы считаются до краёв ОКНА, а не до края контента: вертикальная
+     полоса прокрутки занимает свою колонку справа, и глаз читает её как часть
+     страницы. Поэтому справа вычитаем её ширину — иначе воздуха справа
+     ровно на полосу больше, чем слева у заголовка.
+     --g-scrollbar меряется в рантайме: на macOS с overlay-полосами это 0. */
+  padding: 12px max(0px, calc(var(--g-gutter) - var(--g-scrollbar))) 12px var(--g-gutter);
   background: rgb(var(--white-pure-rgb) / .88);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -456,6 +459,17 @@ gScript(window.ENGINE_BRAND.path('manifest.js'));
       el.setAttribute(pair[1], B.t(el.getAttribute(pair[0])));
     });
   });
+
+  /* Ширина полосы прокрутки — величина окружения, не дизайна. Мерить сразу
+     нельзя: секции ещё не отрисованы, страница короче экрана и полосы нет. */
+  function measureScrollbar() {
+    var w = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--g-scrollbar', (w > 0 ? w : 0) + 'px');
+  }
+  measureScrollbar();
+  window.addEventListener('load', measureScrollbar);
+  window.addEventListener('resize', measureScrollbar);
+  setTimeout(measureScrollbar, 600);
 
   var sub = document.getElementById('g-sub');
   if (sub) sub.textContent = M.version ? 'v' + M.version : '';
