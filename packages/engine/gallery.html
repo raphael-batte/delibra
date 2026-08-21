@@ -425,7 +425,9 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 .g-about code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
 
 /* ── Переключатель сторибуков ──────────────────────────────────────── */
-.g-brandbar { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+/* Интервалы сняты с фрейма «SDM Design System» в Figma: плитка 32×32,
+   от неё до названия 8, от названия до шеврона 8, всё по центру строки. */
+.g-brandbar { display: flex; align-items: center; gap: 0; }
 
 .g-brandmark {
   /* Плитка ровно как в макете: 32×32, радиус 6, серая подложка. */
@@ -439,15 +441,16 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 .g-brandmark svg { width: 20px; height: 20px; }
 
 .g-brandname {
-  display: flex; align-items: center; gap: 6px; min-width: 0;
-  padding: 5px 6px; border: 0; border-radius: 8px;
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  padding: 5px 6px 5px 8px; border: 0; border-radius: 8px;
   background: transparent; cursor: pointer;
-  font-family: var(--font-family); font-size: 13px; font-weight: 700;
-  color: var(--blue);
+  /* В макете название чёрное и полужирное 13/600 — не брендовый синий. */
+  font-family: var(--font-family); font-size: 13px; font-weight: 600;
+  color: var(--text-heading);
 }
 .g-brandname:hover { background: var(--card-gray, var(--bg)); }
-.g-brandname b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
-.g-brandname svg { width: 13px; height: 13px; flex: none; opacity: .55; }
+.g-brandname b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.g-brandname svg { width: 12px; height: 12px; flex: none; opacity: .55; }
 
 .g-menu {
   position: fixed; z-index: 120; min-width: 264px; display: none;
