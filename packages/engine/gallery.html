@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Шрифт и токены подставляет брендовый загрузчик внизу страницы:
+     до чтения манифеста движок не знает ни гарнитуры, ни путей.
+     Токены нужны самой галерее (свотчи, типографика) — но НЕ участвуют
+     в рендере компонентов: те живут внутри iframe со своим набором стилей. -->
+
+<style>
+/* ==========================================================================
+   Хром галереи. Префикс g- — ничего отсюда не попадает в компоненты.
+   ========================================================================== */
+:root { --g-sidebar-w: 232px; }
+
+html { margin: 0; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 14px;
+}
+
+/* ── Сайдбар ───────────────────────────────────────────────────────────── */
+.g-sidebar {
+  position: fixed; inset: 0 auto 0 0;
+  width: var(--g-sidebar-w);
+  padding: 24px 12px 40px;
+  overflow-y: auto;
+  background: var(--white-pure);
+  border-right: 1px solid var(--border);
+  z-index: 100;
+}
+.g-sidebar-logo {
+  margin: 0 0 4px 8px;
+  font-size: 13px; font-weight: 700; color: var(--blue);
+}
+.g-sidebar-sub { margin: 0 0 20px 8px; font-size: 11px; color: var(--text-muted); }
+.g-sidebar-group {
+  padding: 18px 8px 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.g-sidebar a {
+  display: block; padding: 6px 8px; border-radius: 6px;
+  font-size: 13px; color: var(--text-primary); text-decoration: none;
+  transition: background-color .12s, color .12s;
+}
+.g-sidebar a:hover { background: var(--card-gray); color: var(--blue); }
+.g-sidebar a.is-active { background: var(--card-gray); color: var(--blue); font-weight: 600; }
+
+/* ── Верхняя панель ────────────────────────────────────────────────────── */
+.g-topbar {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: center; gap: 16px;
+  margin: -32px -40px 32px;
+  padding: 12px 40px;
+  background: rgb(var(--white-pure-rgb) / .88);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+/* Заголовок текущего раздела — слева, меняется при прокрутке */
+.g-current {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Приложить CSS: скрытый input + кнопка-обёртка */
+.g-attach { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.g-attach input { position: absolute; opacity: 0; width: 0; height: 0; }
+.g-attach__btn {
+  height: 30px; padding-inline: 12px; border: 1px solid var(--border); border-radius: 40px;
+  display: inline-flex; align-items: center;
+  background: var(--white-pure); font-size: 12px; font-weight: 600; color: var(--text-primary);
+}
+.g-attach:hover .g-attach__btn { border-color: var(--blue); color: var(--blue); }
+.g-attach__name { font-size: 11px; color: var(--text-muted); max-width: 220px;
+                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Тоггл «Сравнить с кодом» — выключен, пока не приложен CSS */
+.g-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  cursor: pointer; user-select: none;
+}
+.g-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.g-toggle__track {
+  position: relative; flex: none;
+  width: 34px; height: 20px; border-radius: 10px;
+  background: var(--border);
+  transition: background-color .18s ease;
+}
+.g-toggle__track::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--white-pure);
+  box-shadow: 0 1px 2px rgb(0 0 0 / .25);
+  transition: transform .18s ease;
+}
+.g-toggle input:checked + .g-toggle__track { background: var(--blue); }
+.g-toggle input:checked + .g-toggle__track::after { transform: translateX(14px); }
+.g-toggle input:checked ~ * { color: inherit; }
+.g-toggle:has(input:checked) { color: var(--blue); }
+.g-toggle.is-disabled { opacity: .45; cursor: not-allowed; }
+.g-toggle.is-disabled .g-toggle__track { background: var(--border); }
+
+/* Своя подсказка: нативный title на лейбле с disabled-инпутом
+   браузер показывает не всегда. */
+.g-toggle { position: relative; }
+.g-toggle.is-disabled::after {
+  content: attr(data-hint);
+  position: absolute; top: calc(100% + 8px); right: 0;
+  z-index: 120;
+  padding: 6px 10px; border-radius: 8px;
+  background: var(--dark-toggle); color: var(--white-pure);
+  font-size: 11px; font-weight: 500; line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0; visibility: hidden;
+  transition: opacity .15s ease, visibility .15s ease;
+}
+.g-toggle.is-disabled:hover::after { opacity: 1; visibility: visible; }
+.g-toggle input:focus-visible + .g-toggle__track { outline: 2px solid var(--blue-accent); outline-offset: 2px; }
+
+/* ── Панель различий ─────────────────────────────────────────────────── */
+.g-diff {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--white-pure);
+}
+.g-diff-head {
+  padding: 7px 12px;
+  background: #fff4e0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: #7a4b00;
+}
+.g-diff-head.is-clean { background: #eaf7ec; color: #1d6b2a; }
+.g-diff table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.g-diff td { padding: 5px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.g-diff tr:last-child td { border-bottom: 0; }
+.g-diff .sel { font-family: ui-monospace, Menlo, monospace; color: var(--text-primary); white-space: nowrap; }
+.g-diff .prop { color: var(--text-muted); white-space: nowrap; }
+.g-diff .was { color: #b26a00; }
+.g-diff .now { color: var(--green); }
+.g-diff-empty { padding: 10px 12px; font-size: 12px; color: var(--text-muted); }
+/* Масштаб выбирается прямо в шапке панели, на месте подписи «масштаб 75%» */
+.g-pane-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.g-scale {
+  height: 22px; padding: 0 4px 0 6px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--white-pure); font-family: inherit; font-size: 11px; font-weight: 600;
+  letter-spacing: 0; text-transform: none; color: var(--text-primary); cursor: pointer;
+}
+.g-topbar-note b { color: var(--text-error); }
+
+/* ── Основная колонка ──────────────────────────────────────────────────── */
+.g-main { margin-left: var(--g-sidebar-w); padding: 32px 40px 160px; }
+
+.g-section { margin: 0 0 64px; scroll-margin-top: 72px; }
+.g-section-head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 8px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.g-section-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--text-heading); }
+.g-section-head code {
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--card-gray); color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+}
+.g-section-head .g-note { margin-left: auto; font-size: 11px; color: #b26a00; }
+.g-section-desc { margin: 10px 0 20px; font-size: 13px; line-height: 1.5; color: var(--text-muted); max-width: 780px; }
+
+/* ── Пример: мобайл + десктоп ──────────────────────────────────────────── */
+.g-example { margin: 0 0 28px; }
+.g-example-label { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.g-example-note  { margin: 0 0 10px; font-size: 11px; color: var(--text-muted); }
+
+/* Обе панели — одинаковые полосы во всю ширину колонки. Внутри содержимое
+   прижато к левому краю в обоих случаях, поэтому подписи и компоненты
+   мобильной и десктопной версии стоят на одной вертикали и сравнимы. */
+.g-split { display: flex; flex-direction: column; gap: 14px; align-items: stretch; }
+.g-pane { width: 100%; }
+.g-pane .g-frame-wrap { position: relative; }
+
+.g-pane { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.g-pane-label {
+  padding: 6px 10px;
+  background: var(--card-gray);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+/* Фон коробки совпадает с фоном body внутри фрейма (--bg), иначе справа от
+   узкого мобильного превью виден шов между #FBFCFD и белым. */
+.g-frame-wrap { position: relative; overflow: hidden; width: 100%; background: var(--bg); }
+/* обе панели масштабируются одинаково, поэтому точка отсчёта — левый верхний
+   угол у обеих; иначе мобильный фрейм при ужимании съезжает вправо */
+.g-frame { display: block; border: 0; transform-origin: 0 0; }
+
+/* ── Свотчи и таблицы токенов ──────────────────────────────────────────── */
+.g-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.g-swatch { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--white-pure); }
+.g-swatch-chip { height: 56px; }
+.g-swatch-meta { padding: 8px 10px; }
+.g-swatch-name { font-size: 12px; font-weight: 600; }
+.g-swatch-val, .g-swatch-use {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px; color: var(--text-muted); word-break: break-all;
+}
+.g-swatch-use { font-family: var(--font-family); }
+.g-missing { background: repeating-linear-gradient(45deg, #eee 0 6px, #fafafa 6px 12px); }
+
+.g-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.g-table th, .g-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+.g-table th { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+.g-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.g-ok   { color: var(--green); }
+.g-warn { color: #b26a00; }
+.g-add  { color: var(--blue-accent); }
+
+/* ── Оверлей с кодом ───────────────────────────────────────────────────── */
+.g-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; justify-content: flex-end;
+  background: rgb(var(--black-rgb) / .45);
+  opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s ease;
+}
+.g-overlay.is-open { opacity: 1; visibility: visible; }
+.g-overlay-panel {
+  display: flex; flex-direction: column;
+  width: min(720px, 92vw); height: 100%;
+  background: var(--white-pure);
+  transform: translateX(24px); transition: transform .2s ease;
+}
+.g-overlay.is-open .g-overlay-panel { transform: none; }
+.g-overlay-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.g-overlay-title { font-size: 14px; font-weight: 600; }
+.g-overlay-sel {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; color: var(--text-muted);
+}
+.g-overlay-close {
+  margin-left: auto; width: 30px; height: 30px; border: 0; border-radius: 8px;
+  background: var(--card-gray); font-size: 16px; line-height: 1; color: var(--text-muted); cursor: pointer;
+}
+.g-tabs { display: flex; gap: 4px; padding: 10px 20px 0; }
+.g-tabs button {
+  padding: 6px 12px; border: 0; border-radius: 6px 6px 0 0;
+  background: transparent; font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--text-muted); cursor: pointer;
+}
+.g-tabs button.is-on { background: var(--card-gray); color: var(--blue); }
+.g-overlay-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 32px; }
+.g-code {
+  margin: 0; padding: 14px; border-radius: 8px;
+  background: #1f2430; color: #d6deeb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px; line-height: 1.55; white-space: pre; overflow-x: auto;
+}
+.g-copy {
+  margin-bottom: 10px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--white-pure); font-family: inherit; font-size: 11px; cursor: pointer;
+}
+.g-token-list { margin-top: 16px; }
+.g-token-list h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.g-hint { padding: 12px 14px; border-radius: 8px; background: #fff4e0; color: #7a4b00; font-size: 12px; line-height: 1.5; }
+
+body.g-no-scroll { overflow: hidden; }
+
+@media (max-width: 900px) {
+  .g-sidebar { display: none; }
+  .g-main { margin-left: 0; padding: 24px 16px 120px; }
+}
+
+/* ── Оверлей живой перезагрузки ────────────────────────────────────────
+   Матовое стекло поверх всей галереи, пока файлы «успокаиваются». */
+.g-reload {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(120, 126, 140, .28);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  opacity: 0; transition: opacity .22s ease;
+}
+.g-reload.is-on { opacity: 1; }
+
+.g-reload__card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 24px; border-radius: 18px;
+  background: rgba(255, 255, 255, .72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, .8);
+  box-shadow: 0 12px 40px rgba(16, 24, 40, .16);
+  font-family: var(--font-family, sans-serif);
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary, #1A1A1A);
+}
+
+.g-reload__spin {
+  width: 16px; height: 16px; flex: none;
+  border-radius: 50%;
+  border: 2px solid rgba(16, 24, 40, .18);
+  border-top-color: var(--blue, #0A6ED1);
+  animation: g-reload-spin .7s linear infinite;
+}
+@keyframes g-reload-spin { to { transform: rotate(360deg); } }
+
+/* Кому анимация мешает — оставляем только стекло. */
+@media (prefers-reduced-motion: reduce) {
+  .g-reload__spin { animation: none; }
+  .g-reload { transition: none; }
+}
+
+/* ── Скроллбары ────────────────────────────────────────────────────────
+   Тонкие и проявляются только при наведении: в галерее две прокручиваемые
+   области рядом, и постоянные полосы режут сетку превью на глаз.
+   Firefox управляется двумя свойствами, WebKit — псевдоэлементами; заданы
+   оба набора, поведение одинаковое. */
+.g-sidebar, .g-overlay-body, html { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.g-sidebar:hover, .g-overlay-body:hover, html:hover { scrollbar-color: rgba(16,24,40,.28) transparent; }
+
+.g-sidebar::-webkit-scrollbar,
+.g-overlay-body::-webkit-scrollbar,
+body::-webkit-scrollbar { width: 8px; height: 8px; }
+
+.g-sidebar::-webkit-scrollbar-track,
+.g-overlay-body::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track { background: transparent; }
+
+.g-sidebar::-webkit-scrollbar-thumb,
+.g-overlay-body::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background: transparent; border-radius: 8px;
+  border: 2px solid transparent; background-clip: content-box;
+  transition: background-color .2s ease;
+}
+.g-sidebar:hover::-webkit-scrollbar-thumb,
+.g-overlay-body:hover::-webkit-scrollbar-thumb,
+body:hover::-webkit-scrollbar-thumb { background-color: rgba(16, 24, 40, .28); }
+
+.g-sidebar::-webkit-scrollbar-thumb:hover,
+.g-overlay-body::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
+
+/* Горизонтальную прокрутку внутри превью не трогаем — она часть компонента. */
+</style>
+</head>
+<body>
+
+<nav class="g-sidebar">
+  <p class="g-sidebar-logo" id="g-logo"></p>
+  <p class="g-sidebar-sub" id="g-sub"></p>
+  <div id="g-nav"></div>
+</nav>
+
+<main class="g-main">
+  <div class="g-topbar">
+    <h1 class="g-current" id="g-current"></h1>
+    <label class="g-attach" data-i18n-title="topbar.attach.title">
+      <input type="file" id="g-css-file" accept=".css,text/css">
+      <span class="g-attach__btn" data-i18n="topbar.attach"></span>
+      <span class="g-attach__name" id="g-css-name"></span>
+    </label>
+    <label class="g-toggle is-disabled" id="g-diff-label"
+           data-i18n-hint="topbar.compare.hint">
+      <input type="checkbox" id="g-diff" disabled>
+      <span class="g-toggle__track"></span>
+      <span data-i18n="topbar.compare"></span>
+    </label>
+  </div>
+  <div id="g-sections"></div>
+</main>
+
+<div class="g-overlay" id="g-overlay">
+  <div class="g-overlay-panel">
+    <div class="g-overlay-head">
+      <div>
+        <div class="g-overlay-title" id="g-ov-title">—</div>
+        <div class="g-overlay-sel" id="g-ov-sel"></div>
+      </div>
+      <button class="g-overlay-close" id="g-ov-close" data-i18n-aria="overlay.close">×</button>
+    </div>
+    <div class="g-tabs" id="g-ov-tabs">
+      <button data-tab="html" class="is-on">HTML</button>
+      <button data-tab="css">CSS</button>
+    </div>
+    <div class="g-overlay-body" id="g-ov-body"></div>
+  </div>
+</div>
+
+<script>
+/* Сторибук читает CSS и свои же скрипты с диска на каждой перезагрузке.
+   Без этого браузер отдаёт закешированные скрипты и токены, и галерея
+   показывает вчерашнее состояние — молча, без единой ошибки. */
+window.GALLERY_BUST = '?t=' + Date.now();
+function gScript(src) {
+  document.write('<scr' + 'ipt src="' + src + window.GALLERY_BUST + '"></scr' + 'ipt>');
+}
+/* Порядок важен: языковые паки и резолвер бренда — до всего остального. */
+gScript('i18n/en.js');
+gScript('i18n/ru.js');
+gScript('brand.js');
+</script>
+
+<script>
+/* Второй блок: ENGINE_BRAND уже существует, можно собирать пути бренда. */
+gScript(window.ENGINE_BRAND.path('manifest.js'));
+</script>
+
+<script>
+/* Третий: манифест прочитан — подключаем шрифт, токены и данные бренда. */
+(function () {
+  var B = window.ENGINE_BRAND, M = window.BRAND_MANIFEST;
+  var problem = B.incompatible(M);
+  if (problem) {
+    document.body.innerHTML = '<p style="padding:40px;font:15px/1.5 sans-serif">' +
+      problem + '<br><small>' + B.base + 'manifest.js</small></p>';
+    return;
+  }
+  function link(href, id) {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href; if (id) l.id = id;
+    document.head.appendChild(l);
+  }
+  if (M.font && M.font.href) link(M.font.href);
+  if (M.css && M.css.tokens) link(B.path(M.css.tokens) + window.GALLERY_BUST, 'g-tokens-link');
+  document.title = M.title || document.title;
+
+  /* Перевод статического хрома: атрибуты data-i18n* держат ключи, а не текст,
+     поэтому разметка одна на все языки. */
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    el.textContent = B.t(el.getAttribute('data-i18n'));
+  });
+  [['data-i18n-title', 'title'], ['data-i18n-hint', 'data-hint'],
+   ['data-i18n-aria', 'aria-label']].forEach(function (pair) {
+    document.querySelectorAll('[' + pair[0] + ']').forEach(function (el) {
+      el.setAttribute(pair[1], B.t(el.getAttribute(pair[0])));
+    });
+  });
+
+  var sub = document.getElementById('g-sub');
+  if (sub) sub.textContent = M.version ? 'v' + M.version : '';
+  var logo = document.getElementById('g-logo');
+  if (logo) logo.textContent = M.title || '';
+  [M.legacyNames, M.tokenMap, M.specs].filter(Boolean).forEach(function (f) {
+    gScript(B.path(f));
+  });
+})();
+</script>
+
+<script>
+gScript('gallery.js');
+</script>
+</body>
+</html>

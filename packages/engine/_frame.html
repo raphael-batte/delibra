@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>preview frame</title>
+<!-- Шрифт и стайлшиты бренда подставляются из манифеста: движок не знает,
+     какой бренд он показывает. См. brand.js — пути резолвятся от папки бренда. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var brand = q.get('brand');
+  if (!brand) return;                       // без бренда фрейм остаётся пустым холстом
+  var base = new URL(brand.replace(/\/+$/, '') + '/', location.href).pathname;
+
+  /* <base> — ключевая деталь разреза: разметка бренда пишет пути вида
+     assets/icons/x.svg, а фрейм лежит в папке движка. Без базы они бы
+     резолвились в packages/engine и давали 404 на каждой иконке. */
+  var b = document.createElement('base');
+  b.href = base;
+  document.head.appendChild(b);
+  var bust = q.get('v') ? ('?v=' + encodeURIComponent(q.get('v'))) : '';
+
+  function link(id, href, disabled) {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.id = id;
+    l.href = /^https?:/.test(href) ? href : base + href + bust;
+    if (disabled) l.disabled = true;
+    document.head.appendChild(l);
+    return l;
+  }
+
+  // Манифест грузим синхронно: стайлшиты должны встать до первого g:render.
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', base + 'manifest.js' + bust, false);
+  try { xhr.send(); } catch (e) { return; }
+  if (xhr.status && xhr.status >= 400) return;
+  (0, eval)(xhr.responseText);
+
+  var m = window.BRAND_MANIFEST || {};
+  window.BRAND_BASE = base;
+  if (m.font && m.font.href) link('brand-font', m.font.href);
+  if (m.css && m.css.tokens)     link('css-new-tokens', m.css.tokens);
+  if (m.css && m.css.components) link('css-new-sdm',    m.css.components);
+  // Сравнение с чужим CSS опционально: бренд может его не объявлять.
+  if (m.compare && m.compare.legacy) link('css-current', m.compare.legacy, true);
+})();
+</script>
+<style>
+  /* Хром песочницы. Ничего из этого не участвует в инспекции —
+     все правила помечены слоем g-chrome и отфильтровываются. */
+  @layer g-chrome {
+    html, body { margin: 0; }
+    body { background: transparent; overflow-x: hidden; }
+    /* #root повторяет ширину .container сайта: min(1170, 100% − 40) на
+       десктопе и 100% − 32 на мобайле — иначе 3-колоночная сетка даёт не 379px.
+       Но НЕ центрируем: в галерее содержимое прижато к левому краю, чтобы
+       мобильная и десктопная версии стояли на одной вертикали и их можно было
+       сравнивать построчно. На сайте контейнер по-прежнему центрируется. */
+    #root { width: min(1170px, 100% - 40px); margin-inline: 0;
+            padding: 16px 0 16px 16px;
+            /* content-box: 16px отступа добавляются СНАРУЖИ ширины контейнера.
+               При border-box они съедали её, и 3-колоночная сетка давала
+               374px вместо положенных 379.33.
+               !important нужен потому, что это правило лежит в @layer, а
+               `* { box-sizing: border-box }` из sdm.css вне слоёв — и по
+               правилам каскада безслойные стили всегда сильнее слойных. */
+            box-sizing: content-box !important; }
+    @media (max-width: 900px) { #root { width: calc(100% - 32px); } }
+    /* Секции, которые на сайте идут во всю ширину экрана (обложка, ленты
+       со скроллом), не должны получать гаттер песочницы поверх своего
+       собственного паддинга — иначе контент вдвое уже реального. */
+    .g-bleed { margin-inline: calc(var(--gutter, 16px) * -1); }
+
+    /* Полноширинные секции (обложка) в галерее показываем как компонент:
+       скруглённая рамка и отступ слева, а не встык к краю песочницы. */
+    .g-inset { border-radius: 24px; overflow: hidden; }
+
+    /* Строка «подпись + образец» — ОДНА сетка на оба брейкпоинта:
+       фиксированная колонка метаданных и колонка с самим компонентом.
+       Никаких медиазапросов: иначе подписи в мобильной и десктопной панелях
+       встают на разные вертикали и сравнивать их построчно нельзя. */
+    .g-row {
+      display: grid;
+      grid-template-columns: var(--g-meta-w, 180px) 1fr;
+      align-items: center;
+      column-gap: 16px;
+      margin-bottom: 14px;
+    }
+    .g-row__meta { min-width: 0; }
+    .g-row__name { font-size: 12px; font-weight: 700; line-height: 1.3; color: var(--text-heading); }
+    .g-row__cls  { font-family: ui-monospace, Menlo, monospace; font-size: 10px; line-height: 1.4;
+                   color: var(--text-muted); }
+    .g-row__meta-val { font-size: 10px; line-height: 1.4; color: var(--text-muted); }
+    .g-row__sample { min-width: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .g-pick { cursor: pointer; }
+    .g-pick:hover {
+      outline: 2px solid var(--blue-accent, #0094FF);
+      outline-offset: 4px;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var qs = new URLSearchParams(location.search);
+  var root = document.getElementById('root');
+
+  // тот же cache-buster, что у галереи: иначе фрейм рисует старым CSS
+  var t = qs.get('t');
+  if (t) {
+    ['css-new-tokens', 'css-new-sdm', 'css-current'].forEach(function (id) {
+      var l = document.getElementById(id);
+      if (l && l.getAttribute('href').indexOf('?') < 0) l.href = l.getAttribute('href') + '?t=' + t;
+    });
+  }
+
+  /* ── Режим CSS ─────────────────────────────────────────────────────── */
+  /* Стайлшиты создаются из манифеста, поэтому какого-то из них может не быть:
+     бренд не обязан объявлять compare.legacy. Отсюда — null-safe хелпер. */
+  function sheet(id, off) {
+    var l = document.getElementById(id);
+    if (l) l.disabled = !!off;
+  }
+
+  function applyCss(mode) {
+    var isCurrent = mode === 'current';
+    sheet('css-new-tokens', isCurrent);
+    sheet('css-new-sdm',    isCurrent);
+    sheet('css-current',    !isCurrent);
+    sheet('user-css',       true);
+  }
+
+  /* Произвольный CSS, приложенный пользователем: подменяет собой все
+     встроенные наборы. Так разработчик может сравнить свой файл с ДС,
+     не подкладывая его в репозиторий. */
+  function applyUserCss(text) {
+    var el = document.getElementById('user-css');
+    if (!el) {
+      el = document.createElement('style');
+      el.id = 'user-css';
+      document.head.appendChild(el);
+    }
+    el.textContent = text || '';
+    el.disabled = false;
+    sheet('css-new-tokens', true);
+    sheet('css-new-sdm',    true);
+    sheet('css-current',    true);
+  }
+  applyCss(qs.get('css') || 'new');
+
+  /* ── Разметка приходит от родителя ─────────────────────────────────── */
+  function setHtml(html) {
+    root.innerHTML = html;
+    Array.prototype.forEach.call(root.querySelectorAll('[data-pick]'), function (el) {
+      el.classList.add('g-pick');
+    });
+    reportHeight();
+  }
+
+  /* Высоту сообщаем сразу и ещё раз через тик.
+     Через requestAnimationFrame делать нельзя: браузер тормозит rAF во
+     фреймах вне видимой области, сообщение не уходило, фрейм оставался
+     150px по умолчанию — и содержимое обрезалось. */
+  var lastH = -1;
+  function reportHeight() {
+    var h = document.documentElement.scrollHeight;
+    if (h !== lastH) { lastH = h; post({ type: 'g:height', height: h }); }
+    setTimeout(function () {
+      var h2 = document.documentElement.scrollHeight;
+      if (h2 !== lastH) { lastH = h2; post({ type: 'g:height', height: h2 }); }
+    }, 60);
+  }
+
+  function post(msg) {
+    msg.frameId = qs.get('id') || '';
+    parent.postMessage(msg, '*');
+  }
+
+  /* ── Форматирование HTML ───────────────────────────────────────────── */
+  var VOID = { area:1, base:1, br:1, col:1, embed:1, hr:1, img:1, input:1,
+               link:1, meta:1, source:1, track:1, wbr:1 };
+
+  function formatNode(node, depth) {
+    var pad = '  '.repeat(depth);
+    if (node.nodeType === 3) {
+      var t = node.textContent.trim();
+      return t ? pad + t : '';
+    }
+    if (node.nodeType !== 1) return '';
+
+    var tag = node.tagName.toLowerCase();
+    var attrs = Array.prototype.filter.call(node.attributes, function (a) {
+      return a.name !== 'data-pick' && a.name.indexOf('data-g-') !== 0;
+    }).map(function (a) {
+      // класс-подсветку песочницы не показываем
+      if (a.name === 'class') {
+        var cls = a.value.split(/\s+/).filter(function (c) { return c !== 'g-pick'; }).join(' ');
+        return cls ? ' class="' + cls + '"' : '';
+      }
+      return a.value === '' ? ' ' + a.name : ' ' + a.name + '="' + a.value + '"';
+    }).join('');
+
+    var open = pad + '<' + tag + attrs + '>';
+    if (VOID[tag]) return open;
+
+    var kids = Array.prototype.map.call(node.childNodes, function (c) {
+      return formatNode(c, depth + 1);
+    }).filter(Boolean);
+
+    if (!kids.length) return open + '</' + tag + '>';
+    // короткий однострочный текст оставляем в строке
+    if (kids.length === 1 && node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
+      return open + kids[0].trim() + '</' + tag + '>';
+    }
+    return open + '\n' + kids.join('\n') + '\n' + pad + '</' + tag + '>';
+  }
+
+  /* ── Сбор CSS-правил, реально относящихся к узлу ───────────────────── */
+  // Слишком общие селекторы (reset, базовая типографика тега) — не про этот
+  // компонент, и в панели они только мешают. Оставляем только то, что
+  // цепляется за класс, id, атрибут или псевдокласс состояния.
+  function isGeneric(probe) {
+    return !/[.#\[:]/.test(probe);
+  }
+
+  function matchesAny(el, selector) {
+    // селектор может быть составным: "a, b, c"
+    var parts = selector.split(',');
+    for (var i = 0; i < parts.length; i++) {
+      var s = parts[i].trim();
+      if (!s) continue;
+      // убираем псевдоэлементы — el.matches их не понимает
+      var probe = s.replace(/::?(before|after|placeholder|marker|selection|first-line|first-letter)\b/g, '')
+                   .replace(/:(hover|focus|focus-visible|active|disabled|checked|not\([^)]*\))/g, '')
+                   .trim();
+      if (!probe || isGeneric(probe)) continue;
+      try {
+        if (el.matches(probe) || el.querySelector(probe)) return s;
+      } catch (e) { /* невалидный после чистки — пропускаем */ }
+    }
+    return null;
+  }
+
+  function ruleText(rule) {
+    return rule.cssText;
+  }
+
+  function collectCss(el) {
+    var out = [];
+    var missing = false;
+
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var sheet = document.styleSheets[i];
+      if (sheet.disabled) continue;
+      var rules;
+      try { rules = sheet.cssRules; } catch (e) { missing = true; continue; }
+      if (!rules) { missing = true; continue; }
+
+      walkRules(rules, out, el, null);
+    }
+    return { rules: out, blocked: missing && !out.length };
+  }
+
+  function walkRules(rules, out, el, mediaText) {
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i];
+
+      // слой хрома песочницы игнорируем целиком
+      if (r.constructor && /CSSLayerBlockRule/.test(r.constructor.name) && r.name === 'g-chrome') continue;
+
+      if (r.media) {                       // @media
+        if (!window.matchMedia(r.conditionText || r.media.mediaText).matches) continue;
+        walkRules(r.cssRules, out, el, r.conditionText || r.media.mediaText);
+        continue;
+      }
+      if (r.cssRules && !r.selectorText) { // @layer, @supports
+        walkRules(r.cssRules, out, el, mediaText);
+        continue;
+      }
+      if (!r.selectorText) continue;
+
+      if (matchesAny(el, r.selectorText)) {
+        out.push({ media: mediaText, text: ruleText(r) });
+      }
+    }
+  }
+
+  /* ── Какие токены задействованы в этих правилах ────────────────────── */
+  function usedTokens(rulesText) {
+    var names = {};
+    var re = /var\(\s*(--[\w-]+)/g, m;
+    while ((m = re.exec(rulesText))) names[m[1]] = true;
+    var cs = getComputedStyle(document.documentElement);
+    return Object.keys(names).sort().map(function (n) {
+      return { name: n, value: cs.getPropertyValue(n).trim() };
+    }).filter(function (t) { return t.value; });
+  }
+
+  /* ── Клик по элементу ──────────────────────────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-pick]');
+    if (!el) return;
+    e.preventDefault();
+
+    var css = collectCss(el);
+    var cssText = css.rules.map(function (r) {
+      return r.media ? '@media ' + r.media + ' {\n  ' + r.text + '\n}' : r.text;
+    }).join('\n\n');
+
+    post({
+      type: 'g:pick',
+      name: el.getAttribute('data-pick') || el.className,
+      selector: shortSelector(el),
+      html: formatNode(el, 0),
+      css: cssText,
+      cssBlocked: css.blocked,
+      tokens: usedTokens(cssText)
+    });
+  });
+
+  function shortSelector(el) {
+    var s = el.tagName.toLowerCase();
+    var cls = (el.getAttribute('class') || '').split(/\s+/)
+      .filter(function (c) { return c && c !== 'g-pick'; });
+    return cls.length ? s + '.' + cls.join('.') : s;
+  }
+
+  /* ── Канал с родителем ─────────────────────────────────────────────── */
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.type === 'g:render') setHtml(d.html);
+    else if (d.type === 'g:css') { applyCss(d.mode); reportHeight(); }
+    else if (d.type === 'g:usercss') { applyUserCss(d.text); reportHeight(); }
+  });
+
+  window.addEventListener('load', reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+  post({ type: 'g:ready' });
+})();
+</script>
+</body>
+</html>

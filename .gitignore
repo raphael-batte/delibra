@@ -1,0 +1,6 @@
+.DS_Store
+*.bak
+*.bak.*
+*.v0.*.bak*
+node_modules/
+.bridge/
