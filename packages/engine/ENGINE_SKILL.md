@@ -148,9 +148,13 @@ they are brand data, not chrome.
 ## Checks
 
 ```bash
-node packages/engine/check-skill.js      # required anchors, forbidden strings, dates
-node packages/engine/check-tokens.js <brand>   # dead and undeclared tokens
+node packages/engine/check-skill.js            # required anchors, forbidden strings, dates
+node packages/engine/check-tokens.js <brand>   # dead, phantom and unapplied tokens
+node packages/engine/check-css.js <brand>      # raw hex and px outside var()
 ```
+
+`check-css.js` reads `brands/<id>/css.allow.json` for deliberate exceptions —
+each keyed by line number with a reason, so an exception cannot be silent.
 
 Engine tests run against `brands/_template`. A brand passing while the template
 fails means the engine grew a dependency on that brand.

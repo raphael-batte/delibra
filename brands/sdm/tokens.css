@@ -156,6 +156,7 @@
   --gap-8:   8px;
   --gap-12: 12px;
   --gap-16: 16px;
+  --gap-20: 20px;
   --gap-24: 24px;
   --gap-32: 32px;
   --gap-40: 40px;
@@ -172,8 +173,22 @@
        .perk/.service    pad 24/24/32/24 · r24 · icon 72
        grid gap 16 */
   --news-min-h:     200px;   /* десктоп 246 — см. §16 */
+  --news-w:         250px;   /* десктоп 300 — карточка новости не тянется */
   --step-min-h:     276px;
-  --product-art-h:  150px;
+  --product-art-h:  120px;   /* десктоп 150 */
+  --cta-art-h:      120px;   /* десктоп 150 */
+
+  /* Мелкая геометрия компонентов. Заведена не ради переиспользования, а
+     чтобы величина жила в одном месте с остальными: компонент, у которого
+     размер вписан в правило, невозможно проверить каталогом. */
+  --check-ic:       14px;   /* галочка в чек-листе; десктоп 16 */
+  --acc-icon:       32px;   /* плюс/минус в аккордеоне */
+  --acc-icon-bar:   12px;   /* длина штриха этого плюса */
+  --dot:             8px;   /* точка карусели */
+  --dot-active:     24px;   /* она же в активном состоянии */
+  --search-ico:     22px;   /* иконка в строке поиска */
+  --reveal-shift:   24px;   /* сдвиг блока до появления (анимация .is-revealed) */
+  --hairline:        2px;   /* штрих плюса, полоска — не border, поэтому токеном */
 
   /* Вертикальный ритм секций */
   --section-pt:   48px;
@@ -193,6 +208,20 @@
      внутрь через object-fit: contain и может быть меньше. */
   --hero-art-w:  310px;
   --hero-art-h:  300px;
+
+  /* Геометрия обложек. Величины разные у трёх вариантов, поэтому и токенов
+     три набора, а не один «высота обложки». */
+  --hero-h:            680px;   /* десктоп 768 */
+  --hero-min-h:        700px;   /* нижняя граница по контенту */
+  --hero-pt:            96px;   /* десктоп 118 */
+  --hero-pb:            24px;
+  --hero-title-max:    820px;
+  --hero-lead-max:     640px;
+  --hero-split-h:      664px;
+  --hero-split-row-h:  360px;
+  --hero-split-text-max: 644px;
+  --hero-split-lead-max: 562px;
+  --hero-split-art-w:  331px;
 
   --container:   1170px;
   --gutter:        20px;
@@ -346,6 +375,16 @@
   --font-price-size:   24px;
   --font-price-lh:     28.8px;
 
+  /* Стили, у которых значение одинаково на обоих брейкпоинтах и потому
+     не попало ни в одну шкалу. Заводим им имена, чтобы величина не жила
+     в правиле компонента. */
+  --font-price-amount-size: 24px;   /* .price-amount — styles.css:3037 */
+  --font-price-h4-size:     18px;   /* .price-card h4 — styles.css:3047 */
+  --font-service-p-lh:      25.2px; /* .service p — styles.css:3404 */
+  --font-perk-h3-lh:        33.6px; /* .perk h3 — styles.css:1925 */
+  --font-badge-num-size:    14px;   /* .badge с цифрой — styles.css:589 */
+  --font-badge-num-lh:      16.8px;
+
 /* --------------------------------------------------------------------------
    14. Component tokens — Buttons
    -------------------------------------------------------------------------- */
@@ -469,6 +508,13 @@
     --font-price-size:     32px;
     --font-price-lh:       1.2;
     --news-min-h:          246px;
+    --news-w:              300px;
+    --product-art-h:       150px;
+    --cta-art-h:           150px;
+    --check-ic:             16px;
+
+    --hero-h:              768px;
+    --hero-pt:             118px;
     --font-arrow-news:     22px;
     --font-check-lh:       1.4;
     --font-badge-lh:       1.4;

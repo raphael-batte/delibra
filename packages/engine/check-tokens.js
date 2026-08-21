@@ -47,6 +47,17 @@ const consumers = [compFile, 'sections.js', 'token-map.js']
   .filter(fs.existsSync);
 
 const usageText = consumers.map(f => fs.readFileSync(f, 'utf8')).join('\n');
+
+/* Применение компонентом ≠ упоминание в каталоге. Токен, который только
+   показан свотчем, объявлен «на будущее»: рисунка он не даёт ни одному
+   элементу. Такие перечисляются в tokens.deferred.json — иначе они
+   неотличимы от живых, и обещание «подключим, когда переедет хедер»
+   никто не проверяет. */
+const appliedText = compFile
+  ? strip(fs.readFileSync(path.join(brandDir, compFile), 'utf8'))
+  : '';
+const applied = new Set();
+for (const m of appliedText.matchAll(/var\(\s*(--[\w-]+)/g)) applied.add(m[1]);
 const tokensBody = strip(tokensCss);
 
 /* ── объявления ─────────────────────────────────────────────────────── */
@@ -89,8 +100,15 @@ if (compFile) {
 }
 
 const phantom = [...used].filter(n => !declared.has(n) && !localDeclared.has(n));
-const stillDeferred = [...deferredSet].filter(n => declared.has(n) && !used.has(n));
-const resurrected = [...deferredSet].filter(n => used.has(n));
+/* Объявлен, показан в каталоге, но ни одним компонентом не применён. */
+const unapplied = [...declared.keys()]
+  .filter(n => used.has(n) && !applied.has(n) && !deferredSet.has(n))
+  /* Ссылки внутри самого файла токенов (алиасы и производные) — не применение,
+     но и не забытый токен: их держит тот, кто на них ссылается. */
+  .filter(n => !new RegExp('var\\(\\s*' + n + '\\b').test(tokensBody));
+
+const stillDeferred = [...deferredSet].filter(n => declared.has(n) && !applied.has(n));
+const resurrected = [...deferredSet].filter(n => applied.has(n));
 
 function list(title, arr, extra) {
   if (!arr.length) return;
@@ -103,10 +121,11 @@ console.log('объявлено: ' + declared.size + ' · используетс
             ' · отложено: ' + deferredSet.size);
 
 list('МЁРТВЫЕ — объявлены, нигде не используются', dead);
+list('ОБЪЯВЛЕНЫ, НО НЕ ПРИМЕНЕНЫ — только в каталоге; внести в tokens.deferred.json', unapplied);
 list('ФАНТОМЫ — используются, но не объявлены', phantom);
 list('отложенные, всё ещё не подключены', stillDeferred, deferred.why);
-list('отложенные, которые уже используются — убрать из списка', resurrected);
+list('отложенные, которые уже применены — убрать из списка', resurrected);
 
-const failed = dead.length + phantom.length + resurrected.length;
+const failed = dead.length + phantom.length + resurrected.length + unapplied.length;
 console.log(failed ? '\nнаходок: ' + failed : '\nтокены в порядке');
 process.exit(failed ? 1 : 0);

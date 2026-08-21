@@ -52,9 +52,16 @@ means the engine grew a dependency on SDM.
 Command-line checks:
 
 ```bash
-node packages/engine/check-skill.js
+node packages/engine/check-skill.js            # the skills' contract
+node packages/engine/check-tokens.js brands/sdm  # dead tokens, phantoms, unapplied
+node packages/engine/check-css.js brands/sdm     # raw hex and px outside var()
 node brands/sdm/check-fonts.js <path-to-site-styles.css>
 ```
+
+A token that is declared and shown in the catalogue but applied by no component
+is not dead — it is deferred, and must say so in `brands/<id>/tokens.deferred.json`
+with a reason. The check fails both ways: a new unexplained one, and one that
+has since been applied but stayed on the list.
 
 `check-fonts.js` is a migration check against the live site, not a gate. It
 narrows and eventually dies as the site moves onto the design system.
