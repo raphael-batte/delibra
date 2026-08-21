@@ -33,12 +33,26 @@
     return l;
   }
 
-  // Манифест грузим синхронно: стайлшиты должны встать до первого g:render.
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', base + 'manifest.js' + bust, false);
-  try { xhr.send(); } catch (e) { return; }
-  if (xhr.status && xhr.status >= 400) return;
-  (0, eval)(xhr.responseText);
+  /* Манифест читаем синхронно: стайлшиты должны встать до первого g:render.
+     Именно читаем, а не выполняем — фрейм не запускает из бренда ничего.
+     Прежняя форма manifest.js остаётся, пока бренды переезжают, и только
+     она требует eval. */
+  function read(file) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', base + file + bust, false);
+    try { xhr.send(); } catch (e) { return null; }
+    if (xhr.status && xhr.status >= 400) return null;
+    return xhr.responseText;
+  }
+
+  var json = read('manifest.json');
+  if (json) {
+    try { window.BRAND_MANIFEST = JSON.parse(json); } catch (e) { return; }
+  } else {
+    var legacy = read('manifest.js');
+    if (!legacy) return;
+    (0, eval)(legacy);
+  }
 
   var m = window.BRAND_MANIFEST || {};
   window.BRAND_BASE = base;

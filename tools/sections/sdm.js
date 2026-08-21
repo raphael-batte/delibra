@@ -1,27 +1,28 @@
 /* ==========================================================================
-   SDM — секции компонентов.
-   --------------------------------------------------------------------------
-   Секция: { id, group, title, code, note, desc, render(mode), examples[] }
-     render(mode) → HTML строкой, рисуется в родителе
-     examples[]   → { label, note, html, htmlDesktop, wide }
-                    рендерятся в iframe: мобильный и десктопный
+   SDM — авторский слой секций.
 
-   В разметке примеров атрибут data-pick="Имя" делает узел кликабельным —
-   по клику открывается оверлей с его HTML, CSS и задействованными токенами.
+   Здесь живут сборщики разметки (cover, prod, perk, step, …) и определения
+   секций. Это ЛОГИКА, поэтому её место в репозитории, а не в пакете бренда:
+   пакет содержит только данные и метаданные, иначе открыть присланный
+   сторибук значило бы выполнить чужой код.
 
-   Секции токенов здесь не описаны: их собирает движок из token-map.js.
+   Правки делаются здесь, затем:
+       node tools/emit-sections.js sdm
+   и результат ложится в brands/sdm/sections.json.
+
+   Строки каталога (btnRow / tileRow / specRow) сюда не тянем: это хром
+   движка, и он остаётся дескриптором `rows` — иначе его вёрстка окажется
+   запечённой в каждом пакете.
    ========================================================================== */
-(function () {
-  'use strict';
+'use strict';
 
-  var ES = window.ENGINE_SPECS;
-  var esc = ES.esc, val = ES.val, bp = ES.bp;
-  var row = ES.row, specRow = ES.specRow, btnRow = ES.btnRow, tileRow = ES.tileRow;
+module.exports = function () {
+
+  /* Из движка нужен единственный хелпер — flex-ряд для мелких примеров
+     вроде бейджей. Остальная разметка ниже — брендовая. */
+  var row = require('../../packages/engine/rows.js').row;
 
 
-  function btn(cls, text) {
-    return '<a href="#" class="' + cls + '" data-pick="' + cls + '">' + text + '</a>';
-  }
 
   function check(text) {
     return '<div class="check"><span class="ic"></span>' + text + '</div>';
@@ -111,14 +112,6 @@
     '</section>';
   }
 
-  function illu(src, label, bg, h) {
-    return '<div class="g-swatch"><div style="display:flex;align-items:center;justify-content:center;' +
-      'height:' + (h || 140) + 'px;padding:12px;background:' + (bg || 'var(--card-gray)') + '">' +
-      '<img src="' + (src.indexOf('/') >= 0 ? src : 'assets/img/' + src) + '" alt="" ' +
-      'style="max-height:100%;max-width:100%;object-fit:contain">' +
-      '</div><div class="g-swatch-meta"><div class="g-swatch-name">' + label + '</div>' +
-      '<div class="g-swatch-val">' + src + '</div></div></div>';
-  }
 
   function step(n, title, text, badge, arrow) {
     return '<div class="step" data-pick=".step">' +
@@ -148,35 +141,38 @@
   /* ══════════════════════════════════════════════════════════════════════
      СЕКЦИИ КОМПОНЕНТОВ
      ══════════════════════════════════════════════════════════════════════ */
-  var COMPONENTS = [
+  return [
 {
     id: 'buttons', group: 'Примитивы', title: 'Кнопки', code: '.btn',
     desc: 'Высоты: sm 40/40 · med 48/52 · lg 48/64. На мобайле .btn-lg схлопывается до .btn.',
     examples: [
       { label: 'Primary — три размера', mobileWidth: 900,
-        html:
-          btnRow('SM',  '.btn-sm.btn-primary',  'Войти',                     '40 / 40') +
-          btnRow('MED', '.btn-primary',         'Открыть счет',              '48 / 52') +
-          btnRow('LG',  '.btn-lg.btn-primary',  'Открыть счет в СДМ-Банке',  '48 / 64') },
+        rows: [
+          { kind: 'btn', size: 'SM',  cls: '.btn-sm.btn-primary', text: 'Войти',                    heights: '40 / 40' },
+          { kind: 'btn', size: 'MED', cls: '.btn-primary',        text: 'Открыть счет',             heights: '48 / 52' },
+          { kind: 'btn', size: 'LG',  cls: '.btn-lg.btn-primary', text: 'Открыть счет в СДМ-Банке', heights: '48 / 64' }
+        ] },
       { label: 'Outline — три размера', mobileWidth: 900,
         note: 'Те же высоты, кольцо inset 2px --blue вместо заливки.',
-        html:
-          btnRow('SM',  '.btn-sm.btn-outline',  'Войти',          '40 / 40') +
-          btnRow('MED', '.btn-outline',         'Узнать больше',  '48 / 52') +
-          btnRow('LG',  '.btn-lg.btn-outline',  'Узнать больше',  '48 / 64') },
+        rows: [
+          { kind: 'btn', size: 'SM',  cls: '.btn-sm.btn-outline', text: 'Войти',         heights: '40 / 40' },
+          { kind: 'btn', size: 'MED', cls: '.btn-outline',        text: 'Узнать больше', heights: '48 / 52' },
+          { kind: 'btn', size: 'LG',  cls: '.btn-lg.btn-outline', text: 'Узнать больше', heights: '48 / 64' }
+        ] },
       { label: 'Инверсия на тёмной обложке — те же три размера', mobileWidth: 900,
         note: 'Контекст .card--dark инвертирует кнопки сам: primary становится белой с синим ' +
               'текстом, outline получает белое кольцо. Руками красить ничего не нужно, ' +
               'размеры и радиусы не меняются.',
-        html: '<div class="card card--dark card--dark-blue" data-pick=".card--dark">' +
-          btnRow('SM',  '.btn-sm.btn-primary',  'Войти',                    '40 / 40') +
-          btnRow('MED', '.btn-primary',         'Оставить заявку',          '48 / 52') +
-          btnRow('LG',  '.btn-lg.btn-primary',  'Открыть счет в СДМ-Банке', '48 / 64') +
-          '<div style="height:8px"></div>' +
-          btnRow('SM',  '.btn-sm.btn-outline',  'Войти',          '40 / 40') +
-          btnRow('MED', '.btn-outline',         'Подробнее',      '48 / 52') +
-          btnRow('LG',  '.btn-lg.btn-outline',  'Узнать больше',  '48 / 64') +
-        '</div>' }
+        wrap: { tag: 'div', class: 'card card--dark card--dark-blue', pick: '.card--dark' },
+        rows: [
+          { kind: 'btn', size: 'SM',  cls: '.btn-sm.btn-primary', text: 'Войти',                    heights: '40 / 40' },
+          { kind: 'btn', size: 'MED', cls: '.btn-primary',        text: 'Оставить заявку',          heights: '48 / 52' },
+          { kind: 'btn', size: 'LG',  cls: '.btn-lg.btn-primary', text: 'Открыть счет в СДМ-Банке', heights: '48 / 64' },
+          { kind: 'gap', size: 8 },
+          { kind: 'btn', size: 'SM',  cls: '.btn-sm.btn-outline', text: 'Войти',         heights: '40 / 40' },
+          { kind: 'btn', size: 'MED', cls: '.btn-outline',        text: 'Подробнее',     heights: '48 / 52' },
+          { kind: 'btn', size: 'LG',  cls: '.btn-lg.btn-outline', text: 'Узнать больше', heights: '48 / 64' }
+        ] }
     ]
   },
 
@@ -209,17 +205,18 @@
     desc: 'Иконка 24/36 — и отдельно, и в плитке. Плитки: малая 44, обычная 52/72, числовая 56/72. Плитка под иконку белая, металл только у цифр.',
     examples: [
       { label: 'Четыре типа', mobileWidth: 900,
-        html:
-          tileRow('Иконка без плитки', '.icon', 'M 24 · D 36',
-            '<img class="icon" src="assets/icons/i-h02.svg" alt="">') +
-          tileRow('Малая плитка', '.icon-tile.icon-tile--sm', 'M 44 · D 72 (= обычной)',
-            '<span class="icon-tile icon-tile--sm"><img src="assets/icons/i-case.svg" alt=""></span>') +
-          tileRow('Обычная плитка', '.icon-tile', 'M 52 · D 72 · иконка 24 / 36',
-            '<span class="icon-tile"><img src="assets/icons/i-h03.svg" alt=""></span>') +
-          tileRow('Металлическая', '.icon-tile.icon-tile--metal', 'ангуляр-градиент --metal',
-            '<span class="icon-tile icon-tile--metal"><img src="assets/icons/i-sm-01.svg" alt=""></span>') +
-          tileRow('Числовая', '.icon-tile.num', 'плитка M 56 · D 72 · цифра 24/700 · 36/700',
-            '<span class="icon-tile num">1</span><span class="icon-tile num">2</span><span class="icon-tile num">3</span>') }
+        rows: [
+          { kind: 'tile', name: 'Иконка без плитки', cls: '.icon', meta: 'M 24 · D 36',
+            sample: '<img class="icon" src="assets/icons/i-h02.svg" alt="">' },
+          { kind: 'tile', name: 'Малая плитка', cls: '.icon-tile.icon-tile--sm', meta: 'M 44 · D 72 (= обычной)',
+            sample: '<span class="icon-tile icon-tile--sm"><img src="assets/icons/i-case.svg" alt=""></span>' },
+          { kind: 'tile', name: 'Обычная плитка', cls: '.icon-tile', meta: 'M 52 · D 72 · иконка 24 / 36',
+            sample: '<span class="icon-tile"><img src="assets/icons/i-h03.svg" alt=""></span>' },
+          { kind: 'tile', name: 'Металлическая', cls: '.icon-tile.icon-tile--metal', meta: 'ангуляр-градиент --metal',
+            sample: '<span class="icon-tile icon-tile--metal"><img src="assets/icons/i-sm-01.svg" alt=""></span>' },
+          { kind: 'tile', name: 'Числовая', cls: '.icon-tile.num', meta: 'плитка M 56 · D 72 · цифра 24/700 · 36/700',
+            sample: '<span class="icon-tile num">1</span><span class="icon-tile num">2</span><span class="icon-tile num">3</span>' }
+        ] }
     ]
   },
 
@@ -408,5 +405,5 @@
   /* Бренд объявляет только свои компоненты. Секции токенов собирает движок
      из token-map.js и ставит их перед этими — порядок групп в сайдбаре
      задаётся composition в gallery.js, а не сортировкой. */
-  window.BRAND_SECTIONS = COMPONENTS;
-})();
+
+};

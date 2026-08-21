@@ -48,6 +48,33 @@
     H.ok(!/sdm/i.test(text), 'в шаблоне осталось имя другого бренда');
   });
 
+  H.g('Пакет — данные');
+
+  H.t('данные бренда разбираются как JSON, а не выполняются', function () {
+    /* Ради этого всё и затевалось: сторибук, приехавший файлом, должен
+       открываться без выполнения чужого кода. */
+    var base = G().ENGINE_BRAND.source.base;
+    var files = ['manifest.json', 'sections.json', 'token-map.json'];
+    return Promise.all(files.map(function (f) {
+      return fetch(base + f, { cache: 'no-store' }).then(function (r) {
+        H.ok(r.ok, 'нет файла ' + f);
+        return r.text();
+      }).then(function (text) {
+        try { JSON.parse(text); }
+        catch (e) { throw new Error(f + ' не разбирается как JSON: ' + e.message); }
+      });
+    }));
+  });
+
+  H.t('галерея не подключала из бренда ни одного скрипта', function () {
+    var doc = D();
+    var base = G().ENGINE_BRAND.source.base;
+    var fromBrand = [].filter.call(doc.scripts, function (sc) {
+      return sc.src && sc.src.indexOf(base) >= 0;
+    }).map(function (sc) { return sc.src; });
+    H.eq(fromBrand.length, 0, 'исполнено из бренда: ' + fromBrand.join(', '));
+  });
+
   H.run();
 })();
 </script>

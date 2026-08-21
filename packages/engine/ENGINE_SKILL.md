@@ -37,39 +37,52 @@ packages/engine/
   gallery.js        sections, preview panes, scale, diff, live reload
   _frame.html       the sandbox iframe: real @media, real breakpoints
   engine-specs.js   CSS var parser, swatches, token-section renderers
+  rows.js           catalogue rows — shared by the gallery and the emitter
   brand.js          brand resolution, i18n lookup, version gate
   i18n/en.js        default language pack
-brands/<id>/
-  manifest.js       the contract — see below
+brands/<id>/        DATA ONLY — nothing here is executed
+  manifest.json     the contract — see below
   tokens.css        custom properties only
   <components>.css  components, written against those properties
-  token-map.js      descriptor: which tokens appear in which token section
-  sections.js       component sections
-  legacy.js         optional: old names of the same tokens in production code
+  token-map.json    descriptor: which tokens appear in which token section
+  sections.json     component sections
+  legacy.json       optional: old names of the same tokens in production code
+tools/
+  sections/<id>.js  the authoring layer: builders that produce the sections
+  emit-sections.js  runs it, writes brands/<id>/sections.json
 ```
+
+**A brand package contains only data.** Every file the gallery loads from a
+brand is parsed, never executed — that is what lets a storybook arrive as a
+file and be opened without running someone else's code. Logic lives in the
+repository, under `tools/`.
 
 ## The manifest
 
-```js
-window.BRAND_MANIFEST = {
-  id: 'acme',              // storage keys are prefixed with it
-  title: 'ACME Design System',
-  version: '0.1.0',
-  engine: 1,               // engine contract major — see VERSIONING.md
-  locale: 'en',            // omit for English
+```json
+{
+  "id": "acme",
+  "title": "ACME Design System",
+  "version": "0.1.0",
+  "engine": 1,
+  "locale": "en",
 
-  css:   { tokens: 'tokens.css', components: 'acme.css' },
-  specs: 'sections.js',
-  tokenMap: 'token-map.js',
-  legacyNames: null,
-  assetsBase: 'assets/',
+  "css": { "tokens": "tokens.css", "components": "acme.css" },
+  "sections": "sections.json",
+  "tokenMap": "token-map.json",
+  "legacyNames": null,
+  "assetsBase": "assets/",
 
-  font: { family: "'Inter', sans-serif", href: 'https://fonts.googleapis.com/…' },
-  breakpoints: { mobile: 900, desktopMin: 901 },
-  preview: { mobileWidth: 390, desktopWidth: 1440, container: 1170 },
-  compare: { legacy: null }
-};
+  "font": { "family": "'Inter', sans-serif", "href": "https://fonts.googleapis.com/…" },
+  "breakpoints": { "mobile": 900, "desktopMin": 901 },
+  "preview": { "mobileWidth": 390, "desktopWidth": 1440, "container": 1170 },
+  "compare": { "legacy": null }
+}
 ```
+
+`id` prefixes storage keys, `engine` is the contract major (see VERSIONING.md),
+`locale` may be omitted for English. The older `manifest.js` form still loads,
+but a brand in that shape cannot be exported or imported.
 
 Every path is relative **to the brand folder**, never to the engine. The engine
 resolves them; inside the preview frame a `<base>` does the same for markup, so
@@ -77,9 +90,15 @@ a section can write `assets/icons/x.svg` and it lands in the brand.
 
 ## Adding a component section
 
-Sections live in the brand's `sections.js` and are appended to
-`window.BRAND_SECTIONS`. The engine composes the catalogue: token sections
-first, components after.
+Sections are edited in `tools/sections/<brand>.js` — builders, loops, whatever
+is convenient — and then emitted:
+
+```bash
+node tools/emit-sections.js <brand>
+```
+
+The result lands in `brands/<brand>/sections.json`, which is what the gallery
+reads. Never hand-edit that file: the next emit overwrites it.
 
 ```js
 {
@@ -94,6 +113,26 @@ first, components after.
   ]
 }
 ```
+
+**Two shapes of example, exactly one per example:**
+
+- `html` — a snapshot of the brand's own markup. Needs `data-pick`.
+- `rows` — a descriptor for the engine's catalogue rows, with an optional
+  `wrap` around them:
+
+```js
+{ label: 'Sizes',
+  wrap: { tag: 'div', class: 'card card--dark', pick: '.card--dark' },
+  rows: [
+    { kind: 'btn',  size: 'SM', cls: '.btn-sm', text: 'Sign in', heights: '40 / 40' },
+    { kind: 'gap',  size: 8 },
+    { kind: 'tile', name: 'Icon', cls: '.icon', meta: 'M 24 · D 36', sample: '<img …>' }
+  ] }
+```
+
+Use `rows` whenever the example is a list of variants with a metadata column:
+that markup belongs to the engine, and freezing a snapshot of it would put a
+copy of the engine's own chrome into every brand package.
 
 Rules that are load-bearing:
 
@@ -148,9 +187,10 @@ they are brand data, not chrome.
 ## Checks
 
 ```bash
-node packages/engine/check-skill.js            # required anchors, forbidden strings, dates
-node packages/engine/check-tokens.js <brand>   # dead, phantom and unapplied tokens
-node packages/engine/check-css.js <brand>      # raw hex and px outside var()
+node packages/engine/check-skill.js              # required anchors, forbidden strings, dates
+node packages/engine/check-sections.js <brand>   # the package is data, and the section contract
+node packages/engine/check-tokens.js <brand>     # dead, phantom and unapplied tokens
+node packages/engine/check-css.js <brand>        # raw hex and px outside var()
 ```
 
 `check-css.js` reads `brands/<id>/css.allow.json` for deliberate exceptions —

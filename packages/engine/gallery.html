@@ -757,12 +757,20 @@ function gScript(src) {
 gScript('i18n/en.js');
 gScript('i18n/ru.js');
 gScript('brand.js');
+gScript('rows.js');
 gScript('registry.js');
 </script>
 
 <script>
-/* Второй блок: ENGINE_BRAND уже существует, можно собирать пути бренда. */
-gScript(window.ENGINE_BRAND.path('manifest.js'));
+/* Второй блок: ENGINE_BRAND уже существует, можно читать данные бренда.
+   Манифест — данные, поэтому читается разбором, а не выполнением. Старая
+   форма manifest.js поддерживается для брендов, которые ещё не переехали. */
+(function () {
+  var B = window.ENGINE_BRAND;
+  var data = B.source.json('manifest.json', window.GALLERY_BUST);
+  if (data) window.BRAND_MANIFEST = data;
+  else gScript(B.path('manifest.js'));
+})();
 </script>
 
 <script>
@@ -813,12 +821,29 @@ gScript(window.ENGINE_BRAND.path('manifest.js'));
 
   var logo = document.getElementById('g-logo');
   if (logo) logo.textContent = shownTitle || '';
-  /* Порядок жёсткий: сначала данные бренда, потом движковые рисовальщики
-     (они на старте читают карту старых имён и сразу грузят CSS бренда),
-     и только затем секции, которые этими рисовальщиками пользуются. */
-  [M.legacyNames, M.tokenMap].filter(Boolean).forEach(function (f) { gScript(B.path(f)); });
+  /* Данные бренда: карта старых имён, дескриптор токенов, секции. Всё это
+     разбирается как JSON — пакет бренда не должен исполняться, иначе
+     открыть присланный файл значило бы запустить чужой код.
+     Поля legacyNames/tokenMap/specs с расширением .js — прежняя форма,
+     поддерживается, пока бренды переезжают. */
+  function brandData(file, target) {
+    if (!file) return;
+    if (/\.json$/.test(file)) {
+      var data = B.source.json(file, window.GALLERY_BUST);
+      if (data) window[target] = data;
+    } else {
+      gScript(B.path(file));       // legacy: файл сам присваивает window[target]
+    }
+  }
+
+  brandData(M.legacyNames, 'BRAND_LEGACY');
+  brandData(M.tokenMap,    'BRAND_TOKENS');
+
+  /* Рисовальщики идут после данных: на старте они читают карту старых имён
+     и сразу грузят CSS бренда. */
   gScript('engine-specs.js');
-  if (M.specs) gScript(B.path(M.specs));
+
+  brandData(M.sections || M.specs, 'BRAND_SECTIONS');
 })();
 </script>
 

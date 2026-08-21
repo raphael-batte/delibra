@@ -68,6 +68,24 @@
       });
     },
 
+    /* Синхронное чтение данных бренда. Нужно потому, что галерея собирает
+       себя одним проходом при загрузке документа, а не по промисам; для
+       локального файла это десятки миллисекунд. У пакета в памяти на этом
+       месте окажется чтение из объекта — без запроса вовсе.
+       Возвращает null, если файла нет: необязательные части бренда
+       (карта старых имён, дескриптор токенов) отсутствуют штатно. */
+    json: function (p, bust) {
+      if (!p) return null;
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', SOURCE.url(p) + (bust || ''), false);
+      try { xhr.send(); } catch (e) { return null; }
+      if (xhr.status && xhr.status >= 400) return null;
+      try { return JSON.parse(xhr.responseText); }
+      catch (e) {
+        throw new Error('не разобрался JSON: ' + SOURCE.url(p) + ' — ' + e.message);
+      }
+    },
+
     manifest: function () { return window.BRAND_MANIFEST || null; },
 
     /* Можно ли править этот сторибук из браузера. Папку — нельзя: её

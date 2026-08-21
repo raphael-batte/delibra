@@ -275,7 +275,14 @@
 
     (spec.examples || []).forEach(function (ex) {
       var box = el('div', 'g-example');
-      box.__html = ex.htmlDesktop || ex.html;   // нужна режиму «Фигма ↔ код»
+
+      /* У примера ровно одна форма тела: либо снимок разметки бренда (html),
+         либо дескриптор строк каталога (rows) — их движок рисует сам, чтобы
+         его собственная вёрстка не оказалась запечённой в каждом пакете. */
+      var html = ex.rows ? window.ENGINE_SPECS.renderRows(ex) : ex.html;
+      var htmlDesktop = ex.htmlDesktop || html;
+
+      box.__html = htmlDesktop;                 // нужна режиму «Фигма ↔ код»
       if (ex.label) box.appendChild(el('p', 'g-example-label', ex.label));
       if (ex.note) box.appendChild(el('p', 'g-example-note', ex.note));
 
@@ -290,14 +297,14 @@
            900 — это всё ещё мобильная ветка @media (max-width: 900px),
            но места хватает и раскладка совпадает с десктопной. */
         var mw = ex.mobileWidth || 390;
-        var mRec = makeFrame(ex.html, mw, false);
+        var mRec = makeFrame(html, mw, false);
         mp.appendChild(paneLabel(t('pane.mobile', { w: mw >= 900 ? '≤900' : mw }), mRec));
         mp.appendChild(mRec.wrap);
         split.appendChild(mp);
       }
 
       var dp = el('div', 'g-pane g-pane--desktop');
-      var dRec = makeFrame(ex.htmlDesktop || ex.html, DESKTOP_W, true);
+      var dRec = makeFrame(htmlDesktop, DESKTOP_W, true);
       dp.appendChild(paneLabel(t('pane.desktop', { w: DESKTOP_W, c: CONTAINER }), dRec));
       dp.appendChild(dRec.wrap);
       split.appendChild(dp);

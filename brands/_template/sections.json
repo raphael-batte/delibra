@@ -1,0 +1,14 @@
+[
+  {
+    "id": "buttons",
+    "group": "Primitives",
+    "title": "Button",
+    "code": "components.css",
+    "examples": [
+      {
+        "label": "Button",
+        "html": "<div style=\"display:flex; gap:12px; align-items:center\"><button class=\"t-btn\" data-pick=\".t-btn\">Primary</button><button class=\"t-btn t-btn--ghost\" data-pick=\".t-btn--ghost\">Ghost</button></div>"
+      }
+    ]
+  }
+]

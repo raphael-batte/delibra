@@ -270,43 +270,10 @@
   }
 
   /* ── Хелперы разметки примеров ─────────────────────────────────────
-     Всё, что попадает внутрь iframe. data-pick делает узел кликабельным.  */
-  function row(items, gap) {
-    return '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:' +
-      (gap || 12) + 'px;margin-bottom:12px">' + items.join('') + '</div>';
-  }
+     Живут в packages/engine/rows.js: их использует и галерея, и скрипт,
+     который собирает данные бренда. data-pick делает узел кликабельным. */
+  var ROWS = window.ENGINE_ROWS;
 
-  /* Единая строка каталога: слева колонка метаданных, справа образец.
-     Одна сетка (.g-row) на оба брейкпоинта — и для кнопок, и для плиток,
-     чтобы подписи в мобильной и десктопной панелях стояли на одной вертикали. */
-  function specRow(name, cls, meta, sample) {
-    return '<div class="g-row">' +
-      '<div class="g-row__meta">' +
-        '<div class="g-row__name">' + name + '</div>' +
-        '<div class="g-row__cls">' + cls + '</div>' +
-        '<div class="g-row__meta-val">' + meta + '</div>' +
-      '</div>' +
-      '<div class="g-row__sample" data-pick="' + cls + '">' + sample + '</div>' +
-    '</div>';
-  }
-
-  function btnRow(size, cls, text, heights) {
-    var h = heights.split(' / ');
-    return specRow(size, cls, 'M ' + h[0] + ' · D ' + h[1],
-      '<a href="#" class="' + cls.replace(/^\./, 'btn ').replace(/\./g, ' ') + '">' + text + '</a>');
-  }
-
-  /* Иконки берём из assets/icons — это те же файлы, что в вёрстке
-     (.perk — i-ban-01…03, .service — i-01…i-05,
-     .perk — i-ban-01…03), но с приведённым к квадрату канвасом:
-     в оригиналах он разный (37×50, 30×39, 47×37…), из-за чего иконки
-     одной высоты выглядели разными по величине. Пути не менялись,
-     только рамка viewBox. */
-  function tileRow(name, cls, size, sample) {
-    return specRow(name, cls, size,
-      '<span style="display:inline-flex;align-items:center;gap:12px;padding:12px 16px;' +
-      'border-radius:12px;background:var(--card-gray)">' + sample + '</span>');
-  }
   /* ══════════════════════════════════════════════════════════════════
      Секции токенов из дескриптора бренда.
 
@@ -524,7 +491,9 @@
     tokenSections: tokenSections,
     val: val, bp: bp, bpCell: bpCell, esc: esc, norm: norm,
     swatch: swatch, swatches: swatches, group: group, h3: h3,
-    sizeTable: sizeTable, row: row, specRow: specRow, btnRow: btnRow, tileRow: tileRow,
-    vars: VARS
+    sizeTable: sizeTable, vars: VARS,
+    /* строки каталога — из общего модуля */
+    row: ROWS.row, specRow: ROWS.specRow, btnRow: ROWS.btnRow, tileRow: ROWS.tileRow,
+    renderRows: ROWS.renderRows
   };
 })();

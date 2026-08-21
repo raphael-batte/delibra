@@ -24,16 +24,9 @@ if (!fs.existsSync(brandDir)) {
   process.exit(2);
 }
 
-/* Манифест читаем как текст: тащить сюда браузерный window ради двух полей
-   не стоит, а формат стабильный. */
-const manifestSrc = fs.readFileSync(path.join(brandDir, 'manifest.js'), 'utf8');
-function field(name) {
-  const m = manifestSrc.match(new RegExp(name + "\\s*:\\s*'([^']+)'"));
-  return m ? m[1] : null;
-}
-
-const tokensFile = field('tokens') || 'tokens.css';
-const compFile   = field('components');
+const manifest = require('./brand-node.js').readManifest(brandDir);
+const tokensFile = (manifest.css && manifest.css.tokens) || 'tokens.css';
+const compFile   = manifest.css && manifest.css.components;
 
 const tokensCss = fs.readFileSync(path.join(brandDir, tokensFile), 'utf8');
 const strip = css => css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -41,7 +34,7 @@ const strip = css => css.replace(/\/\*[\s\S]*?\*\//g, '');
 /* Всё, где токен может использоваться: CSS компонентов, секции, дескриптор. */
 /* legacy.js сюда НЕ входит: он перечисляет имена из чужого боевого кода,
    а не токены бренда — иначе каждое старое имя выглядело бы фантомом. */
-const consumers = [compFile, 'sections.js', 'token-map.js']
+const consumers = [compFile, manifest.sections || manifest.specs, manifest.tokenMap]
   .filter(Boolean)
   .map(f => path.join(brandDir, f))
   .filter(fs.existsSync);

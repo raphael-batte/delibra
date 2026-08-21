@@ -67,10 +67,12 @@ function prop(rules,v,selRe,name,bp){
 
    Запуск:  node check-fonts.js <путь к styles.css> */
 const path=require('path');
-const here=__dirname;
+/* Скрипт живёт в tools/, а токены — в папке бренда: путь строим от корня
+   репозитория, а не от расположения скрипта. */
+const here=path.resolve(__dirname,'..','brands','sdm');
 const sitePath=process.argv[2];
 if(!sitePath){
-  console.error('нужен путь к styles.css сайта:\n  node check-fonts.js ../../../sdm/ui2026/app/styles.css');
+  console.error('нужен путь к styles.css сайта:\n  node tools/check-fonts.js ../sdm/ui2026/app/styles.css');
   process.exit(2);
 }
 if(!fs.existsSync(sitePath)){

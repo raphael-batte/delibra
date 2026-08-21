@@ -22,8 +22,8 @@ const fs = require('fs');
 const path = require('path');
 
 const brandDir = path.resolve(process.argv[2] || 'brands/sdm');
-const manifestSrc = fs.readFileSync(path.join(brandDir, 'manifest.js'), 'utf8');
-const compFile = (manifestSrc.match(/components\s*:\s*'([^']+)'/) || [])[1];
+const manifest = require('./brand-node.js').readManifest(brandDir);
+const compFile = manifest.css && manifest.css.components;
 if (!compFile) {
   console.error('в манифесте не объявлен css.components');
   process.exit(2);

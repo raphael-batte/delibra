@@ -4,9 +4,15 @@ A brand-agnostic storybook engine plus the design systems it renders.
 
 ```
 packages/engine/    the storybook: chrome, preview frames, diff, i18n
-brands/sdm/         SDM: tokens, components, sections, assets
+brands/sdm/         SDM: tokens, components, sections, assets — data only
 brands/_template/   empty brand — proof the engine is actually detached
+tools/              logic that produces brand data, and CLI checks
 ```
+
+A brand package contains data and nothing else — no file inside `brands/` is
+executed. That is what makes a storybook safe to send as a file and open on
+another machine. Sections are authored in `tools/sections/<brand>.js` and
+emitted with `node tools/emit-sections.js <brand>`.
 
 ## Run
 

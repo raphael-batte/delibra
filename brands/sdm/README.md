@@ -4,14 +4,18 @@ Tokens and components for the SDM bank site, packaged as a brand for the
 storybook engine.
 
 ```
-manifest.js     what the engine reads first
+manifest.json   what the engine reads first
 tokens.css      196 custom properties — the only place values live
 sdm.css         components, written entirely against those properties
-token-map.js    which tokens appear in which token section (data, not code)
-sections.js     component sections for the gallery
-legacy.js       the same tokens under their old names in the website's CSS
+token-map.json  which tokens appear in which token section
+sections.json   component sections for the gallery — generated, never hand-edited
+legacy.json     the same tokens under their old names in the website's CSS
 assets/         icons and illustrations used by the sections
 ```
+
+Nothing here is executed: the gallery parses every one of these files. Sections
+are authored in `tools/sections/sdm.js` and emitted with
+`node tools/emit-sections.js sdm`.
 
 ## Open it
 
@@ -38,9 +42,10 @@ comparison table are still only in the website. `--shadow-*`, `--blur-*` and
 ## Checks
 
 ```bash
-node ../../packages/engine/check-tokens.js .              # dead tokens, phantoms
-node ../../packages/engine/check-skill.js                 # the skill's contract
-node check-fonts.js <path-to-site>/app/styles.css         # migration diff
+node packages/engine/check-sections.js brands/sdm    # the package is data
+node packages/engine/check-tokens.js brands/sdm     # dead tokens, phantoms
+node packages/engine/check-skill.js                 # the skill's contract
+node tools/check-fonts.js <path-to-site>/app/styles.css   # migration diff
 ```
 
 Open `tests.html` for the 30 brand cases; the engine's own suite lives in
