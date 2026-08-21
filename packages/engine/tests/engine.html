@@ -201,13 +201,41 @@
     H.ok(ticked[0].querySelector('.grow').textContent.trim().length > 0, 'у активного пустое имя');
   });
 
-  H.t('удаление библиотечного сторибука недоступно', function () {
-    /* Пункт, который делает не то, что обещает, хуже отсутствующего:
-       папку на диске браузер удалить не может. */
+  H.t('удаление подписано тем, что оно на самом деле сделает', function () {
+    /* Под статикой папку удалить нельзя, и кнопка обязана говорить
+       «убрать из галереи»; со своим сервером — «удалить». Врать о
+       последствиях необратимого действия нельзя ни в одну сторону. */
+    var G_ = G();
     var del = D().getElementById('g-delete');
     H.ok(del, 'нет пункта удаления');
-    H.eq(del.disabled, true, 'библиотечный сторибук предлагается удалить');
-    H.ok((del.title || '').length > 0, 'выключенный пункт без объяснения');
+    H.eq(del.disabled, false, 'пункт удаления заблокирован');
+
+    var remove = G_.ENGINE_BRAND.t('settings.remove');
+    var erase  = G_.ENGINE_BRAND.t('settings.delete');
+    var label  = del.textContent.trim();
+    H.ok(label === remove || label === erase, 'непонятная подпись: ' + label);
+
+    return G_.ENGINE_REGISTRY.serverWritable().then(function (writable) {
+      if (!writable) H.eq(label, remove, 'обещает удаление там, где его не будет');
+    });
+  });
+
+  H.t('удаление требует ввести слово', function () {
+    var doc = D();
+    doc.getElementById('g-delete').click();
+    return H.wait(200).then(function () {
+      doc.getElementById('g-settings-delete').click();
+      return H.wait(200);
+    }).then(function () {
+      var ok = doc.getElementById('g-confirm-ok');
+      var input = doc.getElementById('g-confirm-input');
+      H.eq(ok.disabled, true, 'подтверждение доступно с пустым полем');
+      input.value = 'delet';
+      input.dispatchEvent(new (D().defaultView.Event)('input'));
+      H.eq(ok.disabled, true, 'приняло неполное слово');
+      /* Само удаление не выполняем: тест не должен стирать бренд. */
+      doc.getElementById('g-confirm-cancel').click();
+    });
   });
 
   /* Контракт: бренд обязан объявить токены, без которых не встаёт хром. */
