@@ -372,6 +372,45 @@ body:hover::-webkit-scrollbar-thumb { background-color: rgba(16, 24, 40, .28); }
 body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
 /* Горизонтальную прокрутку внутри превью не трогаем — она часть компонента. */
+
+/* ── Демонстрации токенов ──────────────────────────────────────────────
+   Раньше эти размеры жили инлайн-стилями внутри секций SDM. После разреза
+   разметку рисует движок, поэтому и оформление её демонстраций — здесь. */
+.g-group-title { margin: 24px 0 10px; font-size: 13px; font-weight: 600; }
+.g-group-note  { font-weight: 400; color: var(--text-muted); }
+
+.g-radius-pair { display: flex; gap: 6px; margin: 10px; }
+.g-radius-half { flex: 1; height: 56px; background: var(--card-blue, var(--border)); }
+
+.g-shadow-demo { margin: 16px; height: 64px; border-radius: 12px; background: var(--white-pure); }
+.g-shadow-demo.is-dark { background: var(--dark-toggle, #222); }
+
+.g-gradborder-demo {
+  margin: 16px; height: 64px; border-radius: 12px;
+  border: 2px solid transparent;   /* фон рисуется через background-clip */
+}
+
+.g-blur-demo {
+  position: relative; height: 110px; overflow: hidden;
+  background:
+    repeating-linear-gradient(45deg, var(--blue) 0 10px, var(--card-peach, var(--border)) 10px 20px),
+    var(--white-pure);
+}
+.g-blur-demo__veil { position: absolute; inset: 0 0 0 50%; background: rgb(var(--white-pure-rgb) / .55); }
+.g-blur-demo__tag  { position: absolute; bottom: 6px; font-size: 9px; font-weight: 700; }
+.g-blur-demo__tag.is-left  { left: 8px; color: var(--white-pure); text-shadow: 0 1px 2px rgb(0 0 0 / .6); }
+.g-blur-demo__tag.is-right { right: 8px; color: var(--text-heading); }
+
+.g-specimen-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.g-specimen-head { border: 1px solid var(--border); border-radius: 8px 8px 0 0; }
+.g-specimen {
+  border: 1px solid var(--border); border-top: 0;
+  border-radius: 0 0 8px 8px; padding: 16px;
+}
+.g-specimen__row { padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-heading); }
+
+.g-space-demo { padding: 16px; display: flex; align-items: center; }
+.g-space-bar  { height: 24px; background: var(--blue); border-radius: 2px; }
 </style>
 </head>
 <body>
@@ -482,9 +521,12 @@ gScript(window.ENGINE_BRAND.path('manifest.js'));
   if (sub) sub.textContent = M.version ? 'v' + M.version : '';
   var logo = document.getElementById('g-logo');
   if (logo) logo.textContent = M.title || '';
-  [M.legacyNames, M.tokenMap, M.specs].filter(Boolean).forEach(function (f) {
-    gScript(B.path(f));
-  });
+  /* Порядок жёсткий: сначала данные бренда, потом движковые рисовальщики
+     (они на старте читают карту старых имён и сразу грузят CSS бренда),
+     и только затем секции, которые этими рисовальщиками пользуются. */
+  [M.legacyNames, M.tokenMap].filter(Boolean).forEach(function (f) { gScript(B.path(f)); });
+  gScript('engine-specs.js');
+  if (M.specs) gScript(B.path(M.specs));
 })();
 </script>
 

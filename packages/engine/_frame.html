@@ -42,9 +42,12 @@
 
   var m = window.BRAND_MANIFEST || {};
   window.BRAND_BASE = base;
+  if (m.preview && m.preview.container) {
+    document.documentElement.style.setProperty('--g-container', m.preview.container + 'px');
+  }
   if (m.font && m.font.href) link('brand-font', m.font.href);
   if (m.css && m.css.tokens)     link('css-new-tokens', m.css.tokens);
-  if (m.css && m.css.components) link('css-new-sdm',    m.css.components);
+  if (m.css && m.css.components) link('css-brand',      m.css.components);
   // Сравнение с чужим CSS опционально: бренд может его не объявлять.
   if (m.compare && m.compare.legacy) link('css-current', m.compare.legacy, true);
 })();
@@ -55,18 +58,20 @@
   @layer g-chrome {
     html, body { margin: 0; }
     body { background: transparent; overflow-x: hidden; }
-    /* #root повторяет ширину .container сайта: min(1170, 100% − 40) на
-       десктопе и 100% − 32 на мобайле — иначе 3-колоночная сетка даёт не 379px.
+    /* #root повторяет ширину контейнера бренда: min(--g-container, 100% − 40)
+       на десктопе и 100% − 32 на мобайле — иначе сетка карточек даёт не ту
+       ширину колонки. Значение приходит из манифеста, дефолт — на случай
+       бренда, который про превью ничего не сказал.
        Но НЕ центрируем: в галерее содержимое прижато к левому краю, чтобы
        мобильная и десктопная версии стояли на одной вертикали и их можно было
        сравнивать построчно. На сайте контейнер по-прежнему центрируется. */
-    #root { width: min(1170px, 100% - 40px); margin-inline: 0;
+    #root { width: min(var(--g-container, 1170px), 100% - 40px); margin-inline: 0;
             padding: 16px 0 16px 16px;
             /* content-box: 16px отступа добавляются СНАРУЖИ ширины контейнера.
                При border-box они съедали её, и 3-колоночная сетка давала
                374px вместо положенных 379.33.
                !important нужен потому, что это правило лежит в @layer, а
-               `* { box-sizing: border-box }` из sdm.css вне слоёв — и по
+               `* { box-sizing: border-box }` из CSS бренда вне слоёв — и по
                правилам каскада безслойные стили всегда сильнее слойных. */
             box-sizing: content-box !important; }
     @media (max-width: 900px) { #root { width: calc(100% - 32px); } }
@@ -118,7 +123,7 @@
   // тот же cache-buster, что у галереи: иначе фрейм рисует старым CSS
   var t = qs.get('t');
   if (t) {
-    ['css-new-tokens', 'css-new-sdm', 'css-current'].forEach(function (id) {
+    ['css-new-tokens', 'css-brand', 'css-current'].forEach(function (id) {
       var l = document.getElementById(id);
       if (l && l.getAttribute('href').indexOf('?') < 0) l.href = l.getAttribute('href') + '?t=' + t;
     });
@@ -135,7 +140,7 @@
   function applyCss(mode) {
     var isCurrent = mode === 'current';
     sheet('css-new-tokens', isCurrent);
-    sheet('css-new-sdm',    isCurrent);
+    sheet('css-brand',    isCurrent);
     sheet('css-current',    !isCurrent);
     sheet('user-css',       true);
   }
@@ -153,7 +158,7 @@
     el.textContent = text || '';
     el.disabled = false;
     sheet('css-new-tokens', true);
-    sheet('css-new-sdm',    true);
+    sheet('css-brand',    true);
     sheet('css-current',    true);
   }
   applyCss(qs.get('css') || 'new');

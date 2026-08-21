@@ -13,10 +13,8 @@ window.BRAND_MANIFEST = {
   },
 
   specs:       'sections.js',
-  /* Дескриптор токен-секций и карта старых имён пока живут внутри sections.js —
-     выносятся отдельными файлами на шаге разреза gallery-specs.js. */
-  tokenMap:    null,
-  legacyNames: null,
+  tokenMap:    'token-map.js',      // данные токен-секций, рисует их движок
+  legacyNames: 'legacy.js',         // как те же токены зовутся в боевом коде
   assetsBase:  'assets/',
 
   font: {
