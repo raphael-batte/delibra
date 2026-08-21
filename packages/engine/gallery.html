@@ -535,7 +535,38 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
   font-family: var(--font-family); font-size: 13px;
 }
 .g-field input[type="text"]:disabled { background: var(--bg); color: var(--text-muted); }
+/* Правый паддинг больше левого: стрелку селект рисует внутри поля, и
+   при симметричном отступе текст упирается в неё. */
+.g-field select {
+  width: 100%; height: 34px; padding: 0 32px 0 10px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--white-pure); color: var(--text-primary);
+  font-family: var(--font-family); font-size: 13px;
+}
 .g-field__hint { display: block; margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+
+.g-danger {
+  margin-top: 22px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.g-btn-danger {
+  height: 32px; padding-inline: 14px; margin-top: 2px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: var(--white-pure); cursor: pointer;
+  font-family: var(--font-family); font-size: 12px; font-weight: 500;
+  color: var(--text-error, #DF3500);
+}
+.g-btn-danger:hover:not(:disabled) { border-color: var(--text-error, #DF3500); }
+.g-btn-danger:disabled { opacity: .4; cursor: not-allowed; }
+
+.g-btn-primary {
+  height: 32px; padding-inline: 16px;
+  border: 0; border-radius: 20px;
+  background: var(--blue); color: var(--white-pure); cursor: pointer;
+  font-family: var(--font-family); font-size: 12px; font-weight: 600;
+}
+.g-btn-primary:disabled { opacity: .35; cursor: not-allowed; }
+.g-confirm__lead { margin: 0 0 16px; font-size: 13px; color: var(--text-primary); }
 </style>
 </head>
 <body>
@@ -564,6 +595,8 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
     <hr>
     <div id="g-suite-list"></div>
     <hr>
+    <button class="g-mi" id="g-ws-settings" role="menuitem">
+      <span class="tick"></span><span class="grow" data-i18n="menu.settings"></span></button>
     <button class="g-mi" id="g-about" role="menuitem">
       <span class="tick"></span><span class="grow" data-i18n="menu.about"></span></button>
   </div>
@@ -584,6 +617,45 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
   <div id="g-nav"></div>
 </nav>
+
+<!-- Подтверждение удаления. Слово вводится руками: удаление сторибука
+     необратимо, и «вы уверены?» нажимают не глядя. -->
+<div class="g-scrim" id="g-confirm-scrim" hidden>
+  <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-confirm-title">
+    <h3 id="g-confirm-title"></h3>
+    <p class="g-confirm__lead" id="g-confirm-lead"></p>
+    <label class="g-field">
+      <span class="g-field__label" id="g-confirm-label"></span>
+      <input type="text" id="g-confirm-input" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="g-dialog__actions" style="gap:8px">
+      <button class="g-mi" id="g-confirm-cancel" style="width:auto" data-i18n="confirm.cancel"></button>
+      <button class="g-btn-danger" id="g-confirm-ok" disabled></button>
+    </div>
+  </div>
+</div>
+
+<!-- Общие настройки: про инструмент, а не про открытую систему. -->
+<div class="g-scrim" id="g-ws-scrim" hidden>
+  <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-ws-title">
+    <h3 id="g-ws-title" data-i18n="ws.title"></h3>
+
+    <label class="g-field">
+      <span class="g-field__label" data-i18n="ws.language"></span>
+      <select id="g-ws-locale"></select>
+      <span class="g-field__hint" data-i18n="ws.language.hint"></span>
+    </label>
+
+    <div class="g-field" id="g-ws-hidden">
+      <span class="g-field__label js-count"></span>
+      <button class="g-mi" style="width:auto;padding-inline:0" hidden></button>
+    </div>
+
+    <div class="g-dialog__actions">
+      <button class="g-mi" id="g-ws-close" style="width:auto" data-i18n="settings.done"></button>
+    </div>
+  </div>
+</div>
 
 <!-- О программе. Отдельный оверлей, а не строка в меню: это про инструмент
      целиком, и читают его редко, зато целиком. -->
@@ -625,9 +697,20 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
       <span class="g-field__hint" data-i18n="settings.compare.hint"></span>
     </div>
 
-    <div class="g-dialog__actions">
-      <button class="g-mi" id="g-settings-close" style="width:auto"
-              data-i18n="settings.done"></button>
+    <!-- Опасная зона: отделена и подписана тем, что произойдёт на самом
+         деле. Для библиотечного сторибука это не удаление, а убирание из
+         этой галереи — папку на диске браузер не трогает. -->
+    <div class="g-danger">
+      <span class="g-field__label" data-i18n="settings.danger"></span>
+      <button class="g-btn-danger" id="g-settings-delete"></button>
+      <span class="g-field__hint" id="g-settings-delete-hint"></span>
+    </div>
+
+    <div class="g-dialog__actions" style="gap:8px">
+      <button class="g-mi" id="g-settings-cancel" style="width:auto"
+              data-i18n="confirm.cancel"></button>
+      <button class="g-btn-primary" id="g-settings-save" disabled
+              data-i18n="settings.save"></button>
     </div>
   </div>
 </div>
@@ -701,7 +784,7 @@ gScript(window.ENGINE_BRAND.path('manifest.js'));
   if (M.css && M.css.tokens) link(B.path(M.css.tokens) + window.GALLERY_BUST, 'g-tokens-link');
   /* Показываем локальное имя, если сторибук переименовали. */
   var shownTitle = window.ENGINE_REGISTRY
-    ? window.ENGINE_REGISTRY.displayName(M.id, M.title)
+    ? window.ENGINE_REGISTRY.displayName(B.source.id, M.title)
     : M.title;
   document.title = shownTitle || document.title;
 

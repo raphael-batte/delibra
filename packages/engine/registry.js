@@ -16,6 +16,7 @@
   'use strict';
 
   var ACTIVE_KEY   = 'ds:active';       // какой сторибук открыт
+  var HIDDEN_KEY   = 'ds:hidden';       // библиотечные, убранные из списка
   var SETTINGS_KEY = 'ds:settings';     // общие настройки воркспейса
   var SUITE_KEY    = 'ds:suite:';       // + id → настройки конкретного
 
@@ -31,7 +32,34 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
   }
 
+  /* Умеет ли сервер, который отдаёт галерею, работать с папками.
+     python3 -m http.server — нет; packages/engine/serve.js — да.
+     Проверяем один раз и запоминаем обещание. */
+  var writablePromise = null;
+  function serverWritable() {
+    if (!writablePromise) {
+      writablePromise = fetch('/__api/ping', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : { writable: false }; })
+        .then(function (d) { return !!d.writable; })
+        .catch(function () { return false; });
+    }
+    return writablePromise;
+  }
+
   var Registry = {
+    serverWritable: serverWritable,
+
+    /* Настоящее удаление папки бренда. Доступно только через свой сервер:
+       страница сама файлы на диске не трогает. */
+    deleteBrand: function (id) {
+      return fetch('/__api/brand/' + encodeURIComponent(id), { method: 'DELETE' })
+        .then(function (r) {
+          if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || r.status); });
+          Registry.forget(id);
+          return true;
+        });
+    },
+
     /* Список сторибуков. Библиотечные — из index.json, локальные — из
        браузера (пока всегда пусто: импорт ещё не сделан). */
     list: function () {
@@ -49,13 +77,35 @@
               brandPath: '../../' + b.path.replace(/^\/+/, '')
             };
           });
-          return library.concat(Registry.localSuites());
+          var hidden = Registry.hidden();
+          return library
+            .filter(function (b) { return hidden.indexOf(b.id) < 0; })
+            .concat(Registry.localSuites());
         });
     },
 
     /* Локальные сторибуки. Пока заглушка: их источник появится вместе с
        импортом. Возвращаем массив, чтобы вызывающий код уже был готов. */
     localSuites: function () { return []; },
+
+    /* Библиотечный сторибук нельзя удалить: он лежит папкой на диске.
+       Убрать его можно только из ЭТОЙ галереи — список скрытых живёт
+       здесь, а сама папка остаётся нетронутой. */
+    hidden: function () { return readJSON(HIDDEN_KEY, []); },
+    hide: function (id) {
+      var list = Registry.hidden();
+      if (list.indexOf(id) < 0) list.push(id);
+      writeJSON(HIDDEN_KEY, list);
+    },
+    unhideAll: function () { writeJSON(HIDDEN_KEY, []); },
+
+    /* Локальные данные сторибука: имя, приложенный CSS. */
+    forget: function (id) {
+      try {
+        localStorage.removeItem(SUITE_KEY + id);
+        localStorage.removeItem(SUITE_KEY + id + ':css');
+      } catch (e) {}
+    },
 
     activeId: function () { return localStorage.getItem(ACTIVE_KEY) || null; },
 

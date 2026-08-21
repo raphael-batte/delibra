@@ -505,7 +505,7 @@
       setCompareCss(text, file.name);
       /* Приложенный файл принадлежит сторибуку и переживает перезагрузку. */
       var R = window.ENGINE_REGISTRY;
-      var id = M.id || 'brand';
+      var id = B.source.id;
       var problem = R && R.saveCompareCss(id, text, file.name);
       if (problem) cssName.textContent = file.name + ' — ' + t('settings.compare.tooBig');
     });
@@ -516,7 +516,7 @@
   (function restoreCompareCss() {
     var R = window.ENGINE_REGISTRY;
     if (!R) return;
-    var id = M.id || 'brand';
+    var id = B.source.id;
     var text = R.compareCss(id);
     if (!text) return;
     var name = (R.suiteSettings(id) || {}).compareName || 'CSS';

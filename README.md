@@ -15,10 +15,15 @@ refuses to expose `cssRules`, so the CSS tab and the token sections come up
 empty — with no error to explain why.
 
 ```bash
-cd design-systems && python3 -m http.server 8777
+node packages/engine/serve.js        # port 8777
 ```
 
 Then open <http://localhost:8777/packages/engine/gallery.html>.
+
+`python3 -m http.server 8777` also works, and everything reads the same — but
+deleting a storybook then only removes it from your list, because a page served
+as plain static files cannot touch folders on disk. The bundled server adds
+exactly that: it is local-only (127.0.0.1) and works strictly inside `brands/`.
 
 Another brand is a query parameter — the engine has no brand baked in:
 

@@ -1,7 +1,15 @@
 {
   "_comment": "Библиотечные сторибуки этого репозитория. Браузер не умеет читать содержимое папки, поэтому список объявляется явно — заодно это единственное место, где repo решает, что показывать в переключателе. Локальные сторибуки сюда не попадают: они живут в браузере.",
   "brands": [
-    { "id": "sdm",       "path": "brands/sdm",       "title": "SDM Design System" },
-    { "id": "_template", "path": "brands/_template",  "title": "Template" }
+    {
+      "id": "sdm",
+      "path": "brands/sdm",
+      "title": "SDM Design System"
+    },
+    {
+      "id": "_template",
+      "path": "brands/_template",
+      "title": "Template"
+    }
   ]
 }

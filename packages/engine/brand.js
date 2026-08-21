@@ -50,6 +50,11 @@
     base: base,
     rel:  rel,
 
+    /* Идентификатор сторибука — имя ПАПКИ, а не manifest.id. Копия бренда
+       уносит с собой чужой id, и по нему настройки, приложенный CSS и
+       удаление уходили бы в исходный бренд. Папка уникальна по определению. */
+    id: base.replace(/\/+$/, '').split('/').pop(),
+
     url: function (p) {
       if (!p) return null;
       if (/^(https?:)?\/\//.test(p) || p.charAt(0) === '/') return p;
@@ -101,16 +106,23 @@
        несколько, а контракт один. */
     source: SOURCE,
 
-    /* ключ localStorage, разведённый по брендам */
-    key: function (name) {
-      var id = (window.BRAND_MANIFEST && window.BRAND_MANIFEST.id) || 'brand';
-      return id + ':' + name;
+    /* ключ localStorage, разведённый по сторибукам (по папке, не по манифесту) */
+    key: function (name) { return SOURCE.id + ':' + name; },
+
+    /* Язык интерфейса. Это язык хрома, а не бренда, поэтому решает
+       настройка воркспейса; manifest.locale — лишь значение по умолчанию
+       для того, кто ничего не выбирал. Иначе две дизайн-системы в одной
+       галерее говорили бы на разных языках. */
+    locale: function () {
+      var chosen = window.ENGINE_REGISTRY && window.ENGINE_REGISTRY.settings().locale;
+      if (chosen) return chosen;
+      return (window.BRAND_MANIFEST && window.BRAND_MANIFEST.locale) || 'en';
     },
 
     /* строка локали с подстановками: t('pane.mobile', {w: 390}) */
     t: function (key, vars) {
       var packs = window.ENGINE_I18N || {};
-      var loc = (window.BRAND_MANIFEST && window.BRAND_MANIFEST.locale) || 'en';
+      var loc = window.ENGINE_BRAND.locale();
       var s = (packs[loc] && packs[loc][key]);
       if (s === undefined) s = (packs.en && packs.en[key]);   // фолбэк на английский
       if (s === undefined) return key;                         // видно, что ключа нет

@@ -90,9 +90,20 @@ Delete…
 The badge in the list is not decoration: two rows otherwise look identical
 while behaving differently, and the difference is "does this survive".
 
-`Delete` on a library brand must be disabled, never wired to remove the folder
-— the browser cannot, and a menu item that does something other than what it
-says is worse than a missing one.
+**Delete depends on the server, and says which it is doing.** A page served as
+static files cannot remove a folder — there is no browser API for it — so there
+`Delete` reads *Remove from this gallery* and only drops the entry and its local
+data. Run `packages/engine/serve.js` and the same button deletes the folder for
+real, with the label and the warning changed to match. What must never happen is
+a button that says "delete" and quietly does something smaller.
+
+Deletion asks for the word `delete` to be typed. "Are you sure?" gets clicked
+without reading; this does not.
+
+**Identity is the folder, never `manifest.id`.** Copying a brand folder carries
+the original id along, and settings, attached CSS and deletion would then all
+address the wrong storybook — this was a real bug, caught by duplicating
+`_template` and watching delete aim at the original.
 
 ## What export carries
 
