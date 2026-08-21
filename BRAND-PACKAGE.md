@@ -16,8 +16,18 @@ Three transports, one contract:
 | Transport | Status | `url()` returns | Good for |
 |---|---|---|---|
 | `folder` | shipped | `/brands/<id>/…` | development, the repo |
-| `.ds.json` | v1 | `blob:` from memory | exchange between machines |
-| `.dsz` (zip) | v2 | `blob:` from memory | heavy assets, arbitrary payload |
+| `.ds.json` | deferred | `blob:` from memory | exchange between machines |
+| `.dsz` (zip) | deferred | `blob:` from memory | heavy assets, arbitrary payload |
+
+**Current decision: the folder is the only transport.** Export and import wait
+until the gallery can hold several design systems at once — until then there is
+no second slot to import into, and a bundle would only round-trip a folder to
+itself. This document exists so that when the work starts, the format is a
+decision already made rather than one improvised under deadline.
+
+What that defers, concretely: `BrandSource` is not extracted yet, the engine
+still resolves brand paths directly. The refactor is small and local to
+`brand.js`, and nothing else should grow a dependency on those paths meanwhile.
 
 ## Why JSON first
 
