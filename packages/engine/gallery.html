@@ -39,7 +39,7 @@ body {
   position: fixed; inset: 0 auto 0 0;
   box-sizing: border-box;
   width: var(--g-sidebar-w);
-  padding: 24px 12px 40px;
+  padding: 0 12px 40px;
   overflow-y: auto;
   background: var(--white-pure);
   border-right: 1px solid var(--border);
@@ -49,7 +49,7 @@ body {
   margin: 0 0 4px 8px;
   font-size: 13px; font-weight: 700; color: var(--blue);
 }
-.g-brandbar { margin-bottom: 20px; }
+.g-brandbar { margin-bottom: 20px; }   /* отбивка до групп навигации */
 .g-sidebar-group {
   padding: 18px 8px 6px;
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
@@ -67,13 +67,16 @@ body {
 .g-topbar {
   position: sticky; top: 0; z-index: 60;
   display: flex; align-items: center; gap: 16px;
+  /* Высота ровно 32 — как строка логотипа в сайдбаре: обе шапки занимают
+     первые 32 пикселя страницы и стоят на одной горизонтали. */
+  height: 32px;
   margin: -32px -40px 32px;
   /* Отступы считаются до краёв ОКНА, а не до края контента: вертикальная
      полоса прокрутки занимает свою колонку справа, и глаз читает её как часть
      страницы. Поэтому справа вычитаем её ширину — иначе воздуха справа
      ровно на полосу больше, чем слева у заголовка.
      --g-scrollbar меряется в рантайме: на macOS с overlay-полосами это 0. */
-  padding: 12px max(0px, calc(var(--g-gutter) - var(--g-scrollbar))) 12px var(--g-gutter);
+  padding: 0 max(0px, calc(var(--g-gutter) - var(--g-scrollbar))) 0 var(--g-gutter);
   background: rgb(var(--white-pure-rgb) / .88);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -435,7 +438,7 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 /* ── Переключатель сторибуков ──────────────────────────────────────── */
 /* Интервалы сняты с фрейма «SDM Design System» в Figma: плитка 32×32,
    от неё до названия 8, от названия до шеврона 8, всё по центру строки. */
-.g-brandbar { display: flex; align-items: center; gap: 0; }
+.g-brandbar { display: flex; align-items: center; gap: 0; height: 32px; }
 
 .g-brandmark {
   /* Плитка 32×32, радиус 6 как в макете. Подложка — состояние наведения,
