@@ -23,12 +23,20 @@
    при content-box падинги и полоса прокрутки прибавлялись к ширине,
    сайдбар занимал 257px против объявленных 232, и шапка на эти 25px
    уезжала под дерево. */
-:root { --g-sidebar-w: 257px; --g-gutter: 40px; --g-scrollbar: 0px;
-        --g-header-h: 56px; }   /* высота обеих шапок: топбара и строки логотипа */
+:root {
+  --g-sidebar-w: 257px;
+  --g-gutter:     32px;   /* поле контента внутри панели */
+  --g-scrollbar:   0px;
+  --g-header-h:   56px;   /* высота обеих шапок: топбара и строки логотипа */
+  --g-inset:       8px;   /* поле панели от краёв окна */
+  --g-panel-r:    12px;   /* скругление канваса — из макета */
+}
 
 html { margin: 0; }
 body {
-  margin: 0;
+  /* Страница не скроллится: прокрутка живёт внутри панели контента,
+     поэтому её полоса оказывается внутри скругления, а не по краю окна. */
+  margin: 0; height: 100vh; overflow: hidden;
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-family);
@@ -40,46 +48,44 @@ body {
   position: fixed; inset: 0 auto 0 0;
   box-sizing: border-box;
   width: var(--g-sidebar-w);
-  padding: 0 12px 40px;
+  padding: 0 16px 40px;
   overflow-y: auto;
-  background: var(--white-pure);
-  border-right: 1px solid var(--border);
+  background: transparent;   /* стоит на фоне страницы, панель рядом белая */
   z-index: 100;
 }
 .g-sidebar-logo {
   margin: 0 0 4px 8px;
-  font-size: 13px; font-weight: 700; color: var(--blue);
+  font-size: 13px; font-weight: 700; color: var(--text-heading);
 }
+/* Заголовок группы набран как сами пункты — тот же размер и начертание,
+   только бледнее. Мелкие прописные с разрядкой вводят второй типографский
+   регистр там, где достаточно тона. */
 .g-sidebar-group {
-  padding: 18px 8px 6px;
-  font-size: 10px; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-muted);
+  padding: 16px 8px 4px;
+  font-size: 13px; font-weight: 400; color: var(--text-muted);
 }
 .g-sidebar a {
-  display: block; padding: 6px 8px; border-radius: 6px;
+  display: block; padding: 8px 8px; border-radius: 6px;
   font-size: 13px; color: var(--text-primary); text-decoration: none;
   transition: background-color .12s, color .12s;
 }
-.g-sidebar a:hover { background: var(--card-gray); color: var(--blue); }
-.g-sidebar a.is-active { background: var(--card-gray); color: var(--blue); font-weight: 600; }
+.g-sidebar a:hover { background: var(--card-gray); }
+.g-sidebar a.is-active { background: var(--card-gray); color: var(--text-heading); font-weight: 600; }
 
 /* ── Верхняя панель ────────────────────────────────────────────────────── */
 .g-topbar {
-  position: sticky; top: 0; z-index: 60;
+  position: relative; z-index: 60;
   display: flex; align-items: center; gap: 16px;
-  /* Высота ровно 56 — как строка логотипа в сайдбаре: обе шапки занимают
-     первые 56 пикселей страницы и стоят на одной горизонтали. */
-  height: var(--g-header-h);
-  margin: -32px -40px 32px;
-  /* Отступы считаются до краёв ОКНА, а не до края контента: вертикальная
-     полоса прокрутки занимает свою колонку справа, и глаз читает её как часть
-     страницы. Поэтому справа вычитаем её ширину — иначе воздуха справа
-     ровно на полосу больше, чем слева у заголовка.
-     --g-scrollbar меряется в рантайме: на macOS с overlay-полосами это 0. */
-  padding: 0 max(0px, calc(var(--g-gutter) - var(--g-scrollbar))) 0 var(--g-gutter);
-  background: rgb(var(--white-pure-rgb) / .88);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  /* Высота ровно 56 — как строка логотипа в сайдбаре: обе шапки стоят на
+     одной горизонтали.
+     Шапка — отдельная строка панели, а не наложение поверх прокрутки: тогда
+     полоса начинается под ней. Фон сплошной: размывать нечего, контент под
+     шапку не уезжает, а полупрозрачность без этого — просто светлее белого. */
+  flex: none; height: var(--g-header-h);
+  padding: 0 var(--g-gutter);
+  background: var(--white-pure);
   border-bottom: 1px solid var(--border);
+  border-radius: var(--g-panel-r) var(--g-panel-r) 0 0;
 }
 /* Заголовок текущего раздела — слева, меняется при прокрутке */
 .g-current {
@@ -99,7 +105,7 @@ body {
   display: inline-flex; align-items: center;
   background: var(--white-pure); font-size: 12px; font-weight: 500; color: var(--text-primary);
 }
-.g-attach:hover .g-attach__btn { border-color: var(--blue); color: var(--blue); }
+.g-attach:hover .g-attach__btn { border-color: var(--text-primary); }
 .g-attach__name { font-size: 11px; color: var(--text-muted); max-width: 220px;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -121,16 +127,16 @@ body {
   transition: background-color .18s ease;
 }
 .g-toggle__track::after {
-  content: ""; position: absolute; top: 2px; left: 2px;
+  content: ""; position: absolute; top: 4px; left: 4px;
   width: 16px; height: 16px; border-radius: 50%;
   background: var(--white-pure);
   box-shadow: 0 1px 2px rgb(0 0 0 / .25);
   transition: transform .18s ease;
 }
-.g-toggle input:checked + .g-toggle__track { background: var(--blue); }
+.g-toggle input:checked + .g-toggle__track { background: var(--text-heading); }
 .g-toggle input:checked + .g-toggle__track::after { transform: translateX(14px); }
 .g-toggle input:checked ~ * { color: inherit; }
-.g-toggle:has(input:checked) { color: var(--blue); }
+.g-toggle:has(input:checked) { color: var(--text-heading); }
 .g-toggle.is-disabled { opacity: .45; cursor: not-allowed; }
 .g-toggle.is-disabled .g-toggle__track { background: var(--border); }
 
@@ -141,7 +147,7 @@ body {
   content: attr(data-hint);
   position: absolute; top: calc(100% + 8px); right: 0;
   z-index: 120;
-  padding: 6px 10px; border-radius: 8px;
+  padding: 8px 8px; border-radius: 8px;
   background: var(--dark-toggle); color: var(--white-pure);
   font-size: 11px; font-weight: 500; line-height: 1.4;
   white-space: nowrap;
@@ -149,18 +155,18 @@ body {
   transition: opacity .15s ease, visibility .15s ease;
 }
 .g-toggle.is-disabled:hover::after { opacity: 1; visibility: visible; }
-.g-toggle input:focus-visible + .g-toggle__track { outline: 2px solid var(--blue-accent); outline-offset: 2px; }
+.g-toggle input:focus-visible + .g-toggle__track { outline: 2px solid var(--text-primary); outline-offset: 2px; }
 
 /* ── Панель различий ─────────────────────────────────────────────────── */
 .g-diff {
-  margin-top: 10px;
+  margin-top: 8px;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
   background: var(--white-pure);
 }
 .g-diff-head {
-  padding: 7px 12px;
+  padding: 8px 12px;
   background: #fff4e0;
   border-bottom: 1px solid var(--border);
   font-size: 11px; font-weight: 700; letter-spacing: .04em;
@@ -168,55 +174,71 @@ body {
 }
 .g-diff-head.is-clean { background: #eaf7ec; color: #1d6b2a; }
 .g-diff table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-.g-diff td { padding: 5px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.g-diff td { padding: 4px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .g-diff tr:last-child td { border-bottom: 0; }
 .g-diff .sel { font-family: ui-monospace, Menlo, monospace; color: var(--text-primary); white-space: nowrap; }
 .g-diff .prop { color: var(--text-muted); white-space: nowrap; }
 .g-diff .was { color: #b26a00; }
 .g-diff .now { color: var(--green); }
-.g-diff-empty { padding: 10px 12px; font-size: 12px; color: var(--text-muted); }
+.g-diff-empty { padding: 8px 12px; font-size: 12px; color: var(--text-muted); }
 /* Масштаб выбирается прямо в шапке панели, на месте подписи «масштаб 75%» */
 .g-pane-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .g-scale {
-  height: 22px; padding: 0 4px 0 6px; border: 1px solid var(--border); border-radius: 6px;
+  height: 22px; padding: 0 4px 0 8px; border: 1px solid var(--border); border-radius: 6px;
   background: var(--white-pure); font-family: inherit; font-size: 11px; font-weight: 600;
   letter-spacing: 0; text-transform: none; color: var(--text-primary); cursor: pointer;
 }
 .g-topbar-note b { color: var(--text-error); }
 
 /* ── Основная колонка ──────────────────────────────────────────────────── */
-.g-main { margin-left: var(--g-sidebar-w); padding: 32px 40px 160px; }
+/* Контент живёт в скруглённой панели со своей прокруткой: страница целиком
+   не скроллится, полоса остаётся внутри панели и не режет макет по краю окна.
+   Сайдбар при этом стоит на фоне страницы, а не на белом полотне. */
+.g-shell {
+  position: fixed; inset: var(--g-inset) var(--g-inset) var(--g-inset)
+                        calc(var(--g-sidebar-w) + var(--g-inset));
+}
+.g-panel {
+  height: 100%; display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--g-panel-r);
+  background: var(--white-pure);
+}
+.g-scroll {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 32px var(--g-gutter) 160px;
+}
 
 .g-section { margin: 0 0 64px; scroll-margin-top: 72px; }
 .g-section-head {
   display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-  margin: 0 0 8px; padding-bottom: 10px;
+  margin: 0 0 8px; padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
 .g-section-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--text-heading); }
 .g-section-head code {
-  padding: 2px 6px; border-radius: 4px;
+  padding: 4px 8px; border-radius: 4px;
   background: var(--card-gray); color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
 }
 .g-section-head .g-note { margin-left: auto; font-size: 11px; color: #b26a00; }
-.g-section-desc { margin: 10px 0 20px; font-size: 13px; line-height: 1.5; color: var(--text-muted); max-width: 780px; }
+.g-section-desc { margin: 8px 0 20px; font-size: 13px; line-height: 1.5; color: var(--text-muted); max-width: 780px; }
 
 /* ── Пример: мобайл + десктоп ──────────────────────────────────────────── */
 .g-example { margin: 0 0 28px; }
 .g-example-label { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
-.g-example-note  { margin: 0 0 10px; font-size: 11px; color: var(--text-muted); }
+.g-example-note  { margin: 0 0 8px; font-size: 11px; color: var(--text-muted); }
 
 /* Обе панели — одинаковые полосы во всю ширину колонки. Внутри содержимое
    прижато к левому краю в обоих случаях, поэтому подписи и компоненты
    мобильной и десктопной версии стоят на одной вертикали и сравнимы. */
-.g-split { display: flex; flex-direction: column; gap: 14px; align-items: stretch; }
+.g-split { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
 .g-pane { width: 100%; }
 .g-pane .g-frame-wrap { position: relative; }
 
 .g-pane { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
 .g-pane-label {
-  padding: 6px 10px;
+  padding: 8px 8px;
   background: var(--card-gray);
   border-bottom: 1px solid var(--border);
   font-size: 10px; font-weight: 700; letter-spacing: .06em;
@@ -233,7 +255,7 @@ body {
 .g-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .g-swatch { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--white-pure); }
 .g-swatch-chip { height: 56px; }
-.g-swatch-meta { padding: 8px 10px; }
+.g-swatch-meta { padding: 8px 8px; }
 .g-swatch-name { font-size: 12px; font-weight: 600; }
 .g-swatch-val, .g-swatch-use {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -243,12 +265,14 @@ body {
 .g-missing { background: repeating-linear-gradient(45deg, #eee 0 6px, #fafafa 6px 12px); }
 
 .g-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.g-table th, .g-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+.g-table th, .g-table td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
 .g-table th { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
 .g-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+/* Пометки статуса в токен-секциях: не хром, а часть сообщения — «есть»,
+   «расходится», «нового в коде нет». Цвет здесь несёт смысл. */
 .g-ok   { color: var(--green); }
 .g-warn { color: #b26a00; }
-.g-add  { color: var(--blue-accent); }
+.g-add  { color: var(--text-muted); }
 
 /* ── Оверлей с кодом ───────────────────────────────────────────────────── */
 .g-overlay {
@@ -278,27 +302,27 @@ body {
   margin-left: auto; width: 30px; height: 30px; border: 0; border-radius: 8px;
   background: var(--card-gray); font-size: 16px; line-height: 1; color: var(--text-muted); cursor: pointer;
 }
-.g-tabs { display: flex; gap: 4px; padding: 10px 20px 0; }
+.g-tabs { display: flex; gap: 4px; padding: 8px 20px 0; }
 .g-tabs button {
-  padding: 6px 12px; border: 0; border-radius: 6px 6px 0 0;
+  padding: 8px 12px; border: 0; border-radius: 6px 6px 0 0;
   background: transparent; font-family: inherit; font-size: 12px; font-weight: 600;
   color: var(--text-muted); cursor: pointer;
 }
-.g-tabs button.is-on { background: var(--card-gray); color: var(--blue); }
+.g-tabs button.is-on { background: var(--card-gray); color: var(--text-heading); }
 .g-overlay-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 32px; }
 .g-code {
-  margin: 0; padding: 14px; border-radius: 8px;
+  margin: 0; padding: 16px; border-radius: 8px;
   background: #1f2430; color: #d6deeb;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11.5px; line-height: 1.55; white-space: pre; overflow-x: auto;
 }
 .g-copy {
-  margin-bottom: 10px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+  margin-bottom: 8px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
   background: var(--white-pure); font-family: inherit; font-size: 11px; cursor: pointer;
 }
 .g-token-list { margin-top: 16px; }
 .g-token-list h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
-.g-hint { padding: 12px 14px; border-radius: 8px; background: #fff4e0; color: #7a4b00; font-size: 12px; line-height: 1.5; }
+.g-hint { padding: 12px 16px; border-radius: 8px; background: #fff4e0; color: #7a4b00; font-size: 12px; line-height: 1.5; }
 
 body.g-no-scroll { overflow: hidden; }
 
@@ -336,7 +360,7 @@ body.g-no-scroll { overflow: hidden; }
   width: 16px; height: 16px; flex: none;
   border-radius: 50%;
   border: 2px solid rgba(16, 24, 40, .18);
-  border-top-color: var(--blue, #0A6ED1);
+  border-top-color: var(--text-heading, #111);
   animation: g-reload-spin .7s linear infinite;
 }
 @keyframes g-reload-spin { to { transform: rotate(360deg); } }
@@ -352,41 +376,41 @@ body.g-no-scroll { overflow: hidden; }
    области рядом, и постоянные полосы режут сетку превью на глаз.
    Firefox управляется двумя свойствами, WebKit — псевдоэлементами; заданы
    оба набора, поведение одинаковое. */
-.g-sidebar, .g-overlay-body, html { scrollbar-width: thin; scrollbar-color: transparent transparent; }
-.g-sidebar:hover, .g-overlay-body:hover, html:hover { scrollbar-color: rgba(16,24,40,.28) transparent; }
+.g-sidebar, .g-overlay-body, .g-scroll { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.g-sidebar:hover, .g-overlay-body:hover, .g-scroll:hover { scrollbar-color: rgba(16,24,40,.28) transparent; }
 
 .g-sidebar::-webkit-scrollbar,
 .g-overlay-body::-webkit-scrollbar,
-body::-webkit-scrollbar { width: 8px; height: 8px; }
+.g-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
 
 .g-sidebar::-webkit-scrollbar-track,
 .g-overlay-body::-webkit-scrollbar-track,
-body::-webkit-scrollbar-track { background: transparent; }
+.g-scroll::-webkit-scrollbar-track { background: transparent; }
 
 .g-sidebar::-webkit-scrollbar-thumb,
 .g-overlay-body::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb {
+.g-scroll::-webkit-scrollbar-thumb {
   background: transparent; border-radius: 8px;
   border: 2px solid transparent; background-clip: content-box;
   transition: background-color .2s ease;
 }
 .g-sidebar:hover::-webkit-scrollbar-thumb,
 .g-overlay-body:hover::-webkit-scrollbar-thumb,
-body:hover::-webkit-scrollbar-thumb { background-color: rgba(16, 24, 40, .28); }
+.g-scroll:hover::-webkit-scrollbar-thumb { background-color: rgba(16, 24, 40, .28); }
 
 .g-sidebar::-webkit-scrollbar-thumb:hover,
 .g-overlay-body::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
+.g-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
 /* Горизонтальную прокрутку внутри превью не трогаем — она часть компонента. */
 
 /* ── Демонстрации токенов ──────────────────────────────────────────────
    Раньше эти размеры жили инлайн-стилями внутри секций SDM. После разреза
    разметку рисует движок, поэтому и оформление её демонстраций — здесь. */
-.g-group-title { margin: 24px 0 10px; font-size: 13px; font-weight: 600; }
+.g-group-title { margin: 24px 0 8px; font-size: 13px; font-weight: 600; }
 .g-group-note  { font-weight: 400; color: var(--text-muted); }
 
-.g-radius-pair { display: flex; gap: 6px; margin: 10px; }
+.g-radius-pair { display: flex; gap: 8px; margin: 8px; }
 .g-radius-half { flex: 1; height: 56px; background: var(--card-blue, var(--border)); }
 
 .g-shadow-demo { margin: 16px; height: 64px; border-radius: 12px; background: var(--white-pure); }
@@ -404,7 +428,7 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
     var(--white-pure);
 }
 .g-blur-demo__veil { position: absolute; inset: 0 0 0 50%; background: rgb(var(--white-pure-rgb) / .55); }
-.g-blur-demo__tag  { position: absolute; bottom: 6px; font-size: 9px; font-weight: 700; }
+.g-blur-demo__tag  { position: absolute; bottom: 8px; font-size: 9px; font-weight: 700; }
 .g-blur-demo__tag.is-left  { left: 8px; color: var(--white-pure); text-shadow: 0 1px 2px rgb(0 0 0 / .6); }
 .g-blur-demo__tag.is-right { right: 8px; color: var(--text-heading); }
 
@@ -417,24 +441,25 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 .g-specimen__row { padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-heading); }
 
 .g-space-demo { padding: 16px; display: flex; align-items: center; }
-.g-space-bar  { height: 24px; background: var(--blue); border-radius: 2px; }
+/* Полоса в шкале отступов показывает величину, а не бренд: нейтральный тон. */
+.g-space-bar  { height: 24px; background: var(--text-primary); border-radius: 2px; }
 
 /* Окно «О программе» — по образцу About This Mac: знак, имя, версия,
    две строки о том, что это, и кнопка закрыть. */
 .g-about { text-align: center; }
 .g-about__mark {
-  width: 56px; height: 56px; margin: 4px auto 14px;
+  width: 56px; height: 56px; margin: 4px auto 16px;
   display: grid; place-items: center;
   border-radius: 12px; background: var(--card-gray, var(--bg));
   color: var(--text-heading);
 }
 .g-about__mark svg { width: 32px; height: 32px; }
-.g-about h3 { margin: 0 0 2px; font-size: 17px; }
+.g-about h3 { margin: 0 0 4px; font-size: 17px; }
 .g-about__ver {
   margin: 0 0 16px; font-size: 12px; color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
-.g-about__lead { margin: 0 0 10px; font-size: 13px; color: var(--text-primary); }
+.g-about__lead { margin: 0 0 8px; font-size: 13px; color: var(--text-primary); }
 .g-about__note { margin: 0; font-size: 12px; color: var(--text-muted); }
 .g-about code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
 .g-about .g-dialog__actions { justify-content: center; }
@@ -459,7 +484,7 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
 .g-brandname {
   display: flex; align-items: center; gap: 8px; min-width: 0;
-  padding: 5px 6px 5px 8px; border: 0; border-radius: 8px;
+  padding: 4px 8px 4px 8px; border: 0; border-radius: 8px;
   background: transparent; cursor: pointer;
   /* В макете название чёрное и полужирное 13/600 — не брендовый синий. */
   font-family: var(--font-family); font-size: 13px; font-weight: 600;
@@ -471,20 +496,20 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
 .g-menu {
   position: fixed; z-index: 120; min-width: 264px; display: none;
-  padding: 6px; border: 1px solid var(--border); border-radius: 12px;
+  padding: 8px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--white-pure); box-shadow: 0 12px 32px rgb(16 24 40 / .14);
 }
 .g-menu.is-open { display: block; }
-.g-menu hr { margin: 6px 4px; border: 0; border-top: 1px solid var(--border); }
+.g-menu hr { margin: 8px 4px; border: 0; border-top: 1px solid var(--border); }
 
 .g-menu-label {
-  padding: 8px 10px 4px; font-size: 10px; font-weight: 700;
+  padding: 8px 8px 4px; font-size: 10px; font-weight: 700;
   letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
 }
 
 .g-mi {
   display: flex; align-items: center; gap: 8px; width: 100%;
-  padding: 7px 10px; border: 0; border-radius: 7px;
+  padding: 8px 8px; border: 0; border-radius: 7px;
   background: transparent; cursor: pointer; text-align: left;
   font-family: var(--font-family); font-size: 13px; font-weight: 500;
   color: var(--text-primary);
@@ -497,7 +522,7 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 /* Бейдж и удаление — без цвета: в меню цвет читается как состояние,
    а Library/Local и «удалить» состояниями не являются. */
 .g-mi .badge {
-  flex: none; padding: 1px 7px; border-radius: 20px;
+  flex: none; padding: 0 8px; border-radius: 20px;
   font-size: 10px; font-weight: 600;
   background: transparent; color: var(--text-muted);
   border: 1px solid var(--border);
@@ -515,21 +540,21 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
 .g-dialog {
   width: min(460px, calc(100% - 48px));
-  padding: 22px; border-radius: 16px;
+  padding: 24px; border-radius: 16px;
   background: var(--white-pure); border: 1px solid var(--border);
   box-shadow: 0 20px 60px rgb(16 24 40 / .22);
 }
-.g-dialog h3 { margin: 0 0 18px; font-size: 16px; color: var(--text-heading); }
+.g-dialog h3 { margin: 0 0 16px; font-size: 16px; color: var(--text-heading); }
 .g-dialog__actions { display: flex; justify-content: flex-end; margin-top: 20px; }
 
-.g-field { display: block; margin-bottom: 18px; }
+.g-field { display: block; margin-bottom: 16px; }
 .g-field__label {
-  display: block; margin-bottom: 6px;
+  display: block; margin-bottom: 8px;
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   text-transform: uppercase; color: var(--text-muted);
 }
 .g-field input[type="text"] {
-  width: 100%; height: 34px; padding-inline: 10px;
+  width: 100%; height: 34px; padding-inline: 8px;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--white-pure); color: var(--text-primary);
   font-family: var(--font-family); font-size: 13px;
@@ -538,19 +563,19 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 /* Правый паддинг больше левого: стрелку селект рисует внутри поля, и
    при симметричном отступе текст упирается в неё. */
 .g-field select {
-  width: 100%; height: 34px; padding: 0 32px 0 10px;
+  width: 100%; height: 34px; padding: 0 32px 0 8px;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--white-pure); color: var(--text-primary);
   font-family: var(--font-family); font-size: 13px;
 }
-.g-field__hint { display: block; margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+.g-field__hint { display: block; margin-top: 8px; font-size: 11px; color: var(--text-muted); }
 
 .g-danger {
-  margin-top: 22px; padding-top: 16px;
+  margin-top: 24px; padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 .g-btn-danger {
-  height: 32px; padding-inline: 14px; margin-top: 2px;
+  height: 32px; padding-inline: 16px; margin-top: 4px;
   border: 1px solid var(--border); border-radius: 20px;
   background: var(--white-pure); cursor: pointer;
   font-family: var(--font-family); font-size: 12px; font-weight: 500;
@@ -562,7 +587,7 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 .g-btn-primary {
   height: 32px; padding-inline: 16px;
   border: 0; border-radius: 20px;
-  background: var(--blue); color: var(--white-pure); cursor: pointer;
+  background: var(--text-heading); color: var(--white-pure); cursor: pointer;
   font-family: var(--font-family); font-size: 12px; font-weight: 600;
 }
 .g-btn-primary:disabled { opacity: .35; cursor: not-allowed; }
@@ -715,7 +740,8 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
   </div>
 </div>
 
-<main class="g-main">
+<main class="g-shell">
+<div class="g-panel">
   <div class="g-topbar">
     <h1 class="g-current" id="g-current"></h1>
     <label class="g-toggle is-disabled" id="g-diff-label"
@@ -725,7 +751,12 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
       <span data-i18n="topbar.compare"></span>
     </label>
   </div>
-  <div id="g-sections"></div>
+  <!-- Прокручивается эта область, а не панель целиком: полоса начинается
+       под шапкой, а не идёт вдоль неё. -->
+  <div class="g-scroll" id="g-panel">
+    <div id="g-sections"></div>
+  </div>
+</div>
 </main>
 
 <div class="g-overlay" id="g-overlay">

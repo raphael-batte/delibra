@@ -358,9 +358,16 @@
     }
   }
 
+  /* Прокручивается панель контента, а не окно: спай обязан слушать её.
+     Фолбэк на документ оставлен для случая, когда панели нет (тесты
+     монтируют галерею в узком фрейме). */
+  function scroller() {
+    return document.getElementById('g-panel') || document.documentElement;
+  }
+
   function pickActive() {
     // у самого верха раздел ещё не выбран — показываем общий заголовок
-    if ((window.scrollY || document.documentElement.scrollTop) < 8) { setActive(null); return; }
+    if (scroller().scrollTop < 8) { setActive(null); return; }
 
     var secs = document.querySelectorAll('.g-section');
     var found = null;
@@ -381,7 +388,8 @@
     setTimeout(function () { spyTick = false; pickActive(); }, 80);
   }
 
-  window.addEventListener('scroll', scheduleSpy, { passive: true });
+  (document.getElementById('g-panel') || window)
+    .addEventListener('scroll', scheduleSpy, { passive: true });
   window.addEventListener('resize', scheduleSpy);
 
   // стартовое состояние: из хеша, иначе по текущей позиции
