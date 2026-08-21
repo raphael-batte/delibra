@@ -72,55 +72,11 @@ readData('legacyNames');
 const sections = readData('sections');
 
 /* ── Контракт секций ─────────────────────────────────────────────────── */
-/* Обязательные поля каждого вида строки. Пока их не проверяли, эмит и
-   ручная правка расходились молча: строка без cls рисуется, но кликнуть
-   по ней нельзя, а без text — выходит пустая кнопка. */
-const ROW_FIELDS = {
-  btn:  ['size', 'cls', 'text', 'heights'],
-  tile: ['name', 'cls', 'meta', 'sample'],
-  spec: ['name', 'cls', 'meta', 'sample'],
-  gap:  []
-};
-const KINDS = new Set(Object.keys(ROW_FIELDS));
-
-if (sections) {
-  if (!Array.isArray(sections)) fail('секции должны быть массивом');
-  else sections.forEach((s, i) => {
-    const id = s.id || '#' + i;
-    if (!s.id)    fail(`секция #${i}: нет id`);
-    if (!s.title) fail(`${id}: нет title`);
-    if (s.render) fail(`${id}: render() — рисование это дело движка, а не бренда`);
-    if (!Array.isArray(s.examples) || !s.examples.length) fail(`${id}: нет примеров`);
-
-    (s.examples || []).forEach((ex, j) => {
-      const where = `${id}/${ex.label || '#' + j}`;
-      if (!ex.label) fail(`${id}: пример #${j} без label`);
-
-      const forms = ['html', 'rows'].filter(k => ex[k] !== undefined);
-      if (forms.length !== 1) {
-        fail(`${where}: ровно одна форма тела — html ИЛИ rows (сейчас ${forms.join(' + ') || 'ни одной'})`);
-      }
-      if (ex.wrap && !ex.rows) fail(`${where}: wrap допустим только вместе с rows`);
-
-      if (typeof ex.html === 'string') {
-        if (ex.html.indexOf('data-pick') < 0) fail(`${where}: нет data-pick — пример не кликабелен`);
-        if (/<script/i.test(ex.html)) fail(`${where}: <script> в разметке примера`);
-      }
-      (ex.rows || []).forEach((r, k) => {
-        if (!KINDS.has(r.kind)) {
-          fail(`${where}: строка #${k} неизвестного вида «${r.kind}»`);
-          return;
-        }
-        const missing = ROW_FIELDS[r.kind].filter(f => r[f] === undefined || r[f] === '');
-        if (missing.length) fail(`${where}: строка #${k} (${r.kind}) без полей: ${missing.join(', ')}`);
-      });
-      /* Обёртка — оболочка, а не разметка: имя тега, классы, data-pick. */
-      if (ex.wrap && ex.wrap.tag && !/^[a-z][a-z0-9]*$/.test(ex.wrap.tag)) {
-        fail(`${where}: wrap.tag «${ex.wrap.tag}» — ожидается имя тега`);
-      }
-    });
-  });
-}
+/* Правила живут в общем модуле: ими же проверяется файл, который приносят
+   через «Импорт» в галерее. Разъехаться они не должны — иначе импорт примет
+   то, что эта проверка отвергает. */
+const contract = require('./sections-contract.js');
+if (sections) contract.check(sections).forEach(fail);
 
 const name = path.basename(brandDir);
 problems.forEach(p => console.log('  ✗ ' + p));

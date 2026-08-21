@@ -13,7 +13,9 @@
 (function () {
   var q = new URLSearchParams(location.search);
   var brand = q.get('brand');
-  if (!brand) return;                       // без бренда фрейм остаётся пустым холстом
+  /* Без пути к папке фрейм ничего не грузит: стили пакета приедут
+     сообщением g:brandcss от галереи. */
+  if (!brand) return;
   var base = new URL(brand.replace(/\/+$/, '') + '/', location.href).pathname;
 
   /* <base> — ключевая деталь разреза: разметка бренда пишет пути вида
@@ -160,6 +162,33 @@
     sheet('css-brand',    isCurrent);
     sheet('css-current',    !isCurrent);
     sheet('user-css',       true);
+  }
+
+  /* Стили бренда, приехавшие пакетом: у него нет файлов на сервере, поэтому
+     токены и компоненты приходят текстом. Порядок тот же, что у ссылок:
+     сначала токены, потом компоненты. */
+  function applyBrandCss(d) {
+    /* Шрифт бренда: у папки его подключает загрузчик из манифеста, у пакета
+       ссылку присылает галерея — иначе превью рисуется системным шрифтом,
+       и сравнивать размеры бессмысленно. */
+    if (d.font && !document.getElementById('bundle-font')) {
+      var f = document.createElement('link');
+      f.rel = 'stylesheet'; f.id = 'bundle-font'; f.href = d.font;
+      document.head.appendChild(f);
+    }
+    ['tokens', 'components'].forEach(function (part) {
+      var id = 'bundle-' + part;
+      var el = document.getElementById(id);
+      if (!el) {
+        el = document.createElement('style');
+        el.id = id;
+        document.head.appendChild(el);
+      }
+      el.textContent = d[part] || '';
+    });
+    if (d.container) {
+      document.documentElement.style.setProperty('--g-container', d.container + 'px');
+    }
   }
 
   /* Произвольный CSS, приложенный пользователем: подменяет собой все
@@ -363,6 +392,7 @@
     if (d.type === 'g:render') setHtml(d.html);
     else if (d.type === 'g:css') { applyCss(d.mode); reportHeight(); }
     else if (d.type === 'g:usercss') { applyUserCss(d.text); reportHeight(); }
+    else if (d.type === 'g:brandcss') { applyBrandCss(d); reportHeight(); }
   });
 
   window.addEventListener('load', reportHeight);

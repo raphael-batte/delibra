@@ -19,6 +19,12 @@
   var HIDDEN_KEY   = 'ds:hidden';       // библиотечные, убранные из списка
   var SETTINGS_KEY = 'ds:settings';     // общие настройки воркспейса
   var SUITE_KEY    = 'ds:suite:';       // + id → настройки конкретного
+  var BUNDLE_KEY   = 'ds:bundle:';      // + id → сам пакет
+  var LOCAL_KEY    = 'ds:local';        // список локальных сторибуков
+
+  /* Порог на пакет. Хранилище браузера — рабочая копия, а не архив: то, что
+     не помещается, должно уехать файлом, а не потеряться молча. */
+  var MAX_BUNDLE_KB = 1024;
 
   /* Путь к brands/index.json считаем от папки движка, а не от документа:
      тесты открывают галерею из другого места. */
@@ -84,9 +90,56 @@
         });
     },
 
-    /* Локальные сторибуки. Пока заглушка: их источник появится вместе с
-       импортом. Возвращаем массив, чтобы вызывающий код уже был готов. */
-    localSuites: function () { return []; },
+    /* ── Локальные сторибуки: пакеты, живущие в этом браузере ─────────── */
+
+    localSuites: function () {
+      return readJSON(LOCAL_KEY, []).map(function (rec) {
+        return {
+          id: rec.id,
+          title: Registry.displayName(rec.id, rec.title),
+          origin: 'local',
+          brandPath: null            // пути на диске нет — открывается по ?suite=
+        };
+      });
+    },
+
+    bundle: function (id) { return readJSON(BUNDLE_KEY + id, null); },
+
+    /* Сохранение возвращает описание проблемы строкой или null. Тихо терять
+       пакет нельзя: человек считает, что система у него есть. */
+    saveBundle: function (id, pack, title) {
+      var size = window.ENGINE_BUNDLE.sizeKb(pack);
+      if (size > MAX_BUNDLE_KB) return { error: 'tooBig', sizeKb: size, maxKb: MAX_BUNDLE_KB };
+      try {
+        localStorage.setItem(BUNDLE_KEY + id, JSON.stringify(pack));
+      } catch (e) {
+        return { error: 'quota', sizeKb: size };
+      }
+      var list = readJSON(LOCAL_KEY, []);
+      if (!list.some(function (r) { return r.id === id; })) {
+        list.push({ id: id, title: title || id });
+        writeJSON(LOCAL_KEY, list);
+      } else if (title) {
+        writeJSON(LOCAL_KEY, list.map(function (r) {
+          return r.id === id ? { id: id, title: title } : r;
+        }));
+      }
+      return null;
+    },
+
+    deleteSuite: function (id) {
+      try { localStorage.removeItem(BUNDLE_KEY + id); } catch (e) {}
+      writeJSON(LOCAL_KEY, readJSON(LOCAL_KEY, []).filter(function (r) { return r.id !== id; }));
+      Registry.forget(id);
+    },
+
+    /* Свежий id: человекочитаемый корень плюс время — сортируется и не
+       сталкивается с папками в brands/. */
+    newId: function (title) {
+      var root = String(title || 'storybook').toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'storybook';
+      return root + '-' + Date.now().toString(36);
+    },
 
     /* Библиотечный сторибук нельзя удалить: он лежит папкой на диске.
        Убрать его можно только из ЭТОЙ галереи — список скрытых живёт
@@ -170,12 +223,14 @@
     },
 
     /* Переключение = смена активного и перезагрузка галереи с новым брендом.
+       У пакета пути на диске нет, поэтому он открывается по ?suite=.
        ?brand= остаётся рабочим адресом: им пользуются тесты и разработчик,
        и он не должен зависеть от состояния браузера. */
     open: function (suite) {
       Registry.setActive(suite.id);
-      var url = location.pathname + '?brand=' + encodeURIComponent(suite.brandPath);
-      location.href = url;
+      location.href = location.pathname + (suite.brandPath
+        ? '?brand=' + encodeURIComponent(suite.brandPath)
+        : '?suite=' + encodeURIComponent(suite.id));
     }
   };
 

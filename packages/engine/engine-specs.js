@@ -16,7 +16,8 @@
 (function () {
   'use strict';
 
-  var BRAND = window.ENGINE_BRAND, MAN = window.BRAND_MANIFEST;
+  var BRAND = window.ENGINE_BRAND;
+  var MAN = window.BRAND_MANIFEST || {};
   var t = BRAND.t;
 
   /* Карта старых имён приходит от бренда: движок не знает, как в чужом
@@ -76,6 +77,15 @@
      момент, когда редактор уже обрезал файл, но ещё не дописал. Тогда мы бы
      молча нарисовали пустую палитру. Пустой или подозрительно короткий ответ
      перечитываем — до трёх попыток. */
+  /* Чтение файла бренда. У пакета в памяти он уже прочитан — перечитывать
+     нечего и незачем ждать. Повторы нужны только папке: файл могли
+     перезаписывать ровно в момент загрузки страницы. */
+  function grabFile(file) {
+    var src = BRAND.source;
+    if (src.kind !== 'folder') return Promise.resolve(src.text(file) || '');
+    return grab(src.url(file));
+  }
+
   function grab(url, tries) {
     tries = tries == null ? 3 : tries;
     return fetch(url + (BUST ? BUST + '&n=' + tries : '?n=' + tries), { cache: 'no-store' })
@@ -95,8 +105,8 @@
 
   function load(attempt) {
     return Promise.all([
-      grab(BRAND.path(MAN.css.tokens)),
-      grab(BRAND.path(MAN.css.components))
+      grabFile(MAN.css.tokens),
+      grabFile(MAN.css.components)
     ]).then(function (res) {
       var tokens = parseVars(res[0]);
       // файл мог быть прочитан в момент перезаписи — тогда разбор пуст.
@@ -489,6 +499,7 @@
   /* Хелперы, которыми бренд рисует свои компонентные секции. */
   window.ENGINE_SPECS = {
     tokenSections: tokenSections,
+    parseVars: parseVars,          // нужен импорту дизайн-системы из CSS-файла
     val: val, bp: bp, bpCell: bpCell, esc: esc, norm: norm,
     swatch: swatch, swatches: swatches, group: group, h3: h3,
     sizeTable: sizeTable, vars: VARS,

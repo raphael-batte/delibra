@@ -57,10 +57,12 @@
   function mountFrame(opts) {
     var id = opts.id || ('f' + (++frameSeq));
     var iframe = document.createElement('iframe');
-    // brand — единственное, что делает фрейм брендовым: он сам подтянет
-    // манифест и соберёт из него ссылки на токены и компоненты.
-    iframe.src = '_frame.html?brand=' + encodeURIComponent(B.rel) +
-                 '&css=' + opts.cssMode + '&id=' + id +
+    /* У папки фрейм сам подтянет манифест и соберёт ссылки на CSS — ему
+       достаточно пути. У пакета файлов на сервере нет: адрес остаётся
+       голым, а стили приезжают сообщением сразу после загрузки. */
+    var fromFolder = B.source.kind === 'folder';
+    iframe.src = '_frame.html?' + (fromFolder ? 'brand=' + encodeURIComponent(B.rel) + '&' : '') +
+                 'css=' + opts.cssMode + '&id=' + id +
                  (window.GALLERY_BUST ? '&' + window.GALLERY_BUST.slice(1) : '');
     iframe.setAttribute('scrolling', 'no');
     iframe.setAttribute('title', opts.title || 'preview');
@@ -71,9 +73,18 @@
     iframe.addEventListener('load', function () {
       var w = iframe.contentWindow;
       if (!w) return;
+      if (!fromFolder) {
+        w.postMessage({
+          type: 'g:brandcss',
+          tokens: B.source.text(M.css.tokens) || '',
+          components: B.source.text(M.css.components) || '',
+          container: CONTAINER,
+          font: (M.font && M.font.href) || null
+        }, '*');
+      }
       if (opts.userCss) w.postMessage({ type: 'g:usercss', text: opts.userCss }, '*');
-      else w.postMessage({ type: 'g:css', mode: opts.cssMode }, '*');
-      w.postMessage({ type: 'g:render', html: opts.html }, '*');
+      else if (fromFolder) w.postMessage({ type: 'g:css', mode: opts.cssMode }, '*');
+      w.postMessage({ type: 'g:render', html: assetUrls(opts.html) }, '*');
       // даём кадр на применение стилей, потом сообщаем о готовности
       setTimeout(function () {
         rec.ready = true;
@@ -81,6 +92,17 @@
       }, opts.settle || 0);
     });
     return rec;
+  }
+
+  /* Пути ассетов в разметке примера. У папки их резолвит <base> во фрейме,
+     у пакета базы нет — подставляем blob-ссылки на файлы из памяти. */
+  function assetUrls(html) {
+    if (!html || B.source.kind === 'folder') return html;
+    return String(html).replace(/(src|href)="([^"]+)"/g, function (all, attr, path) {
+      if (/^(https?:|data:|blob:|#|\/)/.test(path)) return all;
+      var url = B.source.url(path);
+      return url ? attr + '="' + url + '"' : all;
+    });
   }
 
   /* Видимое превью в колонке галереи */
@@ -512,19 +534,9 @@
     if (window.GALLERY_SET_SITE_CSS) window.GALLERY_SET_SITE_CSS(compareCss);
   }
 
-  var cssFile = document.getElementById('g-css-file');
-  if (cssFile) cssFile.addEventListener('change', function (e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    file.text().then(function (text) {
-      setCompareCss(text, file.name);
-      /* Приложенный файл принадлежит сторибуку и переживает перезагрузку. */
-      var R = window.ENGINE_REGISTRY;
-      var id = B.source.id;
-      var problem = R && R.saveCompareCss(id, text, file.name);
-      if (problem) cssName.textContent = file.name + ' — ' + t('settings.compare.tooBig');
-    });
-  });
+  /* Выбор файла обрабатывает диалог настроек: там же стоит кнопка
+     «Сохранить», и применять файл раньше неё — значит менять сторибук,
+     пока человек ещё думает и может нажать «Отмена». */
 
   /* Восстановление приложенного CSS: делаем это после первой отрисовки,
      чтобы не задерживать показ каталога разбором чужого файла. */

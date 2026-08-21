@@ -530,8 +530,13 @@ body.g-no-scroll { overflow: hidden; }
 .g-mi[disabled]:hover { background: transparent; }
 .g-mi .tick { width: 14px; flex: none; color: var(--text-heading); font-weight: 700; }
 .g-mi .grow { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Бейдж и удаление — без цвета: в меню цвет читается как состояние,
-   а Library/Local и «удалить» состояниями не являются. */
+/* Бейдж без цвета: в меню цвет читается как состояние, а Library/Local
+   состоянием не является.
+   Удаление — исключение и останется им: красный здесь не оформление, а
+   предупреждение о необратимом действии. Следующая чистка цвета в хроме
+   не должна его снимать. */
+.g-mi.danger { color: var(--text-error); }
+
 .g-mi .badge {
   flex: none; padding: 0 8px; border-radius: 20px;
   font-size: 10px; font-weight: 600;
@@ -609,6 +614,23 @@ body.g-no-scroll { overflow: hidden; }
 }
 .g-btn-primary:disabled { opacity: .35; cursor: not-allowed; }
 .g-confirm__lead { margin: 0 0 16px; font-size: 13px; color: var(--text-primary); }
+.g-dialog__lead  { margin: 0 0 16px; font-size: 13px; color: var(--text-muted); }
+.g-dialog__error {
+  margin: 16px 0 0; padding: 8px 12px; border-radius: 8px;
+  background: var(--card-gray, var(--bg));
+  font-size: 12px; color: var(--text-error);
+}
+.g-dialog__error[hidden] { display: none; }
+
+.g-choices { display: grid; gap: 8px; }
+.g-choice {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--white-pure); font: inherit; color: var(--text-primary);
+}
+.g-choice:hover { border-color: var(--text-primary); }
+.g-choice b { display: block; font-size: 13px; color: var(--text-heading); }
+.g-choice span { display: block; margin-top: 4px; font-size: 12px; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -659,6 +681,38 @@ body.g-no-scroll { overflow: hidden; }
 
   <div id="g-nav"></div>
 </nav>
+
+<!-- Новый сторибук: создать из шаблона, из файла или из своего CSS.
+     Этот же диалог показывается на пустом старте. -->
+<div class="g-scrim" id="g-new-scrim" hidden>
+  <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-new-title">
+    <h3 id="g-new-title" data-i18n="new.title"></h3>
+    <p class="g-dialog__lead" id="g-new-lead" data-i18n="new.lead"></p>
+
+    <div class="g-choices">
+      <button class="g-choice" id="g-new-template">
+        <b data-i18n="new.template"></b>
+        <span data-i18n="new.template.hint"></span>
+      </button>
+      <label class="g-choice">
+        <input type="file" id="g-new-file" accept=".json,application/json" hidden>
+        <b data-i18n="new.import"></b>
+        <span data-i18n="new.import.hint"></span>
+      </label>
+      <label class="g-choice">
+        <input type="file" id="g-new-css" accept=".css,text/css" hidden>
+        <b data-i18n="new.css"></b>
+        <span data-i18n="new.css.hint"></span>
+      </label>
+    </div>
+
+    <p class="g-dialog__error" id="g-new-error" hidden></p>
+
+    <div class="g-dialog__actions">
+      <button class="g-mi" id="g-new-close" style="width:auto" data-i18n="confirm.cancel"></button>
+    </div>
+  </div>
+</div>
 
 <!-- Подтверждение удаления. Слово вводится руками: удаление сторибука
      необратимо, и «вы уверены?» нажимают не глядя. -->
@@ -801,12 +855,17 @@ window.GALLERY_BUST = '?t=' + Date.now();
 function gScript(src) {
   document.write('<scr' + 'ipt src="' + src + window.GALLERY_BUST + '"></scr' + 'ipt>');
 }
-/* Порядок важен: языковые паки и резолвер бренда — до всего остального. */
+/* Порядок важен: языковые паки, хранилище и формат пакета — до резолвера
+   бренда: он на старте может открыть сторибук прямо из хранилища. */
 gScript('i18n/en.js');
 gScript('i18n/ru.js');
+gScript('bundle.js');
+gScript('registry.js');
 gScript('brand.js');
 gScript('rows.js');
-gScript('registry.js');
+gScript('sections-contract.js');
+gScript('package-io.js');
+gScript('css-import.js');
 </script>
 
 <script>
@@ -817,7 +876,7 @@ gScript('registry.js');
   var B = window.ENGINE_BRAND;
   var data = B.source.json('manifest.json', window.GALLERY_BUST);
   if (data) window.BRAND_MANIFEST = data;
-  else gScript(B.path('manifest.js'));
+  else if (B.source.kind === 'folder') gScript(B.path('manifest.js'));
 })();
 </script>
 
@@ -837,7 +896,12 @@ gScript('registry.js');
     document.head.appendChild(l);
   }
   if (M.font && M.font.href) link(M.font.href);
-  if (M.css && M.css.tokens) link(B.path(M.css.tokens) + window.GALLERY_BUST, 'g-tokens-link');
+  /* Cache-buster нужен только файлу на сервере. У пакета адрес — blob:,
+     и «?t=…» превращает его в несуществующий: стили молча не применяются. */
+  if (M.css && M.css.tokens) {
+    link(B.path(M.css.tokens) + (B.source.kind === 'folder' ? window.GALLERY_BUST : ''),
+         'g-tokens-link');
+  }
   /* Показываем локальное имя, если сторибук переименовали. */
   var shownTitle = window.ENGINE_REGISTRY
     ? window.ENGINE_REGISTRY.displayName(B.source.id, M.title)
@@ -879,7 +943,7 @@ gScript('registry.js');
     if (/\.json$/.test(file)) {
       var data = B.source.json(file, window.GALLERY_BUST);
       if (data) window[target] = data;
-    } else {
+    } else if (B.source.kind === 'folder') {
       gScript(B.path(file));       // legacy: файл сам присваивает window[target]
     }
   }

@@ -27,12 +27,17 @@
   var ENGINE_VERSION = '1.0.0';
   var CONTRACT_MAJOR = 1;
 
-  var rel = new URLSearchParams(location.search).get('brand') || DEFAULT_BRAND;
+  /* Откуда открыт сторибук: ?suite=<id> — пакет в браузере, ?brand=<путь> —
+     папка на сервере. Папка остаётся рабочим адресом разработчика: он не
+     зависит от состояния браузера, и им гоняются тесты. */
+  var qs = new URLSearchParams(location.search);
+  var suiteId = qs.get('suite');
+  var rel = qs.get('brand') || (suiteId ? null : DEFAULT_BRAND);
 
   function brandBase() {
-    var p = rel;
+    if (!rel) return '';
     // нормализуем к абсолютному пути с завершающим слэшем
-    var url = new URL(p.replace(/\/+$/, '') + '/', location.href);
+    var url = new URL(rel.replace(/\/+$/, '') + '/', location.href);
     return url.pathname;
   }
 
@@ -93,10 +98,19 @@
     writable: false
   };
 
+  /* Пакет из хранилища подменяет собой папку целиком: интерфейс тот же,
+     поэтому дальше по коду разницы нет. Читаем пакет здесь, чтобы к моменту
+     загрузки данных бренда источник уже был готов. */
+  if (suiteId && window.ENGINE_BUNDLE && window.ENGINE_REGISTRY) {
+    var pack = window.ENGINE_REGISTRY.bundle(suiteId);
+    if (pack) SOURCE = window.ENGINE_BUNDLE.source(suiteId, pack);
+  }
+
   window.ENGINE_VERSION = ENGINE_VERSION;
 
   window.ENGINE_BRAND = {
     version:  ENGINE_VERSION,
+    suiteId:  suiteId,
     contract: CONTRACT_MAJOR,
 
     /* Несовместимость возвращается строкой-объяснением, null — если всё в порядке. */
@@ -109,22 +123,20 @@
              ', this engine speaks v' + CONTRACT_MAJOR + '.';
     },
 
-    base: base,      // абсолютный путь: /brands/sdm/
-    rel:  rel,       // как бренд был указан — это и передаём фрейму
+    get base() { return SOURCE.base; },
+    get rel()  { return SOURCE.rel; },
 
     /* путь внутри бренда → абсолютный.
        Тонкая обёртка над source.url(): оставлена, потому что ею пользуются
        загрузчики и брендовые секции. */
     path: function (p) { return SOURCE.url(p); },
 
-    /* Источник бренда. Сегодня он один — папка на сервере; интерфейс
-       выделен затем, чтобы вторая реализация (пакет в памяти, приехавший
-       файлом) подключалась, не трогая остальной движок.
-       См. BRAND-PACKAGE.md — там записано, почему транспортов будет
-       несколько, а контракт один. */
-    source: SOURCE,
+    /* Источник бренда: папка на сервере или пакет в памяти. Интерфейс один,
+       поэтому весь остальной движок про разницу не знает.
+       См. BRAND-PACKAGE.md. */
+    get source() { return SOURCE; },
 
-    /* ключ localStorage, разведённый по сторибукам (по папке, не по манифесту) */
+    /* ключ localStorage, разведённый по сторибукам (по папке или id пакета) */
     key: function (name) { return SOURCE.id + ':' + name; },
 
     /* Язык интерфейса. Это язык хрома, а не бренда, поэтому решает

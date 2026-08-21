@@ -76,13 +76,94 @@
   });
 
   /* ── Действия над активным ────────────────────────────────────────── */
-  function soon(el) {
-    if (!el) return;
-    el.disabled = true;
-    el.title = t('menu.soon');
+  /* ── Новый сторибук ────────────────────────────────────────────────
+     Один диалог на три ветки: создание и импорт — это одно намерение,
+     разводить их по пунктам меню значит требовать выбора до того, как
+     показали варианты. Он же служит экраном пустого старта. */
+  var newScrim = document.getElementById('g-new-scrim');
+  var newError = document.getElementById('g-new-error');
+
+  function openNew() {
+    newError.hidden = true;
+    newScrim.hidden = false;
   }
-  soon(document.getElementById('g-new'));
-  soon(document.getElementById('g-export'));
+  function closeNew() { newScrim.hidden = true; }
+
+  function showError(key, vars) {
+    newError.textContent = t('new.failed', { error: t('new.err.' + key, vars || {}) });
+    newError.hidden = false;
+  }
+
+  /* Пакет в хранилище и сразу открыть: сторибук создаётся, чтобы в него
+     смотреть, а не чтобы он появился в списке. */
+  function adopt(pack, title) {
+    var id = R.newId(title);
+    var problem = R.saveBundle(id, pack, title);
+    if (problem) { showError(problem.error, problem); return; }
+    R.setActive(id);
+    location.href = location.pathname + '?suite=' + encodeURIComponent(id);
+  }
+
+  document.getElementById('g-new').addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeAll();
+    openNew();
+  });
+  document.getElementById('g-new-close').addEventListener('click', closeNew);
+  newScrim.addEventListener('click', function (e) { if (e.target === newScrim) closeNew(); });
+
+  /* Из шаблона: читаем ту же папку, что открывается по ?brand=_template. */
+  document.getElementById('g-new-template').addEventListener('click', function () {
+    var base = new URL('../../brands/_template/', location.href).pathname;
+    var files = ['manifest.json', 'tokens.css', 'components.css',
+                 'sections.json', 'token-map.json'];
+    Promise.all(files.map(function (f) {
+      return fetch(base + f, { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : null; });
+    })).then(function (texts) {
+      var pack = window.ENGINE_BUNDLE.empty();
+      files.forEach(function (f, i) { if (texts[i] != null) pack.files[f] = texts[i]; });
+      var m = JSON.parse(pack.files['manifest.json']);
+      m.title = t('new.template');
+      pack.files['manifest.json'] = JSON.stringify(m, null, 2);
+      adopt(pack, m.title);
+    });
+  });
+
+  /* Из файла сторибука. */
+  document.getElementById('g-new-file').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    file.text().then(function (text) {
+      var res = window.ENGINE_PACKAGE.parse(text);
+      if (res.error) { showError(res.error, res); return; }
+      adopt(res.pack, res.manifest.title || file.name);
+    });
+  });
+
+  /* Из чужого CSS: получаются токены без компонентов, и диалог об этом
+     предупреждает заранее. */
+  document.getElementById('g-new-css').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    file.text().then(function (text) {
+      var res = window.ENGINE_CSS_IMPORT.build(text, file.name, t);
+      if (res.error) { showError(res.error); return; }
+      adopt(res.pack, res.title);
+    });
+  });
+
+  /* ── Выгрузить файлом ──────────────────────────────────────────────── */
+  document.getElementById('g-export').addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeAll();
+    var M = window.BRAND_MANIFEST || {};
+    window.ENGINE_PACKAGE
+      .build(B.source, M, window.BRAND_SECTIONS || [], R.displayName(B.source.id, M.title))
+      .then(function (pack) {
+        window.ENGINE_PACKAGE.download(pack, B.source.id + '.ds.json');
+      });
+  });
 
   /* Пункт меню ведёт в опасную зону настроек: подтверждение и объяснение
      последствий живут в одном месте, а не дублируются. */
@@ -247,11 +328,27 @@
        нечего. Кнопка мертва, пока ничего не изменилось. */
     var saveBtn   = document.getElementById('g-settings-save');
     var cancelBtn = document.getElementById('g-settings-cancel');
+    var cssInput  = document.getElementById('g-css-file');
+    var cssName   = document.getElementById('g-css-name');
     var initialName = nameInput.value;
+    var pendingCss = null;      // выбранный, но ещё не сохранённый файл
 
-    function dirty() { return nameInput.value.trim() !== initialName.trim(); }
+    function dirty() {
+      return nameInput.value.trim() !== initialName.trim() || !!pendingCss;
+    }
     function refreshSave() { saveBtn.disabled = !dirty(); }
     nameInput.addEventListener('input', refreshSave);
+
+    /* Файл только запоминается: применяется и сохраняется по «Сохранить». */
+    if (cssInput) cssInput.addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      file.text().then(function (text) {
+        pendingCss = { text: text, name: file.name };
+        cssName.textContent = file.name;
+        refreshSave();
+      });
+    });
 
     function applyName() {
       R.rename(suiteId, nameInput.value.trim());
@@ -267,13 +364,31 @@
       refreshSave();
     }
 
+    function applyCss() {
+      if (!pendingCss) return;
+      window.GALLERY_API.setCompareCss(pendingCss.text, pendingCss.name);
+      /* Приложенный файл принадлежит сторибуку и переживает перезагрузку. */
+      var problem = R.saveCompareCss(suiteId, pendingCss.text, pendingCss.name);
+      if (problem) cssName.textContent = pendingCss.name + ' — ' + t('settings.compare.tooBig');
+      pendingCss = null;
+    }
+
     saveBtn.addEventListener('click', function () {
       applyName();
+      applyCss();
+      refreshSave();
       settingsScrim.hidden = true;
     });
-    cancelBtn.addEventListener('click', function () {
+    function discard() {
       nameInput.value = initialName;   // введённое, но не сохранённое — забываем
+      pendingCss = null;
+      if (cssInput) cssInput.value = '';
+      cssName.textContent = (R.suiteSettings(suiteId) || {}).compareName || '';
       refreshSave();
+    }
+
+    cancelBtn.addEventListener('click', function () {
+      discard();
       settingsScrim.hidden = true;
     });
 
@@ -332,8 +447,7 @@
       settingsScrim.hidden = false;
     });
     function closeSettings() {
-      nameInput.value = initialName;
-      refreshSave();
+      discard();
       settingsScrim.hidden = true;
     }
     settingsScrim.addEventListener('click', function (e) {
