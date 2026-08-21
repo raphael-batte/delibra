@@ -411,13 +411,104 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
 .g-space-demo { padding: 16px; display: flex; align-items: center; }
 .g-space-bar  { height: 24px; background: var(--blue); border-radius: 2px; }
+
+/* ── Переключатель сторибуков ──────────────────────────────────────── */
+.g-brandbar { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+
+.g-brandmark {
+  width: 36px; height: 36px; flex: none;
+  display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--white-pure); color: var(--blue); cursor: pointer;
+}
+.g-brandmark:hover { border-color: var(--blue-accent); }
+.g-brandmark svg { width: 18px; height: 18px; }
+
+.g-brandname {
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+  padding: 5px 6px; border: 0; border-radius: 8px;
+  background: transparent; cursor: pointer;
+  font-family: var(--font-family); font-size: 13px; font-weight: 700;
+  color: var(--blue);
+}
+.g-brandname:hover { background: var(--card-gray, var(--bg)); }
+.g-brandname b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.g-brandname svg { width: 13px; height: 13px; flex: none; opacity: .55; }
+
+.g-menu {
+  position: fixed; z-index: 120; min-width: 264px; display: none;
+  padding: 6px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--white-pure); box-shadow: 0 12px 32px rgb(16 24 40 / .14);
+}
+.g-menu.is-open { display: block; }
+.g-menu hr { margin: 6px 4px; border: 0; border-top: 1px solid var(--border); }
+
+.g-menu-label {
+  padding: 8px 10px 4px; font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
+}
+
+.g-mi {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; border: 0; border-radius: 7px;
+  background: transparent; cursor: pointer; text-align: left;
+  font-family: var(--font-family); font-size: 13px; font-weight: 500;
+  color: var(--text-primary);
+}
+.g-mi:hover { background: var(--card-gray, var(--bg)); }
+.g-mi[disabled] { opacity: .4; cursor: not-allowed; }
+.g-mi[disabled]:hover { background: transparent; }
+.g-mi .tick { width: 14px; flex: none; color: var(--blue-accent); font-weight: 700; }
+.g-mi .grow { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-mi .badge {
+  flex: none; padding: 1px 7px; border-radius: 20px;
+  font-size: 10px; font-weight: 600;
+  background: var(--card-gray, var(--bg)); color: var(--text-muted);
+}
+.g-mi.danger { color: var(--text-error, #DF3500); }
 </style>
 </head>
 <body>
 
 <nav class="g-sidebar">
-  <p class="g-sidebar-logo" id="g-logo"></p>
+  <!-- Плитка — уровень воркспейса, имя с шевроном — уровень открытого
+       сторибука. Граница как у Figma: квадрат это приложение, имя это
+       документ. -->
+  <div class="g-brandbar">
+    <button class="g-brandmark" id="g-mark" aria-haspopup="true" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linejoin="round" aria-hidden="true">
+        <path d="M5 4h9l5 5v11H5z"/><path d="M9 9h5"/><path d="M9 13h6"/></svg>
+    </button>
+    <button class="g-brandname" id="g-name" aria-haspopup="true" aria-expanded="false">
+      <b id="g-logo"></b>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
   <p class="g-sidebar-sub" id="g-sub"></p>
+
+  <div class="g-menu" id="g-menu-workspace" role="menu">
+    <button class="g-mi" id="g-new" role="menuitem">
+      <span class="tick"></span><span class="grow" data-i18n="menu.new"></span></button>
+    <hr>
+    <div class="g-menu-label" data-i18n="menu.storybooks"></div>
+    <div id="g-suite-list"></div>
+  </div>
+
+  <div class="g-menu" id="g-menu-suite" role="menu">
+    <button class="g-mi" id="g-export" role="menuitem">
+      <span class="grow" data-i18n="menu.export"></span></button>
+    <button class="g-mi" id="g-copylink" role="menuitem">
+      <span class="grow" data-i18n="menu.copyLink"></span></button>
+    <hr>
+    <!-- Библиотечный сторибук лежит папкой на диске: браузер её не удалит,
+         поэтому пункт выключен, а рабочий путь — копия. -->
+    <button class="g-mi danger" id="g-delete" role="menuitem" disabled>
+      <span class="grow" data-i18n="menu.delete"></span></button>
+  </div>
+
   <div id="g-nav"></div>
 </nav>
 
@@ -468,6 +559,7 @@ function gScript(src) {
 gScript('i18n/en.js');
 gScript('i18n/ru.js');
 gScript('brand.js');
+gScript('registry.js');
 </script>
 
 <script>
@@ -532,6 +624,7 @@ gScript(window.ENGINE_BRAND.path('manifest.js'));
 
 <script>
 gScript('gallery.js');
+gScript('switcher.js');
 </script>
 </body>
 </html>

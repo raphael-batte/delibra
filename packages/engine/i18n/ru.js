@@ -1,6 +1,18 @@
 /* Русский пак. Не обязан быть полным: недостающие ключи движок берёт из en. */
 window.ENGINE_I18N = window.ENGINE_I18N || {};
 window.ENGINE_I18N.ru = {
+  /* Переключатель сторибуков */
+  'menu.new':          'Новый сторибук…',
+  'menu.storybooks':   'Сторибуки',
+  'menu.export':       'Выгрузить файлом',
+  'menu.copyLink':     'Скопировать ссылку',
+  'menu.copied':       'Ссылка скопирована',
+  'menu.delete':       'Удалить…',
+  'menu.library':      'Library',
+  'menu.local':        'Local',
+  'menu.deleteLibrary':'Библиотечный сторибук лежит папкой на диске — браузер её не удалит',
+  'menu.soon':         'Пока не сделано',
+
   'topbar.defaultTitle':    'Дизайн-система и компоненты сайта',
   'topbar.attach':          'Приложить CSS',
   'topbar.attach.title':    'Приложить CSS-файл, с которым сравнивать дизайн-систему',

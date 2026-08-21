@@ -3,6 +3,18 @@
 window.ENGINE_I18N = window.ENGINE_I18N || {};
 window.ENGINE_I18N.en = {
   /* topbar */
+  /* Переключатель сторибуков */
+  'menu.new':          'New storybook…',
+  'menu.storybooks':   'Storybooks',
+  'menu.export':       'Export as file',
+  'menu.copyLink':     'Copy link',
+  'menu.copied':       'Link copied',
+  'menu.delete':       'Delete…',
+  'menu.library':      'Library',
+  'menu.local':        'Local',
+  'menu.deleteLibrary':'A library storybook lives in a folder on disk — the browser cannot delete it',
+  'menu.soon':         'Not built yet',
+
   'topbar.defaultTitle':    'Design system and site components',
   'topbar.attach':          'Attach CSS',
   'topbar.attach.title':    'Attach a CSS file to compare the design system against',

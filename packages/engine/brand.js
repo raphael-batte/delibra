@@ -38,6 +38,38 @@
 
   var base = brandBase();
 
+  /* ── BrandSource: папка на сервере ─────────────────────────────────
+     url(p)      → адрес, который браузер может загрузить
+     text(p)     → содержимое файла строкой
+     manifest()  → разобранный манифест
+     Для папки манифест приходит тегом <script> из загрузчика галереи,
+     поэтому здесь он просто отдаётся; у пакета в памяти на этом месте
+     будет разбор bundle. */
+  var SOURCE = {
+    kind: 'folder',
+    base: base,
+    rel:  rel,
+
+    url: function (p) {
+      if (!p) return null;
+      if (/^(https?:)?\/\//.test(p) || p.charAt(0) === '/') return p;
+      return base + String(p).replace(/^\.\//, '');
+    },
+
+    text: function (p) {
+      return fetch(SOURCE.url(p), { cache: 'no-store' }).then(function (r) {
+        if (!r.ok) throw new Error(r.status + ' ' + SOURCE.url(p));
+        return r.text();
+      });
+    },
+
+    manifest: function () { return window.BRAND_MANIFEST || null; },
+
+    /* Можно ли править этот сторибук из браузера. Папку — нельзя: её
+       правят в IDE, и запись из галереи разошлась бы с диском. */
+    writable: false
+  };
+
   window.ENGINE_VERSION = ENGINE_VERSION;
 
   window.ENGINE_BRAND = {
@@ -57,12 +89,17 @@
     base: base,      // абсолютный путь: /brands/sdm/
     rel:  rel,       // как бренд был указан — это и передаём фрейму
 
-    /* путь внутри бренда → абсолютный */
-    path: function (rel) {
-      if (!rel) return null;
-      if (/^(https?:)?\/\//.test(rel) || rel.charAt(0) === '/') return rel;
-      return base + String(rel).replace(/^\.\//, '');
-    },
+    /* путь внутри бренда → абсолютный.
+       Тонкая обёртка над source.url(): оставлена, потому что ею пользуются
+       загрузчики и брендовые секции. */
+    path: function (p) { return SOURCE.url(p); },
+
+    /* Источник бренда. Сегодня он один — папка на сервере; интерфейс
+       выделен затем, чтобы вторая реализация (пакет в памяти, приехавший
+       файлом) подключалась, не трогая остальной движок.
+       См. BRAND-PACKAGE.md — там записано, почему транспортов будет
+       несколько, а контракт один. */
+    source: SOURCE,
 
     /* ключ localStorage, разведённый по брендам */
     key: function (name) {

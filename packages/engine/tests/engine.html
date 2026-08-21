@@ -190,6 +190,26 @@
     H.eq(t('no.such.key'), 'no.such.key', 'несуществующий ключ должен возвращать сам ключ');
   });
 
+  H.g('Переключатель');
+  H.t('список сторибуков собран и активный отмечен', function () {
+    var rows = D().querySelectorAll('#g-suite-list .g-mi');
+    H.ok(rows.length > 0, 'список пуст — не прочитан brands/index.json');
+    var ticked = [].filter.call(rows, function (r) {
+      return r.querySelector('.tick').textContent.trim() === '✓';
+    });
+    H.eq(ticked.length, 1, 'отмеченных сторибуков должно быть ровно один');
+    H.ok(ticked[0].querySelector('.grow').textContent.trim().length > 0, 'у активного пустое имя');
+  });
+
+  H.t('удаление библиотечного сторибука недоступно', function () {
+    /* Пункт, который делает не то, что обещает, хуже отсутствующего:
+       папку на диске браузер удалить не может. */
+    var del = D().getElementById('g-delete');
+    H.ok(del, 'нет пункта удаления');
+    H.eq(del.disabled, true, 'библиотечный сторибук предлагается удалить');
+    H.ok((del.title || '').length > 0, 'выключенный пункт без объяснения');
+  });
+
   /* Контракт: бренд обязан объявить токены, без которых не встаёт хром. */
   H.contractTests();
 
