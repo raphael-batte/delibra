@@ -127,14 +127,19 @@ body {
   transition: background-color .18s ease;
 }
 .g-toggle__track::after {
-  content: ""; position: absolute; top: 4px; left: 4px;
+  /* Положение ползунка — не отступ, а геометрия: он центрируется в треке.
+     Центрируем трансформом, а не числом: иначе при правке высоты трека
+     кружок снова сползёт вниз, как уже случилось при посадке отступов
+     на сетку 4. */
+  content: ""; position: absolute; top: 50%; left: 2px;
   width: 16px; height: 16px; border-radius: 50%;
   background: var(--white-pure);
   box-shadow: 0 1px 2px rgb(0 0 0 / .25);
+  transform: translateY(-50%);
   transition: transform .18s ease;
 }
 .g-toggle input:checked + .g-toggle__track { background: var(--text-heading); }
-.g-toggle input:checked + .g-toggle__track::after { transform: translateX(14px); }
+.g-toggle input:checked + .g-toggle__track::after { transform: translate(14px, -50%); }
 .g-toggle input:checked ~ * { color: inherit; }
 .g-toggle:has(input:checked) { color: var(--text-heading); }
 .g-toggle.is-disabled { opacity: .45; cursor: not-allowed; }
@@ -184,8 +189,14 @@ body {
 /* Масштаб выбирается прямо в шапке панели, на месте подписи «масштаб 75%» */
 .g-pane-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .g-scale {
-  height: 22px; padding: 0 4px 0 8px; border: 1px solid var(--border); border-radius: 6px;
-  background: var(--white-pure); font-family: inherit; font-size: 11px; font-weight: 600;
+  /* Системную стрелку выключаем и рисуем свою: у нативной нельзя задать
+     ни размер, ни отступ от края, из-за чего она наезжала на текст.
+     Поля симметричные — 8 слева до текста, 8 справа до шеврона. */
+  appearance: none; -webkit-appearance: none;
+  height: 24px; padding: 0 24px 0 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--white-pure) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center / 10px 10px;
+  font-family: inherit; font-size: 11px; font-weight: 600;
   letter-spacing: 0; text-transform: none; color: var(--text-primary); cursor: pointer;
 }
 .g-topbar-note b { color: var(--text-error); }
@@ -548,6 +559,9 @@ body.g-no-scroll { overflow: hidden; }
 .g-dialog__actions { display: flex; justify-content: flex-end; margin-top: 20px; }
 
 .g-field { display: block; margin-bottom: 16px; }
+/* display:block у .g-field сильнее браузерного [hidden] — без этой строки
+   скрытая настройка продолжала показываться. */
+.g-field[hidden] { display: none; }
 .g-field__label {
   display: block; margin-bottom: 8px;
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
@@ -562,10 +576,13 @@ body.g-no-scroll { overflow: hidden; }
 .g-field input[type="text"]:disabled { background: var(--bg); color: var(--text-muted); }
 /* Правый паддинг больше левого: стрелку селект рисует внутри поля, и
    при симметричном отступе текст упирается в неё. */
+/* Тот же приём, что у выбора масштаба: своя стрелка, симметричные поля. */
 .g-field select {
-  width: 100%; height: 34px; padding: 0 32px 0 8px;
+  appearance: none; -webkit-appearance: none;
+  width: 100%; height: 32px; padding: 0 32px 0 12px;
   border: 1px solid var(--border); border-radius: 8px;
-  background: var(--white-pure); color: var(--text-primary);
+  background: var(--white-pure) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 12px 12px;
+  color: var(--text-primary);
   font-family: var(--font-family); font-size: 13px;
 }
 .g-field__hint { display: block; margin-top: 8px; font-size: 11px; color: var(--text-muted); }
@@ -673,7 +690,7 @@ body.g-no-scroll { overflow: hidden; }
 
     <div class="g-field" id="g-ws-hidden">
       <span class="g-field__label js-count"></span>
-      <button class="g-mi" style="width:auto;padding-inline:0" hidden></button>
+      <button class="g-mi" style="width:auto;padding-inline:0"></button>
     </div>
 
     <div class="g-dialog__actions">

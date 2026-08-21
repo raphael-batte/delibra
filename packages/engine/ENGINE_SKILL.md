@@ -149,7 +149,7 @@ Rules that are load-bearing:
 ## Adding a token section
 
 You do not. Token sections are rendered by the engine from the brand's
-`token-map.js` — a data descriptor, no markup:
+`token-map.json` — a data descriptor, no markup:
 
 ```js
 window.BRAND_TOKENS = {

@@ -72,7 +72,16 @@ readData('legacyNames');
 const sections = readData('sections');
 
 /* ── Контракт секций ─────────────────────────────────────────────────── */
-const KINDS = new Set(['btn', 'tile', 'spec', 'gap']);
+/* Обязательные поля каждого вида строки. Пока их не проверяли, эмит и
+   ручная правка расходились молча: строка без cls рисуется, но кликнуть
+   по ней нельзя, а без text — выходит пустая кнопка. */
+const ROW_FIELDS = {
+  btn:  ['size', 'cls', 'text', 'heights'],
+  tile: ['name', 'cls', 'meta', 'sample'],
+  spec: ['name', 'cls', 'meta', 'sample'],
+  gap:  []
+};
+const KINDS = new Set(Object.keys(ROW_FIELDS));
 
 if (sections) {
   if (!Array.isArray(sections)) fail('секции должны быть массивом');
@@ -98,8 +107,17 @@ if (sections) {
         if (/<script/i.test(ex.html)) fail(`${where}: <script> в разметке примера`);
       }
       (ex.rows || []).forEach((r, k) => {
-        if (!KINDS.has(r.kind)) fail(`${where}: строка #${k} неизвестного вида «${r.kind}»`);
+        if (!KINDS.has(r.kind)) {
+          fail(`${where}: строка #${k} неизвестного вида «${r.kind}»`);
+          return;
+        }
+        const missing = ROW_FIELDS[r.kind].filter(f => r[f] === undefined || r[f] === '');
+        if (missing.length) fail(`${where}: строка #${k} (${r.kind}) без полей: ${missing.join(', ')}`);
       });
+      /* Обёртка — оболочка, а не разметка: имя тега, классы, data-pick. */
+      if (ex.wrap && ex.wrap.tag && !/^[a-z][a-z0-9]*$/.test(ex.wrap.tag)) {
+        fail(`${where}: wrap.tag «${ex.wrap.tag}» — ожидается имя тега`);
+      }
     });
   });
 }

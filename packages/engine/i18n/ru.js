@@ -29,7 +29,6 @@ window.ENGINE_I18N.ru = {
   'confirm.word':      'delete',
   'ws.hidden':         'Скрытых сторибуков: {n}',
   'ws.hidden.show':    'Показать все',
-  'ws.hidden.none':    'Ничего не скрыто',
   'settings.save':     'Сохранить',
   'settings.done':     'Готово',
   'menu.about':        'О программе',

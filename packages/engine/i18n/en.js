@@ -31,7 +31,6 @@ window.ENGINE_I18N.en = {
   'confirm.word':      'delete',
   'ws.hidden':         'Hidden storybooks: {n}',
   'ws.hidden.show':    'Show all',
-  'ws.hidden.none':    'Nothing is hidden',
   'settings.save':     'Save',
   'settings.done':     'Done',
   'menu.about':        'About',

@@ -140,9 +140,11 @@
     var hiddenRow = document.getElementById('g-ws-hidden');
     function paintHidden() {
       var n = R.hidden().length;
-      hiddenRow.querySelector('.js-count').textContent =
-        n ? t('ws.hidden', { n: n }) : t('ws.hidden.none');
-      hiddenRow.querySelector('button').hidden = !n;
+      /* Пустая строка «ничего не скрыто» — сообщение ни о чём: настройка
+         существует, только когда есть что возвращать. */
+      hiddenRow.hidden = !n;
+      if (!n) return;
+      hiddenRow.querySelector('.js-count').textContent = t('ws.hidden', { n: n });
     }
     hiddenRow.querySelector('button').textContent = t('ws.hidden.show');
     hiddenRow.querySelector('button').addEventListener('click', function () {

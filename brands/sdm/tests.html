@@ -216,11 +216,21 @@
 
   H.g('Гигиена');
   H.t('у каждого примера есть кликабельный узел', function () {
+    /* Проверяем обе формы: у снимка data-pick стоит в самой разметке, у
+       строк каталога его проставляет движок из cls — значит cls обязателен,
+       иначе пример отрисуется, но кликнуть по нему будет нельзя. */
     var without = [];
     G().GALLERY.forEach(function (s) {
       (s.examples || []).forEach(function (ex) {
+        var name = s.id + ' / ' + (ex.label || '?');
+        if (ex.rows) {
+          var pickable = ex.rows.some(function (r) { return r.kind !== 'gap' && r.cls; }) ||
+                         (ex.wrap && ex.wrap.pick);
+          if (!pickable) without.push(name + ' (rows без cls)');
+          return;
+        }
         var html = (ex.html || '') + (ex.htmlDesktop || '');
-        if (html && html.indexOf('data-pick') < 0) without.push(s.id + ' / ' + (ex.label || '?'));
+        if (html && html.indexOf('data-pick') < 0) without.push(name);
       });
     });
     H.eq(without.length, 0, 'без data-pick: ' + without.slice(0, 3).join(', '));
