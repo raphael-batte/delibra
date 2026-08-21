@@ -50,7 +50,6 @@ body {
   margin: 0 0 4px 8px;
   font-size: 13px; font-weight: 700; color: var(--blue);
 }
-.g-brandbar { margin-bottom: 20px; }   /* отбивка до групп навигации */
 .g-sidebar-group {
   padding: 18px 8px 6px;
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
@@ -104,7 +103,11 @@ body {
 .g-attach__name { font-size: 11px; color: var(--text-muted); max-width: 220px;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Тоггл «Сравнить с кодом» — выключен, пока не приложен CSS */
+/* Тоггл «Сравнить с кодом» — выключен, пока не приложен CSS.
+   Прижат к правому краю шапки: раньше его туда отодвигала кнопка
+   «Приложить CSS» своим margin-left:auto, а она уехала в настройки. */
+.g-topbar .g-toggle { margin-left: auto; }
+
 .g-toggle {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 12px; font-weight: 500; color: var(--text-muted);
