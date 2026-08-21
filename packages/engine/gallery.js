@@ -497,11 +497,31 @@
     if (window.GALLERY_SET_SITE_CSS) window.GALLERY_SET_SITE_CSS(compareCss);
   }
 
-  document.getElementById('g-css-file').addEventListener('change', function (e) {
+  var cssFile = document.getElementById('g-css-file');
+  if (cssFile) cssFile.addEventListener('change', function (e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
-    file.text().then(function (text) { setCompareCss(text, file.name); });
+    file.text().then(function (text) {
+      setCompareCss(text, file.name);
+      /* Приложенный файл принадлежит сторибуку и переживает перезагрузку. */
+      var R = window.ENGINE_REGISTRY;
+      var id = M.id || 'brand';
+      var problem = R && R.saveCompareCss(id, text, file.name);
+      if (problem) cssName.textContent = file.name + ' — ' + t('settings.compare.tooBig');
+    });
   });
+
+  /* Восстановление приложенного CSS: делаем это после первой отрисовки,
+     чтобы не задерживать показ каталога разбором чужого файла. */
+  (function restoreCompareCss() {
+    var R = window.ENGINE_REGISTRY;
+    if (!R) return;
+    var id = M.id || 'brand';
+    var text = R.compareCss(id);
+    if (!text) return;
+    var name = (R.suiteSettings(id) || {}).compareName || 'CSS';
+    setTimeout(function () { setCompareCss(text, name); }, 0);
+  })();
 
 
   var DIFF_PROPS = [

@@ -412,17 +412,25 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 .g-space-demo { padding: 16px; display: flex; align-items: center; }
 .g-space-bar  { height: 24px; background: var(--blue); border-radius: 2px; }
 
-/* Панель About: разворачивается внутри меню, а не отдельным диалогом —
-   это справка на три строки, ради неё незачем перекрывать экран. */
-.g-about {
-  margin: 4px; padding: 10px; border-radius: 8px;
-  background: var(--bg); font-size: 12px; color: var(--text-muted);
+/* Окно «О программе» — по образцу About This Mac: знак, имя, версия,
+   две строки о том, что это, и кнопка закрыть. */
+.g-about { text-align: center; }
+.g-about__mark {
+  width: 56px; height: 56px; margin: 4px auto 14px;
+  display: grid; place-items: center;
+  border-radius: 12px; background: var(--card-gray, var(--bg));
+  color: var(--text-heading);
 }
-.g-about dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 8px; }
-.g-about dt { color: var(--text-muted); }
-.g-about dd { margin: 0; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.g-about p { margin: 0; }
+.g-about__mark svg { width: 32px; height: 32px; }
+.g-about h3 { margin: 0 0 2px; font-size: 17px; }
+.g-about__ver {
+  margin: 0 0 16px; font-size: 12px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.g-about__lead { margin: 0 0 10px; font-size: 13px; color: var(--text-primary); }
+.g-about__note { margin: 0; font-size: 12px; color: var(--text-muted); }
 .g-about code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+.g-about .g-dialog__actions { justify-content: center; }
 
 /* ── Переключатель сторибуков ──────────────────────────────────────── */
 /* Интервалы сняты с фрейма «SDM Design System» в Figma: плитка 32×32,
@@ -430,14 +438,16 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 .g-brandbar { display: flex; align-items: center; gap: 0; }
 
 .g-brandmark {
-  /* Плитка ровно как в макете: 32×32, радиус 6, серая подложка. */
+  /* Плитка 32×32, радиус 6 как в макете. Подложка — состояние наведения,
+     а не оформление: в покое иконка стоит на фоне сайдбара. */
   width: 32px; height: 32px; flex: none;
   display: grid; place-items: center;
   border: 0; border-radius: 6px;
-  background: var(--card-gray, var(--bg)); color: var(--text-heading);
-  cursor: pointer;
+  background: transparent; color: var(--text-heading);
+  cursor: pointer; transition: background-color .15s ease;
 }
-.g-brandmark:hover { border-color: var(--blue-accent); }
+.g-brandmark:hover,
+.g-brandmark[aria-expanded="true"] { background: var(--card-gray, var(--bg)); }
 .g-brandmark svg { width: 20px; height: 20px; }
 
 .g-brandname {
@@ -475,14 +485,50 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 .g-mi:hover { background: var(--card-gray, var(--bg)); }
 .g-mi[disabled] { opacity: .4; cursor: not-allowed; }
 .g-mi[disabled]:hover { background: transparent; }
-.g-mi .tick { width: 14px; flex: none; color: var(--blue-accent); font-weight: 700; }
+.g-mi .tick { width: 14px; flex: none; color: var(--text-heading); font-weight: 700; }
 .g-mi .grow { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Бейдж и удаление — без цвета: в меню цвет читается как состояние,
+   а Library/Local и «удалить» состояниями не являются. */
 .g-mi .badge {
   flex: none; padding: 1px 7px; border-radius: 20px;
   font-size: 10px; font-weight: 600;
-  background: var(--card-gray, var(--bg)); color: var(--text-muted);
+  background: transparent; color: var(--text-muted);
+  border: 1px solid var(--border);
 }
-.g-mi.danger { color: var(--text-error, #DF3500); }
+
+/* ── Диалог настроек ───────────────────────────────────────────────── */
+.g-scrim {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  background: rgb(120 126 140 / .28);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+.g-scrim[hidden] { display: none; }
+
+.g-dialog {
+  width: min(460px, calc(100% - 48px));
+  padding: 22px; border-radius: 16px;
+  background: var(--white-pure); border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgb(16 24 40 / .22);
+}
+.g-dialog h3 { margin: 0 0 18px; font-size: 16px; color: var(--text-heading); }
+.g-dialog__actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+
+.g-field { display: block; margin-bottom: 18px; }
+.g-field__label {
+  display: block; margin-bottom: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.g-field input[type="text"] {
+  width: 100%; height: 34px; padding-inline: 10px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--white-pure); color: var(--text-primary);
+  font-family: var(--font-family); font-size: 13px;
+}
+.g-field input[type="text"]:disabled { background: var(--bg); color: var(--text-muted); }
+.g-field__hint { display: block; margin-top: 6px; font-size: 11px; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -509,15 +555,15 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
     <button class="g-mi" id="g-new" role="menuitem">
       <span class="tick"></span><span class="grow" data-i18n="menu.new"></span></button>
     <hr>
-    <div class="g-menu-label" data-i18n="menu.storybooks"></div>
     <div id="g-suite-list"></div>
     <hr>
     <button class="g-mi" id="g-about" role="menuitem">
       <span class="tick"></span><span class="grow" data-i18n="menu.about"></span></button>
-    <div class="g-about" id="g-about-panel" hidden></div>
   </div>
 
   <div class="g-menu" id="g-menu-suite" role="menu">
+    <button class="g-mi" id="g-settings" role="menuitem">
+      <span class="grow" data-i18n="menu.settings"></span></button>
     <button class="g-mi" id="g-export" role="menuitem">
       <span class="grow" data-i18n="menu.export"></span></button>
     <button class="g-mi" id="g-copylink" role="menuitem">
@@ -532,14 +578,56 @@ body::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
   <div id="g-nav"></div>
 </nav>
 
+<!-- О программе. Отдельный оверлей, а не строка в меню: это про инструмент
+     целиком, и читают его редко, зато целиком. -->
+<div class="g-scrim" id="g-about-scrim" hidden>
+  <div class="g-dialog g-about" role="dialog" aria-modal="true" aria-labelledby="g-about-title">
+    <div class="g-about__mark">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <g transform="translate(3.765 2.508)"><path id="g-about-path" d=""/></g></svg>
+    </div>
+    <h3 id="g-about-title">Storybook Library</h3>
+    <p class="g-about__ver" id="g-about-ver"></p>
+    <p class="g-about__lead" data-i18n="about.lead"></p>
+    <div class="g-dialog__actions">
+      <button class="g-mi" id="g-about-close" style="width:auto" data-i18n="about.close"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Настройки открытого сторибука. Имя и файл для сравнения принадлежат
+     конкретной системе: общий на галерею CSS после переключения сравнивал бы
+     с чужим файлом. -->
+<div class="g-scrim" id="g-settings-scrim" hidden>
+  <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-settings-title">
+    <h3 id="g-settings-title" data-i18n="settings.title"></h3>
+
+    <label class="g-field">
+      <span class="g-field__label" data-i18n="settings.name"></span>
+      <input type="text" id="g-settings-name">
+      <span class="g-field__hint" id="g-settings-name-hint"></span>
+    </label>
+
+    <div class="g-field">
+      <span class="g-field__label" data-i18n="settings.compare"></span>
+      <label class="g-attach" data-i18n-title="topbar.attach.title">
+        <input type="file" id="g-css-file" accept=".css,text/css">
+        <span class="g-attach__btn" data-i18n="topbar.attach"></span>
+        <span class="g-attach__name" id="g-css-name"></span>
+      </label>
+      <span class="g-field__hint" data-i18n="settings.compare.hint"></span>
+    </div>
+
+    <div class="g-dialog__actions">
+      <button class="g-mi" id="g-settings-close" style="width:auto"
+              data-i18n="settings.done"></button>
+    </div>
+  </div>
+</div>
+
 <main class="g-main">
   <div class="g-topbar">
     <h1 class="g-current" id="g-current"></h1>
-    <label class="g-attach" data-i18n-title="topbar.attach.title">
-      <input type="file" id="g-css-file" accept=".css,text/css">
-      <span class="g-attach__btn" data-i18n="topbar.attach"></span>
-      <span class="g-attach__name" id="g-css-name"></span>
-    </label>
     <label class="g-toggle is-disabled" id="g-diff-label"
            data-i18n-hint="topbar.compare.hint">
       <input type="checkbox" id="g-diff" disabled>
@@ -604,7 +692,11 @@ gScript(window.ENGINE_BRAND.path('manifest.js'));
   }
   if (M.font && M.font.href) link(M.font.href);
   if (M.css && M.css.tokens) link(B.path(M.css.tokens) + window.GALLERY_BUST, 'g-tokens-link');
-  document.title = M.title || document.title;
+  /* Показываем локальное имя, если сторибук переименовали. */
+  var shownTitle = window.ENGINE_REGISTRY
+    ? window.ENGINE_REGISTRY.displayName(M.id, M.title)
+    : M.title;
+  document.title = shownTitle || document.title;
 
   /* Перевод статического хрома: атрибуты data-i18n* держат ключи, а не текст,
      поэтому разметка одна на все языки. */
@@ -630,7 +722,7 @@ gScript(window.ENGINE_BRAND.path('manifest.js'));
   setTimeout(measureScrollbar, 600);
 
   var logo = document.getElementById('g-logo');
-  if (logo) logo.textContent = M.title || '';
+  if (logo) logo.textContent = shownTitle || '';
   /* Порядок жёсткий: сначала данные бренда, потом движковые рисовальщики
      (они на старте читают карту старых имён и сразу грузят CSS бренда),
      и только затем секции, которые этими рисовальщиками пользуются. */

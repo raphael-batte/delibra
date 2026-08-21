@@ -79,6 +79,40 @@
     suiteSettings: function (id) {
       return readJSON(SUITE_KEY + id, {});
     },
+
+    /* Имя, под которым сторибук показан в этой галерее.
+       Для библиотечного бренда это ЛОКАЛЬНОЕ имя: в манифест на диске
+       браузер не пишет, поэтому переименование живёт в реестре и
+       перекрывает title манифеста только на этой машине. */
+    displayName: function (id, fallback) {
+      var own = (Registry.suiteSettings(id) || {}).name;
+      return (own && own.trim()) || fallback || id;
+    },
+    rename: function (id, name) {
+      Registry.saveSuiteSettings(id, { name: (name || '').trim() || null });
+    },
+
+    /* CSS для сравнения — часть сторибука, а не сессии: приложили один раз,
+       и он там же при следующем открытии. Файл может весить сотни килобайт,
+       поэтому запись отдельно и с явной ошибкой при переполнении квоты:
+       молча потерять приложенный файл хуже, чем сказать, что не поместился. */
+    saveCompareCss: function (id, text, name) {
+      try {
+        localStorage.setItem(SUITE_KEY + id + ':css', text || '');
+        Registry.saveSuiteSettings(id, { compareName: name || null });
+        return null;
+      } catch (e) {
+        return e && e.name === 'QuotaExceededError' ? 'quota' : 'failed';
+      }
+    },
+    compareCss: function (id) {
+      try { return localStorage.getItem(SUITE_KEY + id + ':css') || null; }
+      catch (e) { return null; }
+    },
+    clearCompareCss: function (id) {
+      try { localStorage.removeItem(SUITE_KEY + id + ':css'); } catch (e) {}
+      Registry.saveSuiteSettings(id, { compareName: null });
+    },
     saveSuiteSettings: function (id, patch) {
       var next = Object.assign(Registry.suiteSettings(id), patch || {});
       writeJSON(SUITE_KEY + id, next);

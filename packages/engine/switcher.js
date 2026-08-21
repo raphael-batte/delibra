@@ -66,7 +66,7 @@
         '<span class="grow"></span>' +
         '<span class="badge"></span>';
       /* Имя приходит из данных бренда — вставляем текстом, не разметкой. */
-      b.querySelector('.grow').textContent = suite.title;
+      b.querySelector('.grow').textContent = R.displayName(suite.id, suite.title);
       b.querySelector('.badge').textContent =
         t(suite.origin === 'library' ? 'menu.library' : 'menu.local');
 
@@ -87,26 +87,79 @@
   var del = document.getElementById('g-delete');
   if (del) del.title = t('menu.deleteLibrary');   // папку на диске браузер не удалит
 
-  /* About — версии движка, контракта и открытого сторибука. Раньше версия
-     висела подписью под логотипом: место рядом с названием читается как
-     часть названия, а нужна она изредка. */
-  var about = document.getElementById('g-about');
-  var aboutPanel = document.getElementById('g-about-panel');
-  if (about && aboutPanel) {
-    var M = window.BRAND_MANIFEST || {};
-    aboutPanel.innerHTML =
-      '<dl>' +
-        '<dt>' + t('about.engine') + '</dt><dd>' + B.version + '</dd>' +
-        '<dt>' + t('about.contract') + '</dt><dd>v' + B.contract + '</dd>' +
-        '<dt>' + t('about.storybook') + '</dt><dd class="js-suite-version"></dd>' +
-      '</dl><p>' + t('about.http') + '</p>';
-    /* Имя и версия бренда — данные, вставляем текстом. */
-    aboutPanel.querySelector('.js-suite-version').textContent =
-      (M.title || '—') + (M.version ? ' · ' + M.version : '');
+  /* About — про инструмент целиком: знак, имя, версия, две строки о том,
+     что это. Отдельным окном, а не строкой в меню: читают редко, но целиком. */
+  var about      = document.getElementById('g-about');
+  var aboutScrim = document.getElementById('g-about-scrim');
+  if (about && aboutScrim) {
+    document.getElementById('g-about-ver').textContent =
+      t('about.version', { v: B.version, c: B.contract });
+
+    /* Знак берём из той же разметки, что и в сайдбаре, — один источник. */
+    var srcPath = document.querySelector('.g-brandmark path');
+    var dstPath = document.getElementById('g-about-path');
+    if (srcPath && dstPath) dstPath.setAttribute('d', srcPath.getAttribute('d'));
 
     about.addEventListener('click', function (e) {
       e.stopPropagation();
-      aboutPanel.hidden = !aboutPanel.hidden;
+      closeAll();
+      aboutScrim.hidden = false;
+    });
+    function closeAbout() { aboutScrim.hidden = true; }
+    document.getElementById('g-about-close').addEventListener('click', closeAbout);
+    aboutScrim.addEventListener('click', function (e) {
+      if (e.target === aboutScrim) closeAbout();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAbout();
+    });
+  }
+
+  /* ── Настройки сторибука ──────────────────────────────────────────
+     Имя и файл для сравнения — свойства конкретной системы, поэтому живут
+     здесь, а не в шапке галереи. */
+  var settingsBtn   = document.getElementById('g-settings');
+  var settingsScrim = document.getElementById('g-settings-scrim');
+  if (settingsBtn && settingsScrim) {
+    var nameInput = document.getElementById('g-settings-name');
+    var nameHint  = document.getElementById('g-settings-name-hint');
+    var M2 = window.BRAND_MANIFEST || {};
+
+    var suiteId = M2.id || 'brand';
+    nameInput.value = R.displayName(suiteId, M2.title);
+
+    /* Для библиотечного бренда имя локальное: в манифест на диске браузер
+       не пишет. Поэтому переименование работает, но названо тем, что оно
+       есть, — а не выдаётся за правку пакета. */
+    if (!B.source.writable) nameHint.textContent = t('settings.nameLibrary');
+
+    function applyName() {
+      var value = nameInput.value.trim();
+      R.rename(suiteId, value);
+      var shown = R.displayName(suiteId, M2.title);
+      var logo = document.getElementById('g-logo');
+      if (logo) logo.textContent = shown;
+      document.title = shown;
+      var row = document.querySelector('#g-suite-list .g-mi .tick');
+      if (row && row.textContent.trim() === '✓') {
+        row.parentNode.querySelector('.grow').textContent = shown;
+      }
+    }
+    nameInput.addEventListener('input', applyName);
+    nameInput.addEventListener('change', applyName);
+
+    settingsBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeAll();
+      settingsScrim.hidden = false;
+    });
+    function closeSettings() { settingsScrim.hidden = true; }
+    document.getElementById('g-settings-close').addEventListener('click', closeSettings);
+    settingsScrim.addEventListener('click', function (e) {
+      if (e.target === settingsScrim) closeSettings();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeSettings();
     });
   }
 
