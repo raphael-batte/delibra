@@ -10,7 +10,8 @@
   'use strict';
 
   var REQUIRED = [
-    '--bg', '--white-pure', '--border',
+    '--bg', '--white-pure', '--white-pure-rgb',   // хром шапки: rgb(var(--white-pure-rgb) / .88)
+    '--border',
     '--text-primary', '--text-heading', '--text-muted',
     '--blue', '--font-family'
   ];

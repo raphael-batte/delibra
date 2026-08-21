@@ -90,7 +90,10 @@
        встают на разные вертикали и сравнивать их построчно нельзя. */
     .g-row {
       display: grid;
-      grid-template-columns: var(--g-meta-w, 180px) 1fr;
+      /* Ширина колонки метаданных фиксирована: раньше здесь стоял
+         var(--g-meta-w), которого не объявлял ни один бренд, — то есть
+         всегда работал фолбэк, а сама переменная вводила в заблуждение. */
+      grid-template-columns: 180px 1fr;
       align-items: center;
       column-gap: 16px;
       margin-bottom: 14px;

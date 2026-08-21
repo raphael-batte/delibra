@@ -239,6 +239,8 @@ h1, h2, h3, h4, p { margin: 0; }
   display: flex;
   flex-direction: column;
   gap: var(--gap-8);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* ==========================================================================
@@ -822,7 +824,6 @@ img.icon {
   font-weight: var(--font-card-weight);
   color: var(--text-heading);
 }
-.price-list { flex: 1 1 auto; min-height: 0; }
 .price-cta {
   margin-top: auto;
   display: flex;
@@ -912,6 +913,7 @@ img.icon {
   width: var(--card-3col);
   padding: var(--card-pad) var(--card-pad) var(--gap-32);
   border-radius: var(--r-card);
+  background: var(--hero-packages-bg);
 }
 .perk h3 {
   font-size: var(--font-h3-size);
@@ -920,7 +922,6 @@ img.icon {
   color: var(--text-heading);
 }
 .perk p { font-size: var(--font-perk-p-size); line-height: var(--font-perk-p-lh); color: var(--text-primary); }
-.perk { background: var(--hero-packages-bg); }
 
 /* Ряд перков: на десктопе три равные колонки */
 .perks { display: flex; gap: var(--card-gap); }
