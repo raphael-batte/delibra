@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+<title>Template smoke</title>
+<link rel="stylesheet" href="../../packages/engine/tests/harness.css">
+</head>
+<body>
+<h1>Template smoke</h1>
+<p class="sub">Три проверки на то, что шаблон пригоден как заготовка для нового бренда:
+он рисуется, он кликабелен, он не притащил чужих значений.
+<button id="rerun">Перезапустить</button></p>
+<div id="summary">Запускаю…</div>
+<div id="out"></div>
+<div id="stage"></div>
+
+<script>
+  history.replaceState(null, '', location.pathname +
+    '?gallery=../../packages/engine/gallery.html&brand=../../brands/_template' + location.hash);
+</script>
+<script src="../../packages/engine/tests/harness.js"></script>
+<script>
+(function () {
+  'use strict';
+  function D() { return H.gallery().doc; }
+  function G() { return H.gallery().win; }
+
+  H.g('Шаблон');
+
+  H.t('кнопка отрисована в обеих панелях', function () {
+    ['mobile', 'desktop'].forEach(function (which) {
+      var p = H.pane('buttons', which, '.t-btn');
+      H.ok(p.el, 'нет .t-btn в панели ' + which);
+      H.ok(H.px(H.css('buttons', which, '.t-btn', 'height')) > 0, 'нулевая высота в ' + which);
+    });
+  });
+
+  H.t('пример кликабелен', function () {
+    var p = H.pane('buttons', 'mobile', '[data-pick]');
+    H.ok(p.el, 'в шаблоне нет ни одного data-pick — новый бренд скопирует эту ошибку');
+  });
+
+  H.t('шаблон нейтрален: ни одного упоминания другого бренда', function () {
+    var text = (G().BRAND_MANIFEST.title + ' ' +
+                JSON.stringify(G().BRAND_TOKENS) + ' ' +
+                JSON.stringify(G().BRAND_SECTIONS.map(function (s) { return s.title; })));
+    H.ok(!/sdm/i.test(text), 'в шаблоне осталось имя другого бренда');
+  });
+
+  H.run();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Design systems</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 48px 32px; font: 15px/1.6 system-ui, sans-serif;
+         background: Canvas; color: CanvasText; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.lead { margin: 0 0 32px; opacity: .7; }
+  ul { list-style: none; padding: 0; margin: 0 0 32px; }
+  li { padding: 14px 0; border-bottom: 1px solid color-mix(in srgb, CanvasText 15%, transparent); }
+  a { color: inherit; font-weight: 600; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .meta { display: block; font-weight: 400; font-size: 13px; opacity: .65; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Design systems</h1>
+  <p class="lead">Одна галерея, несколько дизайн-систем. Бренд выбирается параметром
+    <code>?brand=</code> — движок не знает ни одного из них по имени.</p>
+
+  <ul>
+    <li><a href="packages/engine/gallery.html?brand=../../brands/sdm">SDM Design System</a>
+        <span class="meta">рабочая система банка · <a href="brands/sdm/tests.html">30 тестов</a></span></li>
+    <li><a href="packages/engine/gallery.html?brand=../../brands/_template">Template</a>
+        <span class="meta">заготовка для нового бренда · <a href="brands/_template/tests.html">смоук</a></span></li>
+  </ul>
+
+  <ul>
+    <li><a href="packages/engine/tests/engine.html">Тесты движка</a>
+        <span class="meta">гоняются на шаблоне: движок обязан работать с любым брендом</span></li>
+  </ul>
+
+  <p class="lead">Открывать только по <code>http://</code>: из файла браузер не отдаёт
+    <code>cssRules</code> и не читает токены.</p>
+</main>
+</body>
+</html>
