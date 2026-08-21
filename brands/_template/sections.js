@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  window.GALLERY = [{
+  window.BRAND_SECTIONS = [{
     id: 'buttons',
     group: 'Primitives',
     title: 'Button',

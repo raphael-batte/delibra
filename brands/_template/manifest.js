@@ -13,7 +13,7 @@ window.BRAND_MANIFEST = {
   },
 
   specs:       'sections.js',
-  tokenMap:    null,
+  tokenMap:    'token-map.js',
   legacyNames: null,
   assetsBase:  'assets/',
 

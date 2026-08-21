@@ -9,7 +9,12 @@
 (function () {
   'use strict';
 
-  var SPECS = window.GALLERY || [];
+  /* Каталог = секции токенов (движок рисует их по дескриптору бренда)
+     плюс компонентные секции самого бренда. Композиция здесь, а не в бренде:
+     иначе каждый новый бренд обязан помнить, что токены надо приклеить. */
+  var SPECS = window.ENGINE_SPECS.tokenSections(window.BRAND_TOKENS)
+                .concat(window.BRAND_SECTIONS || []);
+  window.GALLERY = SPECS;
   var B = window.ENGINE_BRAND;
   var M = window.BRAND_MANIFEST || {};
   var t = B.t;
