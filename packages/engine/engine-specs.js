@@ -192,9 +192,15 @@
 
   /* Таблица размеров: одна строка = токен, отдельные колонки M и D */
   function sizeTable(rows) {
+    /* Колонка с приложенным CSS появляется только при включённом сравнении:
+       без него она пустая на всю таблицу. */
+    var compare = comparing();
+
     return '<table class="g-table"><thead><tr>' +
       '<th>' + t('tok.token') + '</th><th>' + t('tok.mobile') + '</th>' +
-      '<th>' + t('tok.desktop') + '</th><th>' + t('tok.usage') + '</th>' +
+      '<th>' + t('tok.desktop') + '</th>' +
+      (compare ? '<th>' + t('tok.inCode') + '</th>' : '') +
+      '<th>' + t('tok.usage') + '</th>' +
       '</tr></thead><tbody>' +
       rows.map(function (r) {
         var x = bp(r[0]);
@@ -202,8 +208,97 @@
         return '<tr><td><code>' + esc(r[0]) + '</code></td>' +
           '<td><code>' + esc(x.m == null ? '—' : x.m) + '</code></td>' +
           '<td' + cls + '><code>' + esc(x.d == null ? '—' : x.d) + '</code></td>' +
+          (compare ? '<td>' + codeNote(r[0]) + '</td>' : '') +
           '<td>' + (r[1] || '') + '</td></tr>';
       }).join('') + '</tbody></table>';
+  }
+
+  /* Что в приложенном CSS. Возвращает пустую строку, пока сравнение
+     выключено: палитра — это сама дизайн-система, и постоянный рассказ о
+     чужом файле в ней шум. Включили тоггл — расхождения обязаны быть видны
+     не только у компонентов, но и у токенов: именно там они и заводятся. */
+  /* Род токена по имени. Без него поиск «того же значения» находит ложных
+     друзей: 48px есть и у радиуса, и у отступа, и у заголовка — совпадение
+     числа ничего не значит, если это разные вещи. */
+  function kindOf(name) {
+    var n = name.replace(/^--/, '');
+    if (/(^|-)(font|fs|lh|text|title|caption|lead)(-|$)/.test(n)) return 'type';
+    if (/(^|-)(r|radius|rounded)(-|$)/.test(n)) return 'radius';
+    if (/(^|-)(gap|pad|space|gutter|section|inset|margin)(-|$)/.test(n)) return 'space';
+    if (/(^|-)(shadow|ring|blur)(-|$)/.test(n)) return 'effect';
+    if (/(^|-)(h|w|width|height|size|min|max)(-|$)/.test(n)) return 'size';
+    return 'other';
+  }
+
+  /* Тот же токен под другим именем. Сравнение по имени этого не находит: в
+     боевом коде размеры типографики обычно живут своим набором (--m-fs-*),
+     и честный ответ «такого имени нет» практически бесполезен — значение-то
+     на месте. Ищем по значению внутри того же рода и называем найденное. */
+  function sameValueName(name, value) {
+    if (value == null) return null;
+    var target = norm(value);
+    var kind = kindOf(name);
+    var words = name.replace(/^--/, '').split('-').filter(function (w) {
+      return w.length > 1 && w !== 'font' && w !== 'size';
+    });
+
+    var best = null;
+    ['base', 'desktop', 'mobile'].forEach(function (ctx) {
+      var set = VARS.site[ctx] || {};
+      Object.keys(set).forEach(function (n) {
+        if (norm(set[n]) !== target) return;
+        if (kindOf(n) !== kind) return;
+        /* Из нескольких носителей одного значения предпочитаем имя,
+           похожее на наше: --m-fs-h1 полезнее, чем --m-fs-32. */
+        var score = words.filter(function (w) { return n.indexOf(w) >= 0; }).length;
+        if (!best || score > best.score) best = { name: n, score: score };
+      });
+    });
+    return best ? best.name : null;
+  }
+
+  function codeNote(name) {
+    if (!VARS.ready || !VARS.hasSite) return '';
+    if (!window.GALLERY_API || !window.GALLERY_API.isDiffOn()) return '';
+
+    var mine = val(name, 'new');
+    var inCode = val(name, 'current');
+    var codeName = (VARS.site.base[name] === undefined && LEGACY[name]) ? LEGACY[name] : name;
+
+    if (inCode == null) {
+      /* Имени нет — но значение может лежать под другим. У сайта так и
+         устроено: мобильные размеры живут набором --m-fs-*, и «такого нет»
+         формально верно, а по делу бесполезно. Ищем по обоим брейкпоинтам:
+         десктопного значения там может не быть вовсе. */
+      var alias = sameValueName(name, mine) ||
+                  sameValueName(name, val(name, 'new', 'mobile'));
+      if (alias) return '<span class="g-ok">' + t('tok.sameValueAs', { name: esc(alias) }) + '</span>';
+
+      /* «Такого токена нет» — то же расхождение, что и другое значение:
+         одна причина разбираться, значит один цвет. */
+      return '<span class="g-warn">' + t('tok.notInCode') + '</span>';
+    }
+    if (norm(inCode) !== norm(mine)) {
+      return '<span class="g-warn">' +
+        t('tok.inCodeAs', { name: esc(codeName), value: esc(inCode) }) + '</span>';
+    }
+    if (codeName !== name) {
+      return '<span class="g-ok">' + t('tok.inCodeNamed', { name: esc(codeName) }) + '</span>';
+    }
+    return '<span class="g-ok">' + t('tok.matchesCode') + '</span>';
+  }
+
+  /* Сравнение включено? Токен-секции спрашивают об этом в нескольких
+     местах — держим один ответ. */
+  function comparing() {
+    return !!(VARS.ready && VARS.hasSite &&
+              window.GALLERY_API && window.GALLERY_API.isDiffOn());
+  }
+
+  /* Строка с расхождением под токеном — пустая, пока сравнение выключено. */
+  function noteRow(name) {
+    var note = codeNote(name);
+    return note ? '<div class="g-swatch-use">' + note + '</div>' : '';
   }
 
   /* ── Свотчи ────────────────────────────────────────────────────────── */
@@ -217,23 +312,13 @@
       ? '<div class="g-swatch-chip" style="background:' + v + '"></div>'
       : '<div class="g-swatch-chip g-missing"></div>';
 
-    var inCode = val(name, 'current');
-    var codeName = (VARS.site.base[name] === undefined && LEGACY[name]) ? LEGACY[name] : name;
-    var note;
-    if (!VARS.ready || !VARS.hasSite) note = '';   // сравнивать пока не с чем
-    else if (inCode == null) note = '<span class="g-add">' + t('tok.notInCode') + '</span>';
-    else if (norm(inCode) !== norm(v)) note = '<span class="g-warn">' +
-      t('tok.inCodeAs', { name: esc(codeName), value: esc(inCode) }) + '</span>';
-    else if (codeName !== name) note = '<span class="g-ok">' + t('tok.inCodeNamed', { name: esc(codeName) }) + '</span>';
-    else note = '<span class="g-ok">' + t('tok.matchesCode') + '</span>';
-
     return '<div class="g-swatch">' + chip +
       '<div class="g-swatch-meta">' +
         '<div class="g-swatch-name">' + esc(label) + '</div>' +
         '<div class="g-swatch-val">' + (v ? esc(v) : '<span class="g-warn">' + t('tok.missing') + '</span>') + '</div>' +
         '<div class="g-swatch-val">' + esc(name) + '</div>' +
         (use ? '<div class="g-swatch-use">' + esc(use) + '</div>' : '') +
-        '<div class="g-swatch-use">' + note + '</div>' +
+        noteRow(name) +
       '</div></div>';
   }
 
@@ -331,6 +416,7 @@
           '<div class="g-swatch-val">' + esc(name) + '</div>' +
           '<div class="g-swatch-use">' + t(x.same ? 'tok.sameBoth' : 'tok.differs') + '</div>' +
           (label ? '<div class="g-swatch-use">' + esc(label) + '</div>' : '') +
+          noteRow(name) +
         '</div></div>';
     }
     return section('radii', d, function () {
@@ -355,7 +441,8 @@
         '<div class="g-swatch-meta"><div class="g-swatch-name">' + esc(label) + '</div>' +
         '<div class="g-swatch-val">' + esc(v || '—') + '</div>' +
         '<div class="g-swatch-val">' + esc(name) + '</div>' +
-        '<div class="g-swatch-use">' + esc(use || '') + '</div></div></div>';
+        '<div class="g-swatch-use">' + esc(use || '') + '</div>' +
+        noteRow(name) + '</div></div>';
     }
     /* Градиентная рамка — не тень: она рисуется двумя фонами и
        background-clip, поэтому и демонстрируется отдельно. */
@@ -397,6 +484,7 @@
             '<div class="g-swatch-name">' + esc(v || '—') + '</div>' +
             '<div class="g-swatch-val">' + esc(r[0]) + '</div>' +
             '<div class="g-swatch-use">' + esc(r[1] || '') + '</div>' +
+            noteRow(r[0]) +
           '</div></div>';
       }).join('') + '</div>';
     });
@@ -415,10 +503,13 @@
     }
 
     function scaleTable() {
+      var cmp = comparing();
       return h3(t('tok.scale')) + '<table class="g-table"><thead><tr>' +
         '<th>' + t('tok.style') + '</th><th>' + t('tok.token') + '</th>' +
         '<th>' + t('tok.mobileShort') + '</th><th>' + t('tok.desktopShort') + '</th>' +
-        '<th>' + t('tok.weight') + '</th><th>' + t('tok.usage') + '</th>' +
+        '<th>' + t('tok.weight') + '</th>' +
+        (cmp ? '<th>' + t('tok.inCode') + '</th>' : '') +
+        '<th>' + t('tok.usage') + '</th>' +
         '</tr></thead><tbody>' +
         rows.map(function (r) {
           return '<tr><td><b>' + esc(r[0]) + '</b></td>' +
@@ -426,6 +517,7 @@
             '<td><code>' + esc(val(r[1] + '-size', 'new', 'mobile')  || '—') + '</code></td>' +
             '<td><code>' + esc(val(r[1] + '-size', 'new', 'desktop') || '—') + '</code></td>' +
             '<td><code>' + r[3] + '</code></td>' +
+            (cmp ? '<td>' + codeNote(r[1] + '-size') + '</td>' : '') +
             '<td>' + esc(r[2] || '') + '</td></tr>';
         }).join('') + '</tbody></table>';
     }
@@ -473,7 +565,8 @@
             return '<div class="g-swatch"><div class="g-space-demo">' +
               '<div class="g-space-bar" style="width:' + v + '"></div></div>' +
               '<div class="g-swatch-meta"><div class="g-swatch-name">' + esc(v) + '</div>' +
-              '<div class="g-swatch-val">' + esc(n) + '</div></div></div>';
+              '<div class="g-swatch-val">' + esc(n) + '</div>' +
+              noteRow(n) + '</div></div>';
           }).join('') + '</div>';
       }
       return out;

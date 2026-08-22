@@ -181,6 +181,8 @@
 
   function openOverlay(d) {
     current = d;
+    document.getElementById('g-ov-tabs').hidden = false;
+    document.getElementById('g-ov-actions').innerHTML = '';
     document.getElementById('g-ov-title').textContent = d.name || t('overlay.component');
     document.getElementById('g-ov-sel').textContent = d.selector || '';
     ov.classList.add('is-open');
@@ -723,6 +725,10 @@
   }
 
   function setDiff(on) {
+    /* Токен-секции рисуются один раз и про сравнение узнают только отсюда:
+       без перерисовки колонка «в приложенном CSS» появлялась бы лишь после
+       перезагрузки страницы. */
+    setTimeout(function () { if (window.GALLERY_REFRESH) window.GALLERY_REFRESH(); }, 0);
     if (on && !compareCss) return;   // сравнивать не с чем
     diffOn = on;
     diffBtn.checked = on;
@@ -756,6 +762,23 @@
   /* Небольшой публичный API — им пользуются тесты (tests.html) и он же
      удобен из консоли: сборка панелей ленивая и завязана на прокрутку,
      а так можно попросить конкретный раздел посчитаться прямо сейчас. */
+  /* Показать в дравере произвольный файл системы. Тот же оверлей, что у
+     компонентов: заводить второй ради текста файла незачем — человек и так
+     знает это окно. Вкладки прячем: у файла нет второй стороны. */
+  window.GALLERY_API_FILE = function (opts) {
+    current = null;
+    document.getElementById('g-ov-title').textContent = opts.title || '';
+    document.getElementById('g-ov-sel').textContent = opts.path || '';
+    document.getElementById('g-ov-tabs').hidden = true;
+
+    document.getElementById('g-ov-actions').innerHTML = opts.actions || '';
+    ovBody.innerHTML = '<pre class="g-code">' + esc(opts.text || '') + '</pre>';
+
+    ov.classList.add('is-open');
+    document.body.classList.add('g-no-scroll');
+    return ovBody;
+  };
+
   window.GALLERY_API = {
     setDiff: setDiff,
     isDiffOn: function () { return diffOn; },

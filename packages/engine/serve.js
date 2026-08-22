@@ -20,6 +20,7 @@ const http = require('http');
 const fs   = require('fs');
 const path = require('path');
 const SLUG = require('./slug.js');
+const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const BRANDS = path.join(ROOT, 'brands');
@@ -139,6 +140,37 @@ function createBrand(res, data) {
 function api(req, res, url) {
   if (url.pathname === '/__api/ping') {
     return send(res, 200, JSON.stringify({ ok: true, writable: true }));
+  }
+
+  /* Показать файл в проводнике. Смысл в том, чтобы человек мог открыть
+     токены редактором и править их руками: галерея показывает систему, но
+     правят её в файлах. Путь проверяем по корню — открывать произвольное
+     место на диске по просьбе страницы нельзя. */
+  if (url.pathname === '/__api/reveal' && req.method === 'POST') {
+    return readBody(req).then(raw => {
+      let data;
+      try { data = JSON.parse(raw); } catch (e) { return send(res, 400, JSON.stringify({ error: 'bad json' })); }
+
+      const target = path.resolve(ROOT, '.' + path.posix.normalize('/' + (data.path || '')));
+      if (!target.startsWith(ROOT) || !fs.existsSync(target)) {
+        return send(res, 400, JSON.stringify({ error: 'bad path' }));
+      }
+
+      /* У каждой системы свой способ: macOS умеет подсветить сам файл,
+         Windows тоже, у остальных открываем папку — это лучшее, на что
+         можно рассчитывать без догадок про файловый менеджер. */
+      let cmd, args;
+      if (process.platform === 'darwin')      { cmd = 'open';     args = ['-R', target]; }
+      else if (process.platform === 'win32')  { cmd = 'explorer'; args = ['/select,' + target]; }
+      else                                    { cmd = 'xdg-open'; args = [path.dirname(target)]; }
+
+      try {
+        spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref();
+        return send(res, 200, JSON.stringify({ ok: true }));
+      } catch (e) {
+        return send(res, 500, JSON.stringify({ error: String(e.message || e) }));
+      }
+    }, () => send(res, 400, JSON.stringify({ error: 'bad request' })));
   }
 
   if (url.pathname === '/__api/brand' && req.method === 'POST') {

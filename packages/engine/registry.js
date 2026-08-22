@@ -71,6 +71,16 @@
       });
     },
 
+    /* Открыть файл в проводнике — только через свой сервер: страница сама
+       ничего на диске не показывает. */
+    reveal: function (relPath) {
+      return fetch('/__api/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: relPath })
+      }).then(function (r) { return r.ok; });
+    },
+
     /* Настоящее удаление папки бренда. Доступно только через свой сервер:
        страница сама файлы на диске не трогает. */
     deleteBrand: function (id) {

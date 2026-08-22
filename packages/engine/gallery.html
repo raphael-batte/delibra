@@ -23,6 +23,12 @@
    при content-box падинги и полоса прокрутки прибавлялись к ширине,
    сайдбар занимал 257px против объявленных 232, и шапка на эти 25px
    уезжала под дерево. */
+/* [hidden] обязан прятать. Любое правило с display у элемента сильнее
+   браузерного [hidden] — на этом уже трижды ловились: скрытая настройка,
+   вкладки оверлея и выбор сценария в диалоге создания продолжали
+   показываться. Одно правило вместо трёх заплаток. */
+[hidden] { display: none !important; }
+
 /* Собственные значения хрома. Раньше галерея целиком зависела от токенов
    бренда: без открытой системы она превращалась в серое ничто — ни фона, ни
    шрифта, ни границ. Бренд эти же имена переопределяет, когда загрузится. */
@@ -239,10 +245,11 @@ body {
 }
 
 .g-section { margin: 0 0 64px; scroll-margin-top: 72px; }
+/* Без линии под заголовком: разделы и так разведены отступом в 64px, а
+   черта добавляла второй разделитель там, где хватает одного. */
 .g-section-head {
   display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-  margin: 0 0 8px; padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  margin: 0 0 12px;
 }
 .g-section-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--text-heading); }
 .g-section-head code {
@@ -299,6 +306,9 @@ body {
 .g-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 /* Пометки статуса в токен-секциях: не хром, а часть сообщения — «есть»,
    «расходится», «нового в коде нет». Цвет здесь несёт смысл. */
+/* Три состояния сравнения: совпало, разошлось, добавлено. Расхождение —
+   всегда один цвет, независимо от того, отличается значение или его нет
+   вовсе: причина разобраться одна и та же. */
 .g-ok   { color: var(--green); }
 .g-warn { color: #b26a00; }
 .g-add  { color: var(--text-muted); }
@@ -327,8 +337,16 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px; color: var(--text-muted);
 }
+/* Кнопки действий и крестик — одной высоты: они стоят в ряд, и разнобой
+   виден сразу. 30px задаёт крестик, остальные равняются на него. */
+.g-overlay-actions { margin-left: auto; display: flex; gap: 8px; }
+.g-overlay-actions .g-copy {
+  margin: 0; height: 30px; padding-inline: 12px;
+  display: inline-flex; align-items: center;
+}
+
 .g-overlay-close {
-  margin-left: auto; width: 30px; height: 30px; border: 0; border-radius: 8px;
+  width: 30px; height: 30px; border: 0; border-radius: 8px;
   background: var(--card-gray); font-size: 16px; line-height: 1; color: var(--text-muted); cursor: pointer;
 }
 .g-tabs { display: flex; gap: 4px; padding: 8px 20px 0; }
@@ -585,16 +603,15 @@ body.g-no-scroll { overflow: hidden; }
 .g-dialog__actions { display: flex; justify-content: flex-end; margin-top: 20px; }
 
 .g-field { display: block; margin-bottom: 16px; }
-/* display:block у .g-field сильнее браузерного [hidden] — без этой строки
-   скрытая настройка продолжала показываться. */
-.g-field[hidden] { display: none; }
 .g-field__label {
   display: block; margin-bottom: 8px;
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   text-transform: uppercase; color: var(--text-muted);
 }
+/* Поле ввода не тянется во всю ширину диалога: имя сторибука — это два-три
+   слова, а поле в 460 пикселей обещает абзац. */
 .g-field input[type="text"] {
-  width: 100%; height: 34px; padding-inline: 8px;
+  width: 100%; max-width: 320px; height: 34px; padding-inline: 8px;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--white-pure); color: var(--text-primary);
   font-family: var(--font-family); font-size: 13px;
@@ -605,7 +622,7 @@ body.g-no-scroll { overflow: hidden; }
 /* Тот же приём, что у выбора масштаба: своя стрелка, симметричные поля. */
 .g-field select {
   appearance: none; -webkit-appearance: none;
-  width: 100%; height: 32px; padding: 0 32px 0 12px;
+  width: 100%; max-width: 320px; height: 32px; padding: 0 32px 0 12px;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--white-pure) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 12px 12px;
   color: var(--text-primary);
@@ -641,14 +658,12 @@ body.g-no-scroll { overflow: hidden; }
   background: var(--card-gray, var(--bg));
   font-size: 12px; color: var(--text-error);
 }
-.g-dialog__error[hidden] { display: none; }
 
 /* Пустой сторибук: инструкция занимает место каталога, а не всплывает над
    ним. Ширину держим читаемой — это текст, а не сетка карточек. */
 .g-empty { max-width: 640px; padding: 48px 0 0; }
 .g-empty h2 { margin: 0 0 4px; font-size: 20px; color: var(--text-heading); }
 .g-empty__lead { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); }
-.g-empty[hidden] { display: none; }
 
 /* Блок с шагами в онбординге: он единственный на экране, поэтому подан
    спокойно — без соревнования с соседними вариантами. */
@@ -665,7 +680,10 @@ body.g-no-scroll { overflow: hidden; }
 
 /* Адрес будущего сторибука: не поле ввода, а следствие имени. Показываем
    его до создания — «как это будет называться» не должно выясняться потом. */
+/* border-box, иначе паддинги прибавляются к 320 и адрес оказывается шире
+   поля ввода, стоящего прямо над ним. */
 .g-address {
+  box-sizing: border-box; max-width: 320px;
   padding: 8px 12px; border-radius: 8px;
   background: var(--card-gray, var(--bg));
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -744,24 +762,6 @@ body.g-no-scroll { overflow: hidden; }
 
   <div id="g-nav"></div>
 </nav>
-
-<!-- Просмотр файла системы: полный текст и кнопка «Копировать». Для папки
-     рядом стоит ссылка на живой файл — её можно открыть в соседней вкладке
-     или отдать разработчику. У пакета такой ссылки нет: blob живёт только
-     в этой вкладке, и обещать её было бы обманом. -->
-<div class="g-scrim" id="g-code-scrim" hidden>
-  <div class="g-dialog g-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="g-code-title">
-    <h3 id="g-code-title"></h3>
-    <p class="g-dialog__lead" id="g-code-path"></p>
-    <pre class="g-code" id="g-code-body"></pre>
-    <div class="g-dialog__actions" style="gap:8px">
-      <a class="g-mi" id="g-code-open" style="width:auto" target="_blank" rel="noopener"
-         data-i18n="menu.openInTab"></a>
-      <button class="g-mi" id="g-code-copy" style="width:auto" data-i18n="overlay.copyCss"></button>
-      <button class="g-btn-primary" id="g-code-close" data-i18n="settings.done"></button>
-    </div>
-  </div>
-</div>
 
 <!-- Пустой старт и «Новый сторибук» — один экран. Три пути, которыми
      дизайн-система вообще может появиться: с нуля, из файла (пакет или чужой
@@ -965,6 +965,9 @@ body.g-no-scroll { overflow: hidden; }
         <div class="g-overlay-title" id="g-ov-title">—</div>
         <div class="g-overlay-sel" id="g-ov-sel"></div>
       </div>
+      <!-- Действия над файлом стоят в шапке, а не над кодом: там они не
+           уезжают вместе с прокруткой и не спорят за место с содержимым. -->
+      <div class="g-overlay-actions" id="g-ov-actions"></div>
       <button class="g-overlay-close" id="g-ov-close" data-i18n-aria="overlay.close">×</button>
     </div>
     <div class="g-tabs" id="g-ov-tabs">

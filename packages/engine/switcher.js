@@ -116,7 +116,28 @@
        прошлого захода, — источник ошибок, а не экономия клика. */
     backToChoices();
   }
-  function closeNew() { newScrim.hidden = true; }
+  function closeNew() {
+    newScrim.hidden = true;
+    /* Отказ от создания не должен оставлять человека на пустом экране: если
+       за диалогом ничего нет — уходим на список сторибуков. Раньше «Отмена»
+       на /new просто закрывала окно, и оставалась голая галерея. */
+    var opened = B.source.rel || B.suiteId;
+    if (!opened || location.pathname === '/new') location.href = '/';
+  }
+
+  /* Открыть и закрыть. Обработчики стоят рядом с самими функциями: в
+     прошлый раз они уехали вместе с вырезанным блоком, и пункт меню молча
+     перестал работать — ровно то, что теперь проверяется тестами. */
+  document.getElementById('g-new').addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeAll();
+    openNew();
+  });
+  document.getElementById('g-new-close').addEventListener('click', closeNew);
+  newScrim.addEventListener('click', function (e) { if (e.target === newScrim) closeNew(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !newScrim.hidden) closeNew();
+  });
 
   function showError(key, vars) {
     newError.textContent = t('new.failed', { error: t('new.err.' + key, vars || {}) });
@@ -326,33 +347,40 @@
   /* ── Показать CSS системы ──────────────────────────────────────────
      Человек, который пользуется дизайн-системой, должен видеть её код, а не
      только результат: иначе «где это лежит» приходится спрашивать. */
-  var codeScrim = document.getElementById('g-code-scrim');
-
   function showCode(file) {
-    var body = document.getElementById('g-code-body');
-    var open = document.getElementById('g-code-open');
+    if (!file) return;
 
-    document.getElementById('g-code-title').textContent = file || '';
-    document.getElementById('g-code-path').textContent =
-      B.source.kind === 'folder' ? B.source.url(file) : t('menu.copiedLocal');
+    var folder = B.source.kind === 'folder';
+    var path = folder ? B.source.base + file : null;
 
-    if (!file) {
-      body.textContent = t('menu.codeMissing');
-      open.hidden = true;
-    } else {
-      Promise.resolve(B.source.text(file)).then(function (text) {
-        body.textContent = text || t('menu.codeMissing');
+    Promise.resolve(B.source.text(file)).then(function (text) {
+      window.GALLERY_API_FILE({
+        title: file,
+        path: path || t('badge.browserOnly'),
+        text: text || '',
+        actions: '<button class="g-copy" data-copy-file>' + t('overlay.copyCss') + '</button>' +
+                 (folder ? '<button class="g-copy" data-reveal>' + t('menu.reveal') + '</button>' : '')
       });
-      /* Ссылка на живой файл есть только у папки: blob-адрес пакета живёт
-         в этой вкладке и в чужих руках не откроется. */
-      if (B.source.kind === 'folder') {
-        open.hidden = false;
-        open.href = B.source.url(file);
-      } else {
-        open.hidden = true;
-      }
-    }
-    codeScrim.hidden = false;
+
+      var actions = document.getElementById('g-ov-actions');
+      actions.querySelector('[data-copy-file]').addEventListener('click', function (e) {
+        navigator.clipboard.writeText(text || '').then(function () {
+          var was = e.target.textContent;
+          e.target.textContent = t('menu.codeCopied');
+          setTimeout(function () { e.target.textContent = was; }, 1200);
+        });
+      });
+
+      /* Открыть файл в проводнике: галерея показывает систему, но правят её
+         в файлах — и путь до них человек иначе ищет руками. */
+      var revealBtn = actions.querySelector('[data-reveal]');
+      if (revealBtn) revealBtn.addEventListener('click', function () {
+        R.reveal(B.source.base + file).then(function (ok) {
+          if (ok) return;
+          revealBtn.textContent = t('menu.revealFailed');
+        });
+      });
+    });
   }
 
   function wireView(btnId, field) {
@@ -367,22 +395,6 @@
   }
   wireView('g-view-tokens', 'tokens');
   wireView('g-view-components', 'components');
-
-  document.getElementById('g-code-close').addEventListener('click', function () {
-    codeScrim.hidden = true;
-  });
-  codeScrim.addEventListener('click', function (e) {
-    if (e.target === codeScrim) codeScrim.hidden = true;
-  });
-  document.getElementById('g-code-copy').addEventListener('click', function (e) {
-    var btn = e.currentTarget;
-    navigator.clipboard.writeText(document.getElementById('g-code-body').textContent)
-      .then(function () {
-        var was = btn.textContent;
-        btn.textContent = t('menu.codeCopied');
-        setTimeout(function () { btn.textContent = was; }, 1200);
-      });
-  });
 
   /* ── Дублировать ───────────────────────────────────────────────────
      Копия всегда пакет, даже если исходник — папка: браузер в папку не

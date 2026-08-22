@@ -238,6 +238,60 @@
     });
   });
 
+  H.g('Новый сторибук');
+
+  H.t('пункт меню открывает диалог, «Отмена» закрывает', function () {
+    /* Обе кнопки уже теряли обработчики при перестановке кода, и заметно
+       это было только руками: пункт молча ничего не делал. */
+    var doc = D();
+    doc.getElementById('g-mark').click();
+    doc.getElementById('g-new').click();
+    return H.wait(250).then(function () {
+      H.eq(doc.getElementById('g-new-scrim').hidden, false, 'диалог не открылся');
+      doc.getElementById('g-new-close').click();
+      return H.wait(200);
+    }).then(function () {
+      H.eq(doc.getElementById('g-new-scrim').hidden, true, '«Отмена» не закрыла диалог');
+    });
+  });
+
+  H.t('визард: выбор сценария → второй шаг → назад', function () {
+    var doc = D();
+    doc.getElementById('g-mark').click();
+    doc.getElementById('g-new').click();
+
+    return H.wait(250).then(function () {
+      var choices = doc.querySelector('#g-new-scrim .g-choices');
+      H.ok(choices.offsetHeight > 0, 'на первом шаге не видно сценариев');
+      H.eq(doc.getElementById('g-new-step2').offsetHeight, 0, 'второй шаг показан сразу');
+
+      doc.getElementById('g-new-blank').click();
+      return H.wait(200);
+    }).then(function () {
+      /* Первый шаг обязан уйти: два экрана сразу — это не визард. */
+      H.eq(doc.querySelector('#g-new-scrim .g-choices').offsetHeight, 0,
+         'сценарии остались на втором шаге');
+      H.ok(doc.getElementById('g-new-step2').offsetHeight > 0, 'второй шаг не показан');
+      H.ok(doc.getElementById('g-new-name').value.length > 0, 'имя не предзаполнено');
+      H.ok(/^\/[a-z0-9-]+$/.test(doc.getElementById('g-new-address').textContent),
+         'адрес не показан: ' + doc.getElementById('g-new-address').textContent);
+
+      doc.getElementById('g-new-back').click();
+      return H.wait(200);
+    }).then(function () {
+      H.ok(doc.querySelector('#g-new-scrim .g-choices').offsetHeight > 0,
+         '«Назад» не вернул к выбору сценария');
+      doc.getElementById('g-new-close').click();
+    });
+  });
+
+  H.t('адрес считается из имени и транслитерируется', function () {
+    var G_ = G();
+    H.eq(G_.ENGINE_SLUG.slug('New storybook'), 'new-storybook');
+    H.eq(G_.ENGINE_SLUG.slug('Мой бренд'), 'moy-brend', 'кириллица не транслитерируется');
+    H.eq(G_.ENGINE_SLUG.slug('   ---   '), 'storybook', 'пустое имя без отката');
+  });
+
   /* Контракт: бренд обязан объявить токены, без которых не встаёт хром. */
   H.contractTests();
 
