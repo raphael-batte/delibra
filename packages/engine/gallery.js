@@ -382,9 +382,13 @@
     });
     titleEl.textContent = id ? sectionTitle(id) : DEFAULT_TITLE;
 
-    // replaceState, а не pushState: иначе «Назад» отматывал бы по разделу за клик
+    /* replaceState, а не pushState: иначе «Назад» отматывал бы по разделу за
+       клик. Адрес собираем полностью: относительный «#id» резолвится через
+       <base>, и на коротком адресе /sdm якорь уводил на /packages/engine/. */
     if (id) {
-      if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
+      if (location.hash !== '#' + id) {
+        history.replaceState(null, '', location.pathname + location.search + '#' + id);
+      }
     } else if (location.hash) {
       // вернулись к самому верху — якорь тоже снимаем
       history.replaceState(null, '', location.pathname + location.search);

@@ -109,6 +109,14 @@
   function openNew() {
     newError.hidden = true;
     newScrim.hidden = false;
+    /* Всегда начинаем с выбора сценария: диалог, открытый на середине
+       прошлого захода, — источник ошибок, а не экономия клика. */
+    var choicesEl = newScrim.querySelector('.g-choices');
+    var step2El = document.getElementById('g-new-step2');
+    var createEl = document.getElementById('g-new-create');
+    if (choicesEl) choicesEl.hidden = false;
+    if (step2El) step2El.hidden = true;
+    if (createEl) createEl.hidden = true;
   }
   function closeNew() { newScrim.hidden = true; }
 
@@ -117,34 +125,84 @@
     newError.hidden = false;
   }
 
-  /* Пакет в хранилище и сразу открыть: сторибук создаётся, чтобы в него
-     смотреть, а не чтобы он появился в списке. */
-  function adopt(pack, title) {
-    var id = R.newId(title);
-    var problem = R.saveBundle(id, pack, title);
-    if (problem) { showError(problem.error, problem); return; }
-    R.setActive(id);
-    location.href = location.pathname + '?suite=' + encodeURIComponent(id);
+  /* ── Второй шаг: имя, адрес, файл ──────────────────────────────────
+     Сценарий выбран — дальше спрашиваем то, что нужно всем трём веткам, и
+     показываем будущий адрес до создания, а не после. */
+  var step2   = document.getElementById('g-new-step2');
+  var choices = newScrim.querySelector('.g-choices');
+  var nameInput2 = document.getElementById('g-new-name');
+  var addressEl  = document.getElementById('g-new-address');
+  var sourceRow  = document.getElementById('g-new-source');
+  var srcInput   = document.getElementById('g-new-src-file');
+  var srcName    = document.getElementById('g-new-src-name');
+  var createBtn  = document.getElementById('g-new-create');
+
+  var scenario = null;    // 'blank' | 'css' | 'import'
+  var srcText  = null;    // содержимое выбранного файла
+
+  function refreshAddress() {
+    var slug = window.ENGINE_SLUG.slug(nameInput2.value);
+    addressEl.textContent = '/' + slug;
+    var needsFile = scenario !== 'blank';
+    createBtn.disabled = !nameInput2.value.trim() || (needsFile && !srcText);
+  }
+  nameInput2.addEventListener('input', refreshAddress);
+
+  srcInput.addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    file.text().then(function (text) {
+      srcText = text;
+      srcName.textContent = file.name;
+      /* Имя файла — лучшая догадка о названии, чем «New storybook», но
+         только пока человек не ввёл своё. */
+      if (!nameInput2.__touched) {
+        nameInput2.value = file.name.replace(/\.[^.]+$/, '');
+      }
+      refreshAddress();
+    });
+  });
+  nameInput2.addEventListener('input', function () { nameInput2.__touched = true; });
+
+  function step(which) {
+    scenario = which;
+    srcText = null;
+    srcName.textContent = '';
+    srcInput.value = '';
+    nameInput2.__touched = false;
+    nameInput2.value = which === 'blank' ? t('new.blank.name') : '';
+    srcInput.accept = which === 'css' ? '.css,text/css' : '.json,application/json';
+
+    choices.hidden = true;
+    step2.hidden = false;
+    sourceRow.hidden = which === 'blank';
+    createBtn.hidden = false;
+    newError.hidden = true;
+    refreshAddress();
+    nameInput2.focus();
   }
 
-  document.getElementById('g-new').addEventListener('click', function (e) {
-    e.stopPropagation();
-    closeAll();
-    openNew();
-  });
-  document.getElementById('g-new-close').addEventListener('click', closeNew);
-  newScrim.addEventListener('click', function (e) { if (e.target === newScrim) closeNew(); });
+  /* Сборка файлов сторибука — по сценарию. Дальше все три ветки идут одним
+     путём: отдать серверу папку, не получилось — сложить пакет в браузер. */
+  function filesFor(title) {
+    if (scenario === 'css') {
+      var css = window.ENGINE_CSS_IMPORT.build(srcText, srcName.textContent, t, title);
+      return css.error ? { error: css.error } : { files: css.pack.files };
+    }
+    if (scenario === 'import') {
+      var res = window.ENGINE_PACKAGE.parse(srcText);
+      if (res.error) return res;
+      var files = Object.assign({}, res.pack.files);
+      var m = JSON.parse(files['manifest.json']);
+      m.title = title;
+      files['manifest.json'] = JSON.stringify(m, null, 2);
+      return { files: files };
+    }
 
-  /* Пустой — значит пустой: ни одного токена, ни одной секции. Раньше сюда
-     копировался шаблон, и человек получал чужую палитру, которую принимал за
-     свою. Каркас теперь ровно такой, чтобы галерея открылась: манифест и
-     четыре пустых файла. Чем его наполняют — сказано в скилле движка, и об
-     этом же говорит онбординг сразу после создания.
-
-     Хром при этом не рассыпается: у него собственные значения на случай,
-     когда бренд ничего не объявил. */
-  document.getElementById('g-new-blank').addEventListener('click', function () {
-    var title = t('new.blank');
+    /* Пустой — значит пустой: ни одного токена, ни одной секции. Раньше сюда
+       копировался шаблон, и человек получал чужую палитру, принимая её за
+       свою. Каркас ровно такой, чтобы галерея открылась; чем его наполняют,
+       сказано в скилле движка и на экране пустого сторибука. */
     var manifest = {
       id: 'storybook',
       title: title,
@@ -160,40 +218,47 @@
       preview: { mobileWidth: 390, desktopWidth: 1440, container: 1170 },
       compare: { legacy: null }
     };
+    return { files: {
+      'manifest.json':  JSON.stringify(manifest, null, 2),
+      'tokens.css':     ':root {\n}\n',
+      'components.css': '',
+      'token-map.json': '{}',
+      'sections.json':  '[]'
+    } };
+  }
 
-    var pack = window.ENGINE_BUNDLE.empty();
-    pack.files['manifest.json']  = JSON.stringify(manifest, null, 2);
-    pack.files['tokens.css']     = ':root {\n}\n';
-    pack.files['components.css'] = '';
-    pack.files['token-map.json'] = '{}';
-    pack.files['sections.json']  = '[]';
-    adopt(pack, title);
-  });
+  createBtn.addEventListener('click', function () {
+    var title = nameInput2.value.trim();
+    var built = filesFor(title);
+    if (built.error) { showError(built.error, built); return; }
 
-  /* Из CSS: у большинства дизайн-система уже существует списком custom
-     properties в чужом стайлшите. Компонентов оттуда взяться не может —
-     плитка об этом предупреждает заранее. */
-  document.getElementById('g-new-css').addEventListener('change', function (e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    file.text().then(function (text) {
-      var res = window.ENGINE_CSS_IMPORT.build(text, file.name, t);
-      if (res.error) { showError(res.error); return; }
-      adopt(res.pack, res.title);
+    createBtn.disabled = true;
+    R.serverWritable().then(function (writable) {
+      if (writable) {
+        return R.createBrand(window.ENGINE_SLUG.slug(title), title, built.files)
+          .then(function (id) {
+            R.setActive(id);
+            location.href = R.addressOf({ id: id, brandPath: '../../brands/' + id });
+          });
+      }
+      /* Статике папку не создать: складываем пакет в браузер и говорим об
+         этом прямо — иначе человек будет ждать от агента невозможного. */
+      var pack = window.ENGINE_BUNDLE.empty();
+      pack.files = built.files;
+      var id = R.newId(title);
+      var problem = R.saveBundle(id, pack, title);
+      if (problem) { showError(problem.error, problem); createBtn.disabled = false; return; }
+      R.setActive(id);
+      location.href = R.addressOf({ id: id, brandPath: null });
+    }).catch(function (err) {
+      showError('createFailed', { error: err.message });
+      createBtn.disabled = false;
     });
   });
 
-  /* Импорт готового сторибука: пакет .ds.json, выгруженный отсюда или
-     присланный коллегой. */
-  document.getElementById('g-new-file').addEventListener('change', function (e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    file.text().then(function (text) {
-      var res = window.ENGINE_PACKAGE.parse(text);
-      if (res.error) { showError(res.error, res); return; }
-      adopt(res.pack, res.manifest.title || file.name);
-    });
-  });
+  document.getElementById('g-new-blank').addEventListener('click', function () { step('blank'); });
+  document.getElementById('g-new-css').addEventListener('click', function () { step('css'); });
+  document.getElementById('g-new-file').addEventListener('click', function () { step('import'); });
 
   /* ── Пустой сторибук ───────────────────────────────────────────────
      Открыт, но в нём ничего нет — вместо каталога показываем, чем его

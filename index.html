@@ -21,13 +21,13 @@
 <body>
 <main>
   <h1>Design systems</h1>
-  <p class="lead">Одна галерея, несколько дизайн-систем. Бренд выбирается параметром
-    <code>?brand=</code> — движок не знает ни одного из них по имени.</p>
+  <p class="lead">Одна галерея, несколько дизайн-систем. У каждой свой адрес —
+    <code>/sdm</code>, — и движок не знает ни одну из них по имени.</p>
 
   <ul>
-    <li><a href="packages/engine/gallery.html?brand=../../brands/sdm">SDM Design System</a>
+    <li><a href="/sdm">SDM Design System</a>
         <span class="meta">рабочая система банка · <a href="brands/sdm/tests.html">30 тестов</a></span></li>
-    <li><a href="packages/engine/gallery.html?brand=../../brands/_template">Template</a>
+    <li><a href="/_template">Template</a>
         <span class="meta">заготовка для нового бренда · <a href="brands/_template/tests.html">смоук</a></span></li>
   </ul>
 
@@ -36,8 +36,10 @@
         <span class="meta">гоняются на шаблоне: движок обязан работать с любым брендом</span></li>
   </ul>
 
-  <p class="lead">Открывать только по <code>http://</code>: из файла браузер не отдаёт
-    <code>cssRules</code> и не читает токены.</p>
+  <p class="lead">Запускать своим сервером: <code>node packages/engine/serve.js</code>.
+    Он даёт короткие адреса и умеет заводить новые сторибуки папками.
+    Под статикой всё открывается по <code>?brand=</code>, а новые системы живут
+    только в браузере.</p>
 </main>
 </body>
 </html>

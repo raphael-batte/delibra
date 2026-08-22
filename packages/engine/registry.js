@@ -55,6 +55,22 @@
   var Registry = {
     serverWritable: serverWritable,
 
+    /* Создание папки бренда. Доступно только через свой сервер: страница
+       сама файлы на диске не создаёт. Возвращает финальный id — сервер мог
+       развести коллизию и назвать папку иначе, чем предсказал браузер. */
+    createBrand: function (slug, title, files) {
+      return fetch('/__api/brand', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: slug, title: title, files: files })
+      }).then(function (r) {
+        return r.json().then(function (d) {
+          if (!r.ok) throw new Error(d.error || r.status);
+          return d.id;
+        });
+      });
+    },
+
     /* Настоящее удаление папки бренда. Доступно только через свой сервер:
        страница сама файлы на диске не трогает. */
     deleteBrand: function (id) {
@@ -232,9 +248,19 @@
       var src = window.ENGINE_BRAND && window.ENGINE_BRAND.source;
       if (src && src.release) src.release();
       Registry.setActive(suite.id);
-      location.href = location.pathname + (suite.brandPath
-        ? '?brand=' + encodeURIComponent(suite.brandPath)
-        : '?suite=' + encodeURIComponent(suite.id));
+      location.href = Registry.addressOf(suite);
+    },
+
+    /* Адрес сторибука. Короткий (/sdm) — когда галерея отдаётся своим
+       сервером; иначе прежняя форма с параметром. У пакета папки нет, он
+       всегда открывается по ?suite=. */
+    addressOf: function (suite) {
+      if (!suite.brandPath) {
+        return (window.ENGINE_SHORT_URLS ? '/packages/engine/gallery.html' : location.pathname) +
+               '?suite=' + encodeURIComponent(suite.id);
+      }
+      if (window.ENGINE_SHORT_URLS) return '/' + suite.id;
+      return location.pathname + '?brand=' + encodeURIComponent(suite.brandPath);
     }
   };
 

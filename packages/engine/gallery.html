@@ -663,6 +663,15 @@ body.g-no-scroll { overflow: hidden; }
 .g-steps li { margin-bottom: 4px; font-size: 12px; color: var(--text-primary); }
 .g-steps li:last-child { margin-bottom: 0; }
 
+/* Адрес будущего сторибука: не поле ввода, а следствие имени. Показываем
+   его до создания — «как это будет называться» не должно выясняться потом. */
+.g-address {
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--card-gray, var(--bg));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px; color: var(--text-primary);
+}
+
 .g-choices { display: grid; gap: 8px; }
 .g-choice {
   /* border-box обязателен: у <button> он по умолчанию, у <label> — нет, и
@@ -767,22 +776,45 @@ body.g-no-scroll { overflow: hidden; }
         <b data-i18n="new.blank"></b>
         <span data-i18n="new.blank.hint"></span>
       </button>
-      <label class="g-choice">
-        <input type="file" id="g-new-css" accept=".css,text/css" hidden>
+      <button class="g-choice" id="g-new-css">
         <b data-i18n="new.css"></b>
         <span data-i18n="new.css.hint"></span>
-      </label>
-      <label class="g-choice">
-        <input type="file" id="g-new-file" accept=".json,application/json" hidden>
+      </button>
+      <button class="g-choice" id="g-new-file">
         <b data-i18n="new.import"></b>
         <span data-i18n="new.import.hint"></span>
+      </button>
+    </div>
+
+    <!-- Второй шаг: имя и источник. Показывается вместо выбора сценария,
+         поэтому диалог не растёт вниз и не заставляет прокручивать. -->
+    <div id="g-new-step2" hidden>
+      <label class="g-field">
+        <span class="g-field__label" data-i18n="new.name"></span>
+        <input type="text" id="g-new-name" autocomplete="off">
       </label>
+
+      <div class="g-field">
+        <span class="g-field__label" data-i18n="new.address"></span>
+        <div class="g-address" id="g-new-address"></div>
+        <span class="g-field__hint" data-i18n="new.address.hint"></span>
+      </div>
+
+      <div class="g-field" id="g-new-source" hidden>
+        <span class="g-field__label" data-i18n="new.source"></span>
+        <label class="g-attach">
+          <input type="file" id="g-new-src-file">
+          <span class="g-attach__btn" data-i18n="new.choose"></span>
+          <span class="g-attach__name" id="g-new-src-name"></span>
+        </label>
+      </div>
     </div>
 
     <p class="g-dialog__error" id="g-new-error" hidden></p>
 
-    <div class="g-dialog__actions">
+    <div class="g-dialog__actions" style="gap:8px">
       <button class="g-mi" id="g-new-close" style="width:auto" data-i18n="confirm.cancel"></button>
+      <button class="g-btn-primary" id="g-new-create" hidden disabled data-i18n="new.create"></button>
     </div>
   </div>
 </div>
@@ -951,6 +983,7 @@ function gScript(src) {
    бренда: он на старте может открыть сторибук прямо из хранилища. */
 gScript('i18n/en.js');
 gScript('i18n/ru.js');
+gScript('slug.js');
 gScript('bundle.js');
 gScript('registry.js');
 gScript('brand.js');

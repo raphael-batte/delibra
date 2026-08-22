@@ -144,14 +144,17 @@
 
   window.ENGINE_CSS_IMPORT = {
     /* CSS-файл → пакет сторибука. Возвращает { pack, title } или { error }. */
-    build: function (css, filename, t) {
+    build: function (css, filename, t, title) {
       var vars = window.ENGINE_SPECS.parseVars(css);
       var built = toTokenMap(vars, t('new.cssDesc', { file: filename }));
       if (!built) return { error: 'noTokens' };
 
-      var title = t('new.cssName', { file: filename });
+      title = title || t('new.cssName', { file: filename });
       var manifest = {
-        id: 'imported',
+        /* Настоящий id проставит тот, кто заведёт сторибук: имя папки для
+           бренда на диске, id пакета — для браузера. Здесь заглушка, и
+           врать ею нельзя дольше одного шага. */
+        id: 'storybook',
         title: title,
         version: '0.1.0',
         engine: 1,
@@ -166,8 +169,27 @@
         compare: { legacy: null }
       };
 
+      /* Токены есть, компонентов нет — это свойство входных данных, а не
+         брак. Записываем их отложенными с причиной: тогда check-tokens.js
+         по новой папке проходит и говорит правду о состоянии, вместо двух
+         сотен находок «объявлен, но не применён». */
+      var names = [];
+      ['base', 'desktop', 'mobile'].forEach(function (ctx) {
+        Object.keys(vars[ctx] || {}).forEach(function (n) {
+          if (names.indexOf(n) < 0) names.push(n);
+        });
+      });
+      var why = {};
+      var reason = t('new.cssDeferred', { file: filename });
+      names.forEach(function (n) { why[n] = reason; });
+
       var pack = window.ENGINE_BUNDLE.empty();
       pack.files['manifest.json']  = JSON.stringify(manifest, null, 2);
+      pack.files['tokens.deferred.json'] = JSON.stringify({
+        _comment: reason,
+        tokens: names.sort(),
+        why: why
+      }, null, 2);
       pack.files['tokens.css']     = css;
       /* Компонентов нет — но файл должен существовать: движок грузит оба. */
       pack.files['components.css'] = '/* ' + t('new.cssDesc', { file: filename }) + ' */\n';

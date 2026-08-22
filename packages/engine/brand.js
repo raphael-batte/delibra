@@ -27,12 +27,32 @@
   var ENGINE_VERSION = '1.0.0';
   var CONTRACT_MAJOR = 1;
 
-  /* Откуда открыт сторибук: ?suite=<id> — пакет в браузере, ?brand=<путь> —
-     папка на сервере. Папка остаётся рабочим адресом разработчика: он не
-     зависит от состояния браузера, и им гоняются тесты. */
+  /* Откуда открыт сторибук, в порядке убывания «человечности»:
+
+       /sdm            — короткий адрес, его и видит пользователь;
+       ?brand=<путь>   — служебный вход: тесты, ссылки, статический сервер,
+                         где короткие адреса невозможны;
+       ?suite=<id>     — пакет, живущий в браузере.
+
+     Короткий адрес узнаём по <base>: сервер вставляет его, когда отдаёт
+     галерею не по её собственному пути. Без base мы открыты напрямую, и
+     путь в адресе — это путь к файлу движка, а не имя сторибука. */
   var qs = new URLSearchParams(location.search);
   var suiteId = qs.get('suite');
   var rel = qs.get('brand') || null;
+
+  var short = null;
+  if (!rel && !suiteId) {
+    var servedShort = document.querySelector('base') &&
+                      location.pathname.indexOf('/packages/') !== 0;
+    var m = servedShort && location.pathname.match(/^\/([A-Za-z0-9._-]+)\/?$/);
+    if (m) {
+      short = m[1];
+      rel = '../../brands/' + short;
+    }
+  }
+
+  window.ENGINE_SHORT_URLS = !!document.querySelector('base');
 
   function brandBase() {
     if (!rel) return '';
