@@ -37,8 +37,23 @@
                .replace(/^./, function (c) { return c.toUpperCase(); });
   }
 
+  /* Заголовки разделов в дескрипторе — данные бренда, а не интерфейс.
+     Если брать их из языкового пака импортирующего, пакет уедет коллеге с
+     русскими заголовками поверх английской галереи. Поэтому канонические
+     английские: это имена разделов справочника, а не текст интерфейса. */
+  var TITLES = {
+    colors:   'Colours',
+    gradients:'Gradients',
+    radii:    'Radii',
+    shadows:  'Shadows',
+    sizes:    'Sizes',
+    type:     'Type scale',
+    spacing:  'Spacing',
+    other:    'Other tokens'
+  };
+
   /* Разбор → дескриптор токен-секций того же вида, что token-map.json. */
-  function toTokenMap(vars, t) {
+  function toTokenMap(vars, note) {
     var all = {};
     ['base', 'desktop', 'mobile'].forEach(function (ctx) {
       Object.keys(vars[ctx] || {}).forEach(function (n) {
@@ -86,16 +101,19 @@
     });
     if (groups.length || gradients.length) {
       map.colors = {
-        title: t('tok.group') === 'Tokens' ? 'Colours' : 'Цвета',
+        title: TITLES.colors,
+        /* Единственное место, где сказано про отсутствие компонентов так,
+           чтобы это было видно: первая секция каталога. */
+        desc: note,
         groups: groups,
-        gradients: gradients.length ? { title: t('tok.gradients'), items: gradients } : undefined
+        gradients: gradients.length ? { title: TITLES.gradients, items: gradients } : undefined
       };
     }
     if (radii.length) {
-      map.radii = { title: t('tok.semantics'), semantic: radii };
+      map.radii = { title: TITLES.radii, semantic: radii };
     }
     if (shadows.length) {
-      map.shadows = { title: t('tok.dropShadows'), drop: shadows.map(function (r) {
+      map.shadows = { title: TITLES.shadows, drop: shadows.map(function (r) {
         return [r[0], r[1], ''];
       }) };
     }
@@ -103,20 +121,20 @@
       /* Дескриптор типографики ждёт префиксы (--font-h1 → -size/-lh). У чужого
          файла таких пар обычно нет, поэтому показываем их таблицей размеров:
          честнее, чем делать вид, что шкала собралась. */
-      map.sizes = map.sizes || { title: t('tok.scale'), groups: [] };
-      map.sizes.groups.push({ title: t('tok.weights'), rows: fonts.map(function (r) {
+      map.sizes = map.sizes || { title: TITLES.sizes, groups: [] };
+      map.sizes.groups.push({ title: TITLES.type, rows: fonts.map(function (r) {
         return [r[0], ''];
       }) });
     }
     if (sizes.length) {
-      map.sizes = map.sizes || { title: t('tok.scale'), groups: [] };
-      map.sizes.groups.push({ title: t('tok.spacingScale'), rows: sizes.map(function (r) {
+      map.sizes = map.sizes || { title: TITLES.sizes, groups: [] };
+      map.sizes.groups.push({ title: TITLES.spacing, rows: sizes.map(function (r) {
         return [r[0], ''];
       }) });
     }
     if (other.length) {
-      map.sizes = map.sizes || { title: t('tok.scale'), groups: [] };
-      map.sizes.groups.push({ title: t('new.other'), rows: other.map(function (r) {
+      map.sizes = map.sizes || { title: TITLES.sizes, groups: [] };
+      map.sizes.groups.push({ title: TITLES.other, rows: other.map(function (r) {
         return [r[0], ''];
       }) });
     }
@@ -128,7 +146,7 @@
     /* CSS-файл → пакет сторибука. Возвращает { pack, title } или { error }. */
     build: function (css, filename, t) {
       var vars = window.ENGINE_SPECS.parseVars(css);
-      var built = toTokenMap(vars, t);
+      var built = toTokenMap(vars, t('new.cssDesc', { file: filename }));
       if (!built) return { error: 'noTokens' };
 
       var title = t('new.cssName', { file: filename });

@@ -624,6 +624,10 @@ body.g-no-scroll { overflow: hidden; }
 
 .g-choices { display: grid; gap: 8px; }
 .g-choice {
+  /* border-box обязателен: у <button> он по умолчанию, у <label> — нет, и
+     при width:100% рамка с паддингами вылезали за край диалога. Ровно та же
+     ловушка, что была с сайдбаром. */
+  box-sizing: border-box;
   display: block; width: 100%; text-align: left; cursor: pointer;
   padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--white-pure); font: inherit; color: var(--text-primary);
@@ -668,6 +672,8 @@ body.g-no-scroll { overflow: hidden; }
   <div class="g-menu" id="g-menu-suite" role="menu">
     <button class="g-mi" id="g-settings" role="menuitem">
       <span class="grow" data-i18n="menu.settings"></span></button>
+    <button class="g-mi" id="g-duplicate" role="menuitem">
+      <span class="grow" data-i18n="menu.duplicate"></span></button>
     <button class="g-mi" id="g-export" role="menuitem">
       <span class="grow" data-i18n="menu.export"></span></button>
     <button class="g-mi" id="g-copylink" role="menuitem">

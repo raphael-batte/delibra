@@ -51,6 +51,10 @@
   var list = document.getElementById('g-suite-list');
 
   R.list().then(function (suites) {
+    /* Ни одного сторибука — показываем создание сразу: пустая галерея не
+       объясняет, что делать дальше. */
+    if (!suites.length) openNew();
+
     var current = B.source.base;      // абсолютный путь открытой папки
 
     suites.forEach(function (suite) {
@@ -151,6 +155,21 @@
       if (res.error) { showError(res.error); return; }
       adopt(res.pack, res.title);
     });
+  });
+
+  /* ── Дублировать ───────────────────────────────────────────────────
+     Копия всегда пакет, даже если исходник — папка: браузер в папку не
+     пишет, а править копию человек хочет сразу. Для библиотечного бренда
+     это единственный путь к правкам, и он же делает осмысленным
+     выключенное удаление папки. */
+  document.getElementById('g-duplicate').addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeAll();
+    var M = window.BRAND_MANIFEST || {};
+    var title = R.displayName(B.source.id, M.title) + t('menu.copySuffix');
+    window.ENGINE_PACKAGE
+      .build(B.source, M, window.BRAND_SECTIONS || [], title)
+      .then(function (pack) { adopt(pack, title); });
   });
 
   /* ── Выгрузить файлом ──────────────────────────────────────────────── */
@@ -351,7 +370,19 @@
     });
 
     function applyName() {
-      R.rename(suiteId, nameInput.value.trim());
+      var value = nameInput.value.trim();
+      /* У пакета имя — часть его самого и уезжает вместе с файлом. У папки
+         в манифест на диске браузер не пишет, поэтому там имя локальное. */
+      if (B.source.kind === 'bundle') {
+        var pack = R.bundle(suiteId);
+        if (pack) {
+          var m = JSON.parse(pack.files['manifest.json']);
+          m.title = value || m.title;
+          pack.files['manifest.json'] = JSON.stringify(m, null, 2);
+          R.saveBundle(suiteId, pack, m.title);
+        }
+      }
+      R.rename(suiteId, value);
       var shown = R.displayName(suiteId, M2.title);
       var logo = document.getElementById('g-logo');
       if (logo) logo.textContent = shown;
@@ -397,7 +428,7 @@
        галереи», и подпись говорит ровно это. */
     var delBtn  = document.getElementById('g-settings-delete');
     var delHint = document.getElementById('g-settings-delete-hint');
-    var isLibrary = !B.source.writable;
+    var isLibrary = !B.source.writable;   // папка: браузер в неё не пишет
 
     /* Что кнопка делает, решает сервер, а не догадки: со своим сервером
        папка удаляется по-настоящему, под статикой — только пропадает из
@@ -427,6 +458,14 @@
              нельзя, а гадать, какой открыть следующим, — не наше дело. */
           function leave() { location.href = location.pathname; }
 
+          /* Пакет живёт в браузере: удаление — это стереть его из хранилища,
+             никакого сервера для этого не нужно. */
+          if (B.source.kind === 'bundle') {
+            B.source.release();
+            R.deleteSuite(suiteId);
+            leave();
+            return;
+          }
           if (canDelete) {
             R.deleteBrand(suiteId).then(leave, function (err) {
               delHint.textContent = t('settings.deleteFailed', { error: err.message });
@@ -461,11 +500,14 @@
   var copy = document.getElementById('g-copylink');
   if (copy) {
     copy.addEventListener('click', function () {
-      var url = location.origin + location.pathname + '?brand=' + encodeURIComponent(B.source.rel);
+      var bundle = B.source.kind === 'bundle';
+      var url = location.origin + location.pathname +
+                (bundle ? '?suite=' + encodeURIComponent(B.source.id)
+                        : '?brand=' + encodeURIComponent(B.source.rel));
       var label = copy.querySelector('.grow');
       var before = label.textContent;
       navigator.clipboard.writeText(url).then(function () {
-        label.textContent = t('menu.copied');
+        label.textContent = t(bundle ? 'menu.copiedLocal' : 'menu.copied');
         setTimeout(function () { label.textContent = before; closeAll(); }, 900);
       });
     });
