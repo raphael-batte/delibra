@@ -19,7 +19,11 @@
   function assetPaths(sections) {
     var found = {};
     JSON.stringify(sections || []).replace(/(?:src|href)=\\"([^"\\\\]+)/g, function (all, p) {
-      if (!/^(https?:|data:|blob:|#|\/)/.test(p)) found[p] = 1;
+      /* Только файлы: якоря, внешние адреса и уже готовые данные в пакет не
+         кладём — иначе он обрастает мусором вроде href="#". */
+      if (/^(https?:|data:|blob:|#|\/|mailto:|tel:)/.test(p)) return all;
+      if (!/\.[a-z0-9]{2,5}$/i.test(p)) return all;
+      found[p] = 1;
       return all;
     });
     return Object.keys(found);

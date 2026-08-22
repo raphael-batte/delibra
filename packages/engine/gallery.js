@@ -9,13 +9,24 @@
 (function () {
   'use strict';
 
+  var B = window.ENGINE_BRAND;
+
+  /* Сторибук не открыт — каталог рисовать не из чего. Это штатный случай
+     (первый заход, ссылка на чужой пакет), а не ошибка: галерея молчит, а
+     switcher показывает экран создания. Без этой проверки движок падал на
+     попытке собрать секции без бренда — и вместе с ним не запускался
+     switcher, то есть человек видел пустой экран без объяснений. */
+  if (!window.ENGINE_SPECS || !window.BRAND_MANIFEST) {
+    window.GALLERY = [];
+    return;
+  }
+
   /* Каталог = секции токенов (движок рисует их по дескриптору бренда)
      плюс компонентные секции самого бренда. Композиция здесь, а не в бренде:
      иначе каждый новый бренд обязан помнить, что токены надо приклеить. */
   var SPECS = window.ENGINE_SPECS.tokenSections(window.BRAND_TOKENS)
                 .concat(window.BRAND_SECTIONS || []);
   window.GALLERY = SPECS;
-  var B = window.ENGINE_BRAND;
   var M = window.BRAND_MANIFEST || {};
   var t = B.t;
 

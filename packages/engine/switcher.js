@@ -16,6 +16,14 @@
   var R = window.ENGINE_REGISTRY;
   var t = B.t;
 
+  /* На пустом заходе манифеста нет: подставляем имя инструмента, чтобы в
+     шапке не висела пустота. */
+  if (!window.BRAND_MANIFEST) {
+    var logoEl = document.getElementById('g-logo');
+    if (logoEl) logoEl.textContent = 'Storybook Library';
+    document.title = 'Storybook Library';
+  }
+
   var mark  = document.getElementById('g-mark');
   var name  = document.getElementById('g-name');
   var menuW = document.getElementById('g-menu-workspace');
@@ -51,9 +59,20 @@
   var list = document.getElementById('g-suite-list');
 
   R.list().then(function (suites) {
-    /* Ни одного сторибука — показываем создание сразу: пустая галерея не
-       объясняет, что делать дальше. */
-    if (!suites.length) openNew();
+    /* Показывать нечего — открываем создание сразу: пустая галерея не
+       объясняет, что делать дальше. Условие именно такое: если адрес указан
+       явно (?brand= или ?suite=), человек знает, куда шёл, и диалог ему
+       мешает — даже если список пуст. */
+    var opened = B.source.rel || B.suiteId;
+    if (!opened) openNew();
+
+    /* Адрес указывает на пакет, которого в этом браузере нет: чаще всего
+       ссылку прислали с другой машины. Говорим прямо и предлагаем завести
+       систему, а не показываем пустую галерею. */
+    if (B.missingSuite) {
+      openNew();                                   // сначала открыть,
+      showError('missingSuite', { id: B.suiteId }); // потом объяснить: openNew
+    }                                              // сбрасывает прежнюю ошибку
 
     var current = B.source.base;      // абсолютный путь открытой папки
 
@@ -116,25 +135,56 @@
   document.getElementById('g-new-close').addEventListener('click', closeNew);
   newScrim.addEventListener('click', function (e) { if (e.target === newScrim) closeNew(); });
 
-  /* Из шаблона: читаем ту же папку, что открывается по ?brand=_template. */
-  document.getElementById('g-new-template').addEventListener('click', function () {
-    var base = new URL('../../brands/_template/', location.href).pathname;
-    var files = ['manifest.json', 'tokens.css', 'components.css',
-                 'sections.json', 'token-map.json'];
-    Promise.all(files.map(function (f) {
-      return fetch(base + f, { cache: 'no-store' })
-        .then(function (r) { return r.ok ? r.text() : null; });
-    })).then(function (texts) {
-      var pack = window.ENGINE_BUNDLE.empty();
-      files.forEach(function (f, i) { if (texts[i] != null) pack.files[f] = texts[i]; });
-      var m = JSON.parse(pack.files['manifest.json']);
-      m.title = t('new.template');
-      pack.files['manifest.json'] = JSON.stringify(m, null, 2);
-      adopt(pack, m.title);
+  /* Пустой — значит пустой: ни одного токена, ни одной секции. Раньше сюда
+     копировался шаблон, и человек получал чужую палитру, которую принимал за
+     свою. Каркас теперь ровно такой, чтобы галерея открылась: манифест и
+     четыре пустых файла. Чем его наполняют — сказано в скилле движка, и об
+     этом же говорит онбординг сразу после создания.
+
+     Хром при этом не рассыпается: у него собственные значения на случай,
+     когда бренд ничего не объявил. */
+  document.getElementById('g-new-blank').addEventListener('click', function () {
+    var title = t('new.blank');
+    var manifest = {
+      id: 'storybook',
+      title: title,
+      version: '0.1.0',
+      engine: 1,
+      css: { tokens: 'tokens.css', components: 'components.css' },
+      sections: 'sections.json',
+      tokenMap: 'token-map.json',
+      legacyNames: null,
+      assetsBase: 'assets/',
+      font: { family: null, href: null },
+      breakpoints: { mobile: 900, desktopMin: 901 },
+      preview: { mobileWidth: 390, desktopWidth: 1440, container: 1170 },
+      compare: { legacy: null }
+    };
+
+    var pack = window.ENGINE_BUNDLE.empty();
+    pack.files['manifest.json']  = JSON.stringify(manifest, null, 2);
+    pack.files['tokens.css']     = ':root {\n}\n';
+    pack.files['components.css'] = '';
+    pack.files['token-map.json'] = '{}';
+    pack.files['sections.json']  = '[]';
+    adopt(pack, title);
+  });
+
+  /* Из CSS: у большинства дизайн-система уже существует списком custom
+     properties в чужом стайлшите. Компонентов оттуда взяться не может —
+     плитка об этом предупреждает заранее. */
+  document.getElementById('g-new-css').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    file.text().then(function (text) {
+      var res = window.ENGINE_CSS_IMPORT.build(text, file.name, t);
+      if (res.error) { showError(res.error); return; }
+      adopt(res.pack, res.title);
     });
   });
 
-  /* Из файла сторибука. */
+  /* Импорт готового сторибука: пакет .ds.json, выгруженный отсюда или
+     присланный коллегой. */
   document.getElementById('g-new-file').addEventListener('change', function (e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -145,16 +195,107 @@
     });
   });
 
-  /* Из чужого CSS: получаются токены без компонентов, и диалог об этом
-     предупреждает заранее. */
-  document.getElementById('g-new-css').addEventListener('change', function (e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    file.text().then(function (text) {
-      var res = window.ENGINE_CSS_IMPORT.build(text, file.name, t);
-      if (res.error) { showError(res.error); return; }
-      adopt(res.pack, res.title);
+  /* ── Пустой сторибук ───────────────────────────────────────────────
+     Открыт, но в нём ничего нет — вместо каталога показываем, чем его
+     наполняют. Условие именно такое: не «первый заход», а «нечего
+     показать»; наполнивший систему этого экрана больше не увидит. */
+  (function onboardEmpty() {
+    if (!window.BRAND_MANIFEST) return;
+    if ((window.GALLERY || []).length) return;
+
+    /* Шаги подставляем под конкретный сторибук: агенту нужен путь к файлам
+       и путь к скиллу движка. У пакета в браузере папки нет — так и
+       сказано, вместо пути. */
+    var folder = B.source.kind === 'folder';
+    var path = folder ? B.source.base : null;
+    var skill = new URL('ENGINE_SKILL.md', location.href).pathname;
+
+    function step(key, vars) {
+      var el = document.querySelector('[data-i18n="' + key + '"]');
+      if (el) el.textContent = t(key, vars);
+    }
+    var s1 = document.querySelector('[data-i18n="new.agent.s1"]');
+    if (s1) s1.textContent = folder ? t('new.agent.s1', { path: path })
+                                    : t('new.agent.noFolder');
+    step('new.agent.s2', { skill: skill });
+    step('new.agent.s3');
+
+    /* Промпт отдаём кнопкой: пересказывать его по памяти в чате — верный
+       способ потерять половину требований. */
+    var copyBtn = document.getElementById('g-copy-prompt');
+    if (copyBtn) {
+      var prompt = t('new.agent.prompt', { skill: skill, path: path || '' });
+      copyBtn.addEventListener('click', function () {
+        navigator.clipboard.writeText(prompt).then(function () {
+          var was = copyBtn.textContent;
+          copyBtn.textContent = t('new.agent.copied');
+          setTimeout(function () { copyBtn.textContent = was; }, 1200);
+        });
+      });
+    }
+
+    document.getElementById('g-onboard').hidden = false;
+  })();
+
+  /* ── Показать CSS системы ──────────────────────────────────────────
+     Человек, который пользуется дизайн-системой, должен видеть её код, а не
+     только результат: иначе «где это лежит» приходится спрашивать. */
+  var codeScrim = document.getElementById('g-code-scrim');
+
+  function showCode(file) {
+    var body = document.getElementById('g-code-body');
+    var open = document.getElementById('g-code-open');
+
+    document.getElementById('g-code-title').textContent = file || '';
+    document.getElementById('g-code-path').textContent =
+      B.source.kind === 'folder' ? B.source.url(file) : t('menu.copiedLocal');
+
+    if (!file) {
+      body.textContent = t('menu.codeMissing');
+      open.hidden = true;
+    } else {
+      Promise.resolve(B.source.text(file)).then(function (text) {
+        body.textContent = text || t('menu.codeMissing');
+      });
+      /* Ссылка на живой файл есть только у папки: blob-адрес пакета живёт
+         в этой вкладке и в чужих руках не откроется. */
+      if (B.source.kind === 'folder') {
+        open.hidden = false;
+        open.href = B.source.url(file);
+      } else {
+        open.hidden = true;
+      }
+    }
+    codeScrim.hidden = false;
+  }
+
+  function wireView(btnId, field) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeAll();
+      var css = (window.BRAND_MANIFEST || {}).css || {};
+      showCode(css[field]);
     });
+  }
+  wireView('g-view-tokens', 'tokens');
+  wireView('g-view-components', 'components');
+
+  document.getElementById('g-code-close').addEventListener('click', function () {
+    codeScrim.hidden = true;
+  });
+  codeScrim.addEventListener('click', function (e) {
+    if (e.target === codeScrim) codeScrim.hidden = true;
+  });
+  document.getElementById('g-code-copy').addEventListener('click', function (e) {
+    var btn = e.currentTarget;
+    navigator.clipboard.writeText(document.getElementById('g-code-body').textContent)
+      .then(function () {
+        var was = btn.textContent;
+        btn.textContent = t('menu.codeCopied');
+        setTimeout(function () { btn.textContent = was; }, 1200);
+      });
   });
 
   /* ── Дублировать ───────────────────────────────────────────────────

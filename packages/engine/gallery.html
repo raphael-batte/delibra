@@ -23,6 +23,24 @@
    при content-box падинги и полоса прокрутки прибавлялись к ширине,
    сайдбар занимал 257px против объявленных 232, и шапка на эти 25px
    уезжала под дерево. */
+/* Собственные значения хрома. Раньше галерея целиком зависела от токенов
+   бренда: без открытой системы она превращалась в серое ничто — ни фона, ни
+   шрифта, ни границ. Бренд эти же имена переопределяет, когда загрузится. */
+:root {
+  --bg:            #FBFCFD;
+  --white-pure:    #FFFFFF;
+  --white-pure-rgb: 255 255 255;
+  --white:         #FBFBFB;
+  --card-gray:     #F3F5F8;
+  --border:        #E3E8F0;
+  --text-primary:  #333333;
+  --text-heading:  #000000;
+  --text-muted:    #757575;
+  --text-error:    #DF3500;
+  --green:         #17AA26;
+  --font-family:   'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
 :root {
   --g-sidebar-w: 257px;
   --g-gutter:     32px;   /* поле контента внутри панели */
@@ -556,6 +574,9 @@ body.g-no-scroll { overflow: hidden; }
 
 .g-dialog {
   width: min(460px, calc(100% - 48px));
+  /* Диалог не обязан помещаться в экран целиком: на невысоком окне шаги
+     онбординга обрезались сверху и снизу. */
+  max-height: calc(100vh - 48px); overflow-y: auto;
   padding: 24px; border-radius: 16px;
   background: var(--white-pure); border: 1px solid var(--border);
   box-shadow: 0 20px 60px rgb(16 24 40 / .22);
@@ -622,6 +643,26 @@ body.g-no-scroll { overflow: hidden; }
 }
 .g-dialog__error[hidden] { display: none; }
 
+/* Пустой сторибук: инструкция занимает место каталога, а не всплывает над
+   ним. Ширину держим читаемой — это текст, а не сетка карточек. */
+.g-empty { max-width: 640px; padding: 48px 0 0; }
+.g-empty h2 { margin: 0 0 4px; font-size: 20px; color: var(--text-heading); }
+.g-empty__lead { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); }
+.g-empty[hidden] { display: none; }
+
+/* Блок с шагами в онбординге: он единственный на экране, поэтому подан
+   спокойно — без соревнования с соседними вариантами. */
+.g-primary {
+  padding: 16px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card-gray, var(--bg));
+}
+.g-primary b { display: block; font-size: 14px; color: var(--text-heading); }
+.g-primary p { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
+
+.g-steps { margin: 12px 0 16px; padding-left: 20px; }
+.g-steps li { margin-bottom: 4px; font-size: 12px; color: var(--text-primary); }
+.g-steps li:last-child { margin-bottom: 0; }
+
 .g-choices { display: grid; gap: 8px; }
 .g-choice {
   /* border-box обязателен: у <button> он по умолчанию, у <label> — нет, и
@@ -672,6 +713,13 @@ body.g-no-scroll { overflow: hidden; }
   <div class="g-menu" id="g-menu-suite" role="menu">
     <button class="g-mi" id="g-settings" role="menuitem">
       <span class="grow" data-i18n="menu.settings"></span></button>
+    <!-- CSS системы всегда под рукой: человек, который ею пользуется,
+         должен видеть код, а не только результат. -->
+    <button class="g-mi" id="g-view-tokens" role="menuitem">
+      <span class="grow" data-i18n="menu.viewTokens"></span></button>
+    <button class="g-mi" id="g-view-components" role="menuitem">
+      <span class="grow" data-i18n="menu.viewComponents"></span></button>
+    <hr>
     <button class="g-mi" id="g-duplicate" role="menuitem">
       <span class="grow" data-i18n="menu.duplicate"></span></button>
     <button class="g-mi" id="g-export" role="menuitem">
@@ -688,27 +736,46 @@ body.g-no-scroll { overflow: hidden; }
   <div id="g-nav"></div>
 </nav>
 
-<!-- Новый сторибук: создать из шаблона, из файла или из своего CSS.
-     Этот же диалог показывается на пустом старте. -->
+<!-- Просмотр файла системы: полный текст и кнопка «Копировать». Для папки
+     рядом стоит ссылка на живой файл — её можно открыть в соседней вкладке
+     или отдать разработчику. У пакета такой ссылки нет: blob живёт только
+     в этой вкладке, и обещать её было бы обманом. -->
+<div class="g-scrim" id="g-code-scrim" hidden>
+  <div class="g-dialog g-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="g-code-title">
+    <h3 id="g-code-title"></h3>
+    <p class="g-dialog__lead" id="g-code-path"></p>
+    <pre class="g-code" id="g-code-body"></pre>
+    <div class="g-dialog__actions" style="gap:8px">
+      <a class="g-mi" id="g-code-open" style="width:auto" target="_blank" rel="noopener"
+         data-i18n="menu.openInTab"></a>
+      <button class="g-mi" id="g-code-copy" style="width:auto" data-i18n="overlay.copyCss"></button>
+      <button class="g-btn-primary" id="g-code-close" data-i18n="settings.done"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Пустой старт и «Новый сторибук» — один экран. Три пути, которыми
+     дизайн-система вообще может появиться: с нуля, из файла (пакет или чужой
+     CSS) и копией уже открытой. -->
 <div class="g-scrim" id="g-new-scrim" hidden>
   <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-new-title">
     <h3 id="g-new-title" data-i18n="new.title"></h3>
     <p class="g-dialog__lead" id="g-new-lead" data-i18n="new.lead"></p>
 
     <div class="g-choices">
-      <button class="g-choice" id="g-new-template">
-        <b data-i18n="new.template"></b>
-        <span data-i18n="new.template.hint"></span>
+      <button class="g-choice" id="g-new-blank">
+        <b data-i18n="new.blank"></b>
+        <span data-i18n="new.blank.hint"></span>
       </button>
-      <label class="g-choice">
-        <input type="file" id="g-new-file" accept=".json,application/json" hidden>
-        <b data-i18n="new.import"></b>
-        <span data-i18n="new.import.hint"></span>
-      </label>
       <label class="g-choice">
         <input type="file" id="g-new-css" accept=".css,text/css" hidden>
         <b data-i18n="new.css"></b>
         <span data-i18n="new.css.hint"></span>
+      </label>
+      <label class="g-choice">
+        <input type="file" id="g-new-file" accept=".json,application/json" hidden>
+        <b data-i18n="new.import"></b>
+        <span data-i18n="new.import.hint"></span>
       </label>
     </div>
 
@@ -831,6 +898,25 @@ body.g-no-scroll { overflow: hidden; }
   <!-- Прокручивается эта область, а не панель целиком: полоса начинается
        под шапкой, а не идёт вдоль неё. -->
   <div class="g-scroll" id="g-panel">
+    <!-- Пустой сторибук: вместо каталога — как его наполнить. Не оверлей:
+         это не сообщение поверх работы, а содержимое экрана, пока работы
+         ещё нет. -->
+    <div class="g-empty" id="g-onboard" hidden>
+      <h2 data-i18n="onboard.title"></h2>
+      <p class="g-empty__lead" data-i18n="onboard.lead"></p>
+
+      <div class="g-primary">
+        <b data-i18n="new.agent"></b>
+        <p data-i18n="new.agent.hint"></p>
+        <ol class="g-steps">
+          <li data-i18n="new.agent.s1"></li>
+          <li data-i18n="new.agent.s2"></li>
+          <li data-i18n="new.agent.s3"></li>
+        </ol>
+        <button class="g-btn-primary" id="g-copy-prompt" data-i18n="new.agent.copy"></button>
+      </div>
+    </div>
+
     <div id="g-sections"></div>
   </div>
 </div>
@@ -890,6 +976,26 @@ gScript('css-import.js');
 /* Третий: манифест прочитан — подключаем шрифт, токены и данные бренда. */
 (function () {
   var B = window.ENGINE_BRAND, M = window.BRAND_MANIFEST;
+
+  /* Перевод статического хрома: атрибуты data-i18n* держат ключи, а не текст,
+     поэтому разметка одна на все языки. */
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    el.textContent = B.t(el.getAttribute('data-i18n'));
+  });
+  [['data-i18n-title', 'title'], ['data-i18n-hint', 'data-hint'],
+   ['data-i18n-aria', 'aria-label']].forEach(function (pair) {
+    document.querySelectorAll('[' + pair[0] + ']').forEach(function (el) {
+      el.setAttribute(pair[1], B.t(el.getAttribute(pair[0])));
+    });
+  });
+
+
+  /* Показывать нечего: либо первый заход без адреса, либо ссылка на пакет,
+     которого в этом браузере нет. Оба случая штатные, и объясняет их
+     switcher — здесь просто не грузим бренд. Строки хрома проставлены выше:
+     они не зависят от того, открыт ли сторибук. */
+  if (!B.source.rel || B.missingSuite) return;
+
   var problem = B.incompatible(M);
   if (problem) {
     document.body.innerHTML = '<p style="padding:40px;font:15px/1.5 sans-serif">' +
@@ -913,18 +1019,6 @@ gScript('css-import.js');
     ? window.ENGINE_REGISTRY.displayName(B.source.id, M.title)
     : M.title;
   document.title = shownTitle || document.title;
-
-  /* Перевод статического хрома: атрибуты data-i18n* держат ключи, а не текст,
-     поэтому разметка одна на все языки. */
-  document.querySelectorAll('[data-i18n]').forEach(function (el) {
-    el.textContent = B.t(el.getAttribute('data-i18n'));
-  });
-  [['data-i18n-title', 'title'], ['data-i18n-hint', 'data-hint'],
-   ['data-i18n-aria', 'aria-label']].forEach(function (pair) {
-    document.querySelectorAll('[' + pair[0] + ']').forEach(function (el) {
-      el.setAttribute(pair[1], B.t(el.getAttribute(pair[0])));
-    });
-  });
 
   /* Ширина полосы прокрутки — величина окружения, не дизайна. Мерить сразу
      нельзя: секции ещё не отрисованы, страница короче экрана и полосы нет. */

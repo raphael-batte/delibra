@@ -227,6 +227,10 @@
        ?brand= остаётся рабочим адресом: им пользуются тесты и разработчик,
        и он не должен зависеть от состояния браузера. */
     open: function (suite) {
+      /* Blob-ссылки живут, пока жива вкладка: уходя со сторибука, отпускаем
+         их сразу, иначе за сессию переключений в памяти повиснут сотни. */
+      var src = window.ENGINE_BRAND && window.ENGINE_BRAND.source;
+      if (src && src.release) src.release();
       Registry.setActive(suite.id);
       location.href = location.pathname + (suite.brandPath
         ? '?brand=' + encodeURIComponent(suite.brandPath)

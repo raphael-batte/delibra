@@ -14,10 +14,10 @@
 (function () {
   'use strict';
 
-  /* Дефолт нарочно нейтральный: движок не должен предпочитать один бренд
-     другому. Открывать сразу нужную систему — задача index.html в корне
-     репозитория, где перечислены все бренды. */
-  var DEFAULT_BRAND = '../../brands/_template';
+  /* Дефолтного бренда нет. Раньше пустой заход молча открывал шаблон, и
+     человек видел чужую систему вместо предложения завести свою. Без
+     параметров галерея показывает экран создания; ?brand= и ?suite=
+     по-прежнему открывают систему напрямую — ими пользуются тесты и ссылки. */
 
   /* Версия движка и версия контракта — разные вещи.
      ENGINE_VERSION растёт с каждым релизом движка (SemVer).
@@ -32,7 +32,7 @@
      зависит от состояния браузера, и им гоняются тесты. */
   var qs = new URLSearchParams(location.search);
   var suiteId = qs.get('suite');
-  var rel = qs.get('brand') || (suiteId ? null : DEFAULT_BRAND);
+  var rel = qs.get('brand') || null;
 
   function brandBase() {
     if (!rel) return '';
@@ -101,9 +101,13 @@
   /* Пакет из хранилища подменяет собой папку целиком: интерфейс тот же,
      поэтому дальше по коду разницы нет. Читаем пакет здесь, чтобы к моменту
      загрузки данных бренда источник уже был готов. */
+  var missingSuite = false;
   if (suiteId && window.ENGINE_BUNDLE && window.ENGINE_REGISTRY) {
     var pack = window.ENGINE_REGISTRY.bundle(suiteId);
     if (pack) SOURCE = window.ENGINE_BUNDLE.source(suiteId, pack);
+    /* Ссылка на пакет живёт только в том браузере, где он лежит. Открытая
+       в другом месте, она должна сказать об этом, а не показать пустоту. */
+    else missingSuite = true;
   }
 
   window.ENGINE_VERSION = ENGINE_VERSION;
@@ -111,6 +115,7 @@
   window.ENGINE_BRAND = {
     version:  ENGINE_VERSION,
     suiteId:  suiteId,
+    missingSuite: missingSuite,
     contract: CONTRACT_MAJOR,
 
     /* Несовместимость возвращается строкой-объяснением, null — если всё в порядке. */
