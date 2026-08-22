@@ -608,10 +608,11 @@ body.g-no-scroll { overflow: hidden; }
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   text-transform: uppercase; color: var(--text-muted);
 }
-/* Поле ввода не тянется во всю ширину диалога: имя сторибука — это два-три
-   слова, а поле в 460 пикселей обещает абзац. */
+/* border-box обязателен: у input по умолчанию content-box, и при одинаковой
+   ширине поле оказывалось шире соседнего блока ровно на паддинги с рамкой. */
 .g-field input[type="text"] {
-  width: 100%; max-width: 320px; height: 34px; padding-inline: 8px;
+  box-sizing: border-box;
+  width: 100%; height: 34px; padding-inline: 8px;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--white-pure); color: var(--text-primary);
   font-family: var(--font-family); font-size: 13px;
@@ -622,7 +623,8 @@ body.g-no-scroll { overflow: hidden; }
 /* Тот же приём, что у выбора масштаба: своя стрелка, симметричные поля. */
 .g-field select {
   appearance: none; -webkit-appearance: none;
-  width: 100%; max-width: 320px; height: 32px; padding: 0 32px 0 12px;
+  box-sizing: border-box;
+  width: 100%; height: 32px; padding: 0 32px 0 12px;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--white-pure) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 12px 12px;
   color: var(--text-primary);
@@ -680,10 +682,10 @@ body.g-no-scroll { overflow: hidden; }
 
 /* Адрес будущего сторибука: не поле ввода, а следствие имени. Показываем
    его до создания — «как это будет называться» не должно выясняться потом. */
-/* border-box, иначе паддинги прибавляются к 320 и адрес оказывается шире
+/* border-box, иначе паддинги прибавляются к ширине и адрес оказывается шире
    поля ввода, стоящего прямо над ним. */
 .g-address {
-  box-sizing: border-box; max-width: 320px;
+  box-sizing: border-box;
   padding: 8px 12px; border-radius: 8px;
   background: var(--card-gray, var(--bg));
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

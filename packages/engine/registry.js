@@ -41,19 +41,22 @@
   /* Умеет ли сервер, который отдаёт галерею, работать с папками.
      python3 -m http.server — нет; packages/engine/serve.js — да.
      Проверяем один раз и запоминаем обещание. */
-  var writablePromise = null;
-  function serverWritable() {
-    if (!writablePromise) {
-      writablePromise = fetch('/__api/ping', { cache: 'no-store' })
+  var pingPromise = null;
+  function ping() {
+    if (!pingPromise) {
+      pingPromise = fetch('/__api/ping', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : { writable: false }; })
-        .then(function (d) { return !!d.writable; })
-        .catch(function () { return false; });
+        .catch(function () { return { writable: false }; });
     }
-    return writablePromise;
+    return pingPromise;
+  }
+  function serverWritable() {
+    return ping().then(function (d) { return !!d.writable; });
   }
 
   var Registry = {
     serverWritable: serverWritable,
+    ping: ping,
 
     /* Создание папки бренда. Доступно только через свой сервер: страница
        сама файлы на диске не создаёт. Возвращает финальный id — сервер мог

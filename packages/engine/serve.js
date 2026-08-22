@@ -139,7 +139,11 @@ function createBrand(res, data) {
 
 function api(req, res, url) {
   if (url.pathname === '/__api/ping') {
-    return send(res, 200, JSON.stringify({ ok: true, writable: true }));
+    /* brandsRoot — путь на диске, а не URL: онбординг показывает его агенту,
+       а тому нужно место в файловой системе, а не адрес в браузере. */
+    return send(res, 200, JSON.stringify({
+      ok: true, writable: true, root: ROOT, brandsRoot: BRANDS
+    }));
   }
 
   /* Показать файл в проводнике. Смысл в том, чтобы человек мог открыть

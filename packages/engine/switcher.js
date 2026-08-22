@@ -314,8 +314,10 @@
        и путь к скиллу движка. У пакета в браузере папки нет — так и
        сказано, вместо пути. */
     var folder = B.source.kind === 'folder';
-    var path = folder ? B.source.base : null;
     var skill = new URL('ENGINE_SKILL.md', location.href).pathname;
+    /* Пока сервер не ответил, показываем URL — он хотя бы не врёт про
+       структуру; настоящий путь на диске подставим, как только узнаем. */
+    var path = folder ? B.source.base : null;
 
     function step(key, vars) {
       var el = document.querySelector('[data-i18n="' + key + '"]');
@@ -342,6 +344,18 @@
     }
 
     document.getElementById('g-onboard').hidden = false;
+
+    /* Настоящий путь на диске: агент открывает папку, а не адрес. */
+    if (folder) R.ping().then(function (info) {
+      if (!info || !info.brandsRoot) return;
+      var disk = info.brandsRoot + '/' + B.source.id;
+      var skillDisk = info.root + '/packages/engine/ENGINE_SKILL.md';
+      if (s1) s1.textContent = t('new.agent.s1', { path: disk });
+      step('new.agent.s2', { skill: skillDisk });
+      if (copyBtn) {
+        prompt = t('new.agent.prompt', { skill: skillDisk, path: disk });
+      }
+    });
   })();
 
   /* ── Показать CSS системы ──────────────────────────────────────────
@@ -695,7 +709,10 @@
         onConfirm: function () {
           /* Уходим на нейтральный адрес: остаться в удалённом сторибуке
              нельзя, а гадать, какой открыть следующим, — не наше дело. */
-          function leave() { location.href = location.pathname; }
+          /* Уходим на список сторибуков: остаться на адресе удалённого —
+             значит показать пустую галерею вместо объяснения. Раньше здесь
+             стоял location.pathname, то есть ровно этот мёртвый адрес. */
+          function leave() { location.href = '/'; }
 
           /* Пакет живёт в браузере: удаление — это стереть его из хранилища,
              никакого сервера для этого не нужно. */
@@ -739,10 +756,14 @@
   var copy = document.getElementById('g-copylink');
   if (copy) {
     copy.addEventListener('click', function () {
+      /* Адрес собирает реестр: он один знает, короткие ссылки доступны или
+         нет. Раньше здесь клеился свой, и на /sdm получалась ссылка вида
+         /sdm?brand=../../brands/sdm — рабочая, но показывающая кухню. */
       var bundle = B.source.kind === 'bundle';
-      var url = location.origin + location.pathname +
-                (bundle ? '?suite=' + encodeURIComponent(B.source.id)
-                        : '?brand=' + encodeURIComponent(B.source.rel));
+      var url = location.origin + R.addressOf({
+        id: B.source.id,
+        brandPath: bundle ? null : B.source.rel
+      });
       var label = copy.querySelector('.grow');
       var before = label.textContent;
       navigator.clipboard.writeText(url).then(function () {
