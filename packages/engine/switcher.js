@@ -63,8 +63,10 @@
        объясняет, что делать дальше. Условие именно такое: если адрес указан
        явно (?brand= или ?suite=), человек знает, куда шёл, и диалог ему
        мешает — даже если список пуст. */
+    /* Диалог создания открываем, когда показывать нечего или когда за ним
+       пришли по адресу /new с домашнего экрана. */
     var opened = B.source.rel || B.suiteId;
-    if (!opened) openNew();
+    if (!opened || location.pathname === '/new') openNew();
 
     /* Адрес указывает на пакет, которого в этом браузере нет: чаще всего
        ссылку прислали с другой машины. Говорим прямо и предлагаем завести
@@ -90,8 +92,10 @@
         '<span class="badge"></span>';
       /* Имя приходит из данных бренда — вставляем текстом, не разметкой. */
       b.querySelector('.grow').textContent = R.displayName(suite.id, suite.title);
+      /* См. домашний экран: подписываем только пакеты — папка это норма,
+         а «только в этом браузере» стоит сказать. */
       b.querySelector('.badge').textContent =
-        t(suite.origin === 'library' ? 'menu.library' : 'menu.local');
+        suite.origin === 'library' ? '' : t('badge.browserOnly');
 
       if (!isActive) b.addEventListener('click', function () { R.open(suite); });
       list.appendChild(b);
@@ -107,16 +111,10 @@
   var newError = document.getElementById('g-new-error');
 
   function openNew() {
-    newError.hidden = true;
     newScrim.hidden = false;
     /* Всегда начинаем с выбора сценария: диалог, открытый на середине
        прошлого захода, — источник ошибок, а не экономия клика. */
-    var choicesEl = newScrim.querySelector('.g-choices');
-    var step2El = document.getElementById('g-new-step2');
-    var createEl = document.getElementById('g-new-create');
-    if (choicesEl) choicesEl.hidden = false;
-    if (step2El) step2El.hidden = true;
-    if (createEl) createEl.hidden = true;
+    backToChoices();
   }
   function closeNew() { newScrim.hidden = true; }
 
@@ -136,6 +134,8 @@
   var srcInput   = document.getElementById('g-new-src-file');
   var srcName    = document.getElementById('g-new-src-name');
   var createBtn  = document.getElementById('g-new-create');
+  var backBtn    = document.getElementById('g-new-back');
+  var leadEl     = document.getElementById('g-new-lead');
 
   var scenario = null;    // 'blank' | 'css' | 'import'
   var srcText  = null;    // содержимое выбранного файла
@@ -177,10 +177,31 @@
     step2.hidden = false;
     sourceRow.hidden = which === 'blank';
     createBtn.hidden = false;
+    backBtn.hidden = false;
     newError.hidden = true;
+    /* Подзаголовок напоминает, какой сценарий выбран: на втором шаге плиток
+       уже не видно, а «Название» одинаково для всех трёх. */
+    if (leadEl) leadEl.textContent = t('new.' + which + '.hint');
     refreshAddress();
     nameInput2.focus();
   }
+
+  /* Первый шаг заново. Отдельная функция, потому что тем же путём диалог
+     открывается: состояние обязано быть одинаковым, откуда бы ни пришли. */
+  function backToChoices() {
+    scenario = null;
+    srcText = null;
+    srcName.textContent = '';
+    srcInput.value = '';
+    choices.hidden = false;
+    step2.hidden = true;
+    createBtn.hidden = true;
+    backBtn.hidden = true;
+    newError.hidden = true;
+    if (leadEl) leadEl.textContent = t('new.lead');
+  }
+
+  backBtn.addEventListener('click', backToChoices);
 
   /* Сборка файлов сторибука — по сценарию. Дальше все три ветки идут одним
      путём: отдать серверу папку, не получилось — сложить пакет в браузер. */

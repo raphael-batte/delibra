@@ -46,6 +46,9 @@
     var servedShort = document.querySelector('base') &&
                       location.pathname.indexOf('/packages/') !== 0;
     var m = servedShort && location.pathname.match(/^\/([A-Za-z0-9._-]+)\/?$/);
+    /* /new — не сторибук, а экран создания: слово занято интерфейсом, и
+       папку с таким именем открывать по нему нельзя. */
+    if (m && m[1] === 'new') m = null;
     if (m) {
       short = m[1];
       rel = '../../brands/' + short;

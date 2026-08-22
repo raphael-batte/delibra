@@ -84,8 +84,12 @@ function takenIds() {
   return dirs.concat(listed);
 }
 
+/* Слова, занятые интерфейсом: /new — экран создания, /brands и /packages —
+   настоящие пути. Бренд с таким именем сделал бы адрес неоднозначным. */
+const RESERVED = ['new', 'brands', 'packages', 'index'];
+
 function createBrand(res, data) {
-  const id = SLUG.unique(data.slug || data.title, takenIds());
+  const id = SLUG.unique(data.slug || data.title, takenIds().concat(RESERVED));
   const dir = brandDir(id);
   if (!dir) return send(res, 400, JSON.stringify({ error: 'bad slug' }));
   if (fs.existsSync(dir)) return send(res, 409, JSON.stringify({ error: 'exists' }));
@@ -189,7 +193,10 @@ http.createServer((req, res) => {
      Отдаём ту же галерею, вставив <base>: одной строкой чинятся все
      относительные пути движка, и сам движок из адреса исчезает. */
   const short = url.pathname.match(/^\/([A-Za-z0-9._-]+)\/?$/);
-  if (short && fs.existsSync(path.join(BRANDS, short[1]))) {
+  /* /new — тот же экран галереи, но без сторибука: на нём открывается
+     диалог создания. Отдельный адрес нужен, чтобы на него можно было
+     сослаться с домашнего экрана. */
+  if (short && (short[1] === 'new' || fs.existsSync(path.join(BRANDS, short[1])))) {
     const html = fs.readFileSync(path.join(ROOT, 'packages/engine/gallery.html'), 'utf8')
       .replace('<head>', '<head>\n<base href="/packages/engine/">');
     return send(res, 200, html, TYPES['.html']);

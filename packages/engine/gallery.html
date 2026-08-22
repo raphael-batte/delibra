@@ -813,6 +813,10 @@ body.g-no-scroll { overflow: hidden; }
     <p class="g-dialog__error" id="g-new-error" hidden></p>
 
     <div class="g-dialog__actions" style="gap:8px">
+      <!-- Возврат на первый шаг: выбор сценария — не приговор, а ошибиться
+           в нём легко: три плитки похожи по весу. -->
+      <button class="g-mi" id="g-new-back" style="width:auto;margin-right:auto"
+              hidden data-i18n="new.back"></button>
       <button class="g-mi" id="g-new-close" style="width:auto" data-i18n="confirm.cancel"></button>
       <button class="g-btn-primary" id="g-new-create" hidden disabled data-i18n="new.create"></button>
     </div>
