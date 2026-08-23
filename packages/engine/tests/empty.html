@@ -44,17 +44,18 @@
        'topbar visible in empty mode');
   });
 
-  H.t('onboard centered in content panel', function () {
+  H.t('onboard centered on page axis (sidebar width counted)', function () {
     var doc = D();
+    var win = doc.defaultView;
     var panel = doc.querySelector('.g-panel');
     var onboard = doc.getElementById('g-onboard');
-    H.ok(panel && onboard, 'missing panel or onboard');
+    H.ok(panel && onboard && win, 'missing panel or onboard');
     var pr = panel.getBoundingClientRect();
     var or = onboard.getBoundingClientRect();
     var vOff = Math.abs((pr.top + pr.height / 2) - (or.top + or.height / 2));
-    var hOff = Math.abs((pr.left + pr.width / 2) - (or.left + or.width / 2));
+    var hOff = Math.abs(win.innerWidth / 2 - (or.left + or.width / 2));
     H.ok(vOff < 48, 'not vertically centered: Δ' + Math.round(vOff) + 'px');
-    H.ok(hOff < 48, 'not horizontally centered: Δ' + Math.round(hOff) + 'px');
+    H.ok(hOff < 48, 'not horizontally centered on page: Δ' + Math.round(hOff) + 'px');
   });
 
   H.g('Duplicate must not show empty state');

@@ -758,11 +758,6 @@
     document.getElementById('g-about-ver').textContent =
       t('about.version', { v: B.version, c: B.contract });
 
-    /* Take the mark from the same markup as the sidebar — one source. */
-    var srcPath = document.querySelector('.g-brandmark path');
-    var dstPath = document.getElementById('g-about-path');
-    if (srcPath && dstPath) dstPath.setAttribute('d', srcPath.getAttribute('d'));
-
     about.addEventListener('click', function (e) {
       e.stopPropagation();
       closeAll();
