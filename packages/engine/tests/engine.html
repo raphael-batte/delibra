@@ -238,6 +238,80 @@
     });
   });
 
+  H.g('Сравнение с кодом');
+
+  /* Подкладываем CSS строкой и смотрим пометки в DOM: внутренние функции
+     наружу не вынесены, да и проверять надо то, что видит человек. */
+  function withCompare(css) {
+    var G_ = G();
+    G_.GALLERY_API.setCompareCss(css, 'probe.css');
+    G_.GALLERY_API.setDiff(true);
+    return H.wait(900);
+  }
+  function notes(sectionId) {
+    return [].map.call(
+      D().querySelectorAll('#' + sectionId + ' .g-warn, #' + sectionId + ' .g-ok'),
+      function (el) { return el.textContent.trim(); });
+  }
+
+  H.t('без сравнения у токенов нет ни одной пометки', function () {
+    G().GALLERY_API.setDiff(false);
+    return H.wait(500).then(function () {
+      H.eq(notes('colors').length, 0, 'палитра говорит о коде, когда её не спрашивали');
+      H.eq(notes('sizes').length, 0, 'размеры говорят о коде, когда их не спрашивали');
+    });
+  });
+
+  H.t('расхождение значения помечено как расхождение', function () {
+    /* У шаблона --blue синий; подкладываем красный под тем же именем. */
+    return withCompare(':root { --blue: #FF0000; }').then(function () {
+      var warn = notes('colors').filter(function (text) {
+        return text.indexOf('#FF0000') >= 0 || text.toUpperCase().indexOf('FF0000') >= 0;
+      });
+      H.ok(warn.length > 0, 'другое значение не показано: ' + notes('colors').join(' · '));
+    });
+  });
+
+  H.t('токен под другим именем находится по значению', function () {
+    var G_ = G();
+    /* Имени --r-card в подложенном файле нет, а значение 12px есть под своим:
+       так устроен боевой код, где радиусы живут отдельным набором. */
+    return withCompare(':root { --m-radius-12: 12px; }').then(function () {
+      var found = notes('radii').filter(function (text) {
+        return text.indexOf('--m-radius-12') >= 0;
+      });
+      H.ok(found.length > 0, 'не нашёлся по значению: ' + notes('radii').join(' · '));
+    });
+  });
+
+  H.t('то же значение другого рода находкой не считается', function () {
+    /* Главный кейс: 12px у радиуса и 12px у заголовка — разные вещи, и
+       предлагать одно как имя другого хуже, чем промолчать. */
+    return withCompare(':root { --font-h1-size: 12px; }').then(function () {
+      var wrong = notes('radii').filter(function (text) {
+        return text.indexOf('--font-h1-size') >= 0;
+      });
+      H.eq(wrong.length, 0, 'радиусу предложено имя из типографики');
+    });
+  });
+
+  H.t('колонка «в приложенном CSS» появляется вместе со сравнением', function () {
+    var G_ = G();
+    var heads = function () {
+      return [].map.call(D().querySelectorAll('#sizes table th'),
+                         function (el) { return el.textContent.trim(); });
+    };
+    var label = G_.ENGINE_BRAND.t('tok.inCode');
+
+    return withCompare(':root { --space-m: 16px; }').then(function () {
+      H.ok(heads().indexOf(label) >= 0, 'колонки нет при включённом сравнении');
+      G_.GALLERY_API.setDiff(false);
+      return H.wait(500);
+    }).then(function () {
+      H.eq(heads().indexOf(label), -1, 'колонка осталась после выключения');
+    });
+  });
+
   H.g('Новый сторибук');
 
   H.t('пункт меню открывает диалог, «Отмена» закрывает', function () {
