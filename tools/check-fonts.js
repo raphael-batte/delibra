@@ -67,9 +67,9 @@ function prop(rules,v,selRe,name,bp){
 
    Run:  node check-fonts.js <path to styles.css> */
 const path=require('path');
-/* Script lives in tools/, tokens in the brand folder: build path from repo
-   root, not from script location. */
-const here=path.resolve(__dirname,'..','brands','sdm');
+const ROOT=path.resolve(__dirname,'..');
+const DATA=require('../packages/engine/data-root.js');
+const here=DATA.resolveBrandDir(ROOT);
 const sitePath=process.argv[2];
 if(!sitePath){
   console.error('need path to site styles.css:\n  node tools/check-fonts.js ../sdm/ui2026/app/styles.css');

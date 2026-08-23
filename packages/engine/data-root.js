@@ -28,10 +28,30 @@ function ensureDataRoot(root) {
 
 const BRAND_URL_PREFIX = '/__data';
 
+const REFERENCE_BRAND_IDS = ['_template'];
+
+function isReferenceBrand(id) {
+  return REFERENCE_BRAND_IDS.indexOf(id) >= 0;
+}
+
+/* Default CLI target: DELIBRA_DATA/<id>, then brands/<id> in the repo. */
+function resolveBrandDir(repoRoot, arg, defaultId) {
+  defaultId = defaultId || 'sdm';
+  if (arg) return path.resolve(arg);
+  const dataDir = path.join(dataRoot(repoRoot), defaultId);
+  if (fs.existsSync(dataDir)) return dataDir;
+  const repoDir = path.join(repoBrands(repoRoot), defaultId);
+  if (fs.existsSync(repoDir)) return repoDir;
+  return dataDir;
+}
+
 module.exports = {
   dataRoot,
   repoBrands,
   templateDir,
   ensureDataRoot,
-  BRAND_URL_PREFIX
+  BRAND_URL_PREFIX,
+  REFERENCE_BRAND_IDS,
+  isReferenceBrand,
+  resolveBrandDir
 };

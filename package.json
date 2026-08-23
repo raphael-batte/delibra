@@ -1,0 +1,12 @@
+{
+  "name": "delibra",
+  "private": true,
+  "description": "DeLibra — design system engine",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node packages/engine/check-package.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

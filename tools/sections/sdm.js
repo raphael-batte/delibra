@@ -8,7 +8,7 @@
 
    Edit here, then run:
        node tools/emit-sections.js sdm
-   Output lands in brands/sdm/sections.json (or DELIBRA_DATA when migrated).
+   Output lands in $DELIBRA_DATA/<brand>/sections.json (or brands/<brand>/ if present).
 
    Catalog rows (btnRow / tileRow / specRow) stay out of here — that chrome is
    engine-owned via the `rows` descriptor; baking it into every package would

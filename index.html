@@ -201,7 +201,10 @@ main { max-width: 1120px; margin: 0 auto; }
   function setStats(metaEl, tokens, components) {
     var text = summary(tokens, components);
     metaEl.textContent = '';
-    if (!text) return;
+    if (!text) {
+      metaEl.appendChild(el('span', 'badge', t('home.emptyCard')));
+      return;
+    }
     metaEl.appendChild(el('span', null, text));
   }
 

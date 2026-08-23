@@ -11,16 +11,20 @@
    Deferred tokens (declared for components that have not moved over yet) are
    listed in brands/<id>/tokens.deferred.json and do not count as dead.
 
-   Run:  node packages/engine/check-tokens.js brands/sdm
+   Run:  node packages/engine/check-tokens.js [path-or-id]
    ========================================================================== */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const brandDir = path.resolve(process.argv[2] || 'brands/sdm');
+const ROOT = path.resolve(__dirname, '..', '..');
+const DATA = require('./data-root.js');
+
+const brandDir = DATA.resolveBrandDir(ROOT, process.argv[2]);
 if (!fs.existsSync(brandDir)) {
   console.error('no such brand folder: ' + brandDir);
+  console.error('hint: set DELIBRA_DATA or pass path, e.g. node packages/engine/check-tokens.js');
   process.exit(2);
 }
 

@@ -10,9 +10,9 @@
 
    Run:  node packages/engine/serve.js [port]
 
-   The server is intentionally local: it listens only on 127.0.0.1 and works
-   strictly inside DELIBRA_DATA. Do not expose it — this is a developer tool, not
-   a service.
+   The server is intentionally local: it binds loopback only (127.0.0.1 and ::1)
+   so both http://127.0.0.1 and http://localhost work, and works strictly inside
+   DELIBRA_DATA. Do not expose it — this is a developer tool, not a service.
 
    Environment:
      DELIBRA_DATA  — folder for index.json and libra directories
@@ -73,6 +73,47 @@ function brandDir(id) {
 }
 
 function indexFile() { return path.join(DATA_ROOT, 'index.json'); }
+
+function isReferenceBrand(id) {
+  return DATA.isReferenceBrand(id);
+}
+
+function readOnlyBrand(res) {
+  return send(res, 403, JSON.stringify({ error: 'reference brand is read-only' }));
+}
+
+function readIndexRaw() {
+  const idx = indexFile();
+  if (!fs.existsSync(idx)) return { brands: [] };
+  try { return JSON.parse(fs.readFileSync(idx, 'utf8')); }
+  catch (e) { return { brands: [] }; }
+}
+
+function writeIndex(data) {
+  fs.writeFileSync(indexFile(), JSON.stringify(data, null, 2) + '\n');
+}
+
+function removeIndexEntry(id) {
+  const data = readIndexRaw();
+  const before = (data.brands || []).length;
+  data.brands = (data.brands || []).filter(b => b.id !== id);
+  if (data.brands.length === before) return false;
+  writeIndex(data);
+  return true;
+}
+
+/* Drop index entries whose folders vanished; persist when the index changed. */
+function listBrands() {
+  const data = readIndexRaw();
+  const brands = (data.brands || []).filter(b => {
+    const dir = brandDir(b.id);
+    return dir && fs.existsSync(dir);
+  });
+  if (brands.length !== (data.brands || []).length) {
+    writeIndex({ brands: brands });
+  }
+  return { brands: brands };
+}
 
 function pushIndexEntry(index, id, title) {
   index.brands = (index.brands || []).filter(b => b.id !== id);
@@ -278,6 +319,9 @@ function importBrand(zipBody, title, slugHint) {
 
 function createBrand(res, data) {
   const id = SLUG.unique(data.slug || data.title, takenIds().concat(RESERVED));
+  if (isReferenceBrand(id)) {
+    return send(res, 403, JSON.stringify({ error: 'reference brand is read-only' }));
+  }
   const dir = brandDir(id);
   if (!dir) return send(res, 400, JSON.stringify({ error: 'bad slug' }));
   if (fs.existsSync(dir)) return send(res, 409, JSON.stringify({ error: 'exists' }));
@@ -434,10 +478,8 @@ function api(req, res, url) {
   }
 
   if (url.pathname === '/__api/brands' && req.method === 'GET') {
-    const idx = indexFile();
-    if (!fs.existsSync(idx)) return send(res, 200, JSON.stringify({ brands: [] }));
     try {
-      return send(res, 200, fs.readFileSync(idx, 'utf8'));
+      return send(res, 200, JSON.stringify(listBrands()));
     } catch (e) {
       return send(res, 500, JSON.stringify({ error: String(e.message || e) }));
     }
@@ -480,6 +522,7 @@ function api(req, res, url) {
   if (putFiles && (req.method === 'POST' || req.method === 'PATCH')) {
     return readBody(req).then(raw => {
       const id = decodeURIComponent(putFiles[1]);
+      if (isReferenceBrand(id)) return readOnlyBrand(res);
       const dir = brandDir(id);
       if (!dir) return send(res, 400, JSON.stringify({ error: 'bad brand id' }));
       if (!fs.existsSync(dir)) return send(res, 404, JSON.stringify({ error: 'not found' }));
@@ -510,7 +553,9 @@ function api(req, res, url) {
   const patch = url.pathname.match(/^\/__api\/brand\/([^/]+)\/manifest$/);
   if (patch && (req.method === 'PATCH' || req.method === 'POST')) {
     return readBody(req).then(raw => {
-      const dir = brandDir(decodeURIComponent(patch[1]));
+      const id = decodeURIComponent(patch[1]);
+      if (isReferenceBrand(id)) return readOnlyBrand(res);
+      const dir = brandDir(id);
       if (!dir) return send(res, 400, JSON.stringify({ error: 'bad brand id' }));
 
       const file = path.join(dir, 'manifest.json');
@@ -623,18 +668,15 @@ function api(req, res, url) {
   const m = url.pathname.match(/^\/__api\/brand\/([^/]+)$/);
   if (m && req.method === 'DELETE') {
     const id = decodeURIComponent(m[1]);
+    if (isReferenceBrand(id)) return readOnlyBrand(res);
     const dir = brandDir(id);
     if (!dir) return send(res, 400, JSON.stringify({ error: 'bad brand id' }));
-    if (!fs.existsSync(dir)) return send(res, 404, JSON.stringify({ error: 'not found' }));
+    const hadFolder = fs.existsSync(dir);
     try {
-      fs.rmSync(dir, { recursive: true, force: true });
-      /* Brand is listed in brands/index.json — remove it there too, otherwise
-         the gallery list would point at nothing. */
-      const idx = indexFile();
-      if (fs.existsSync(idx)) {
-        const data = JSON.parse(fs.readFileSync(idx, 'utf8'));
-        data.brands = (data.brands || []).filter(b => b.id !== id);
-        fs.writeFileSync(idx, JSON.stringify(data, null, 2) + '\n');
+      if (hadFolder) fs.rmSync(dir, { recursive: true, force: true });
+      const removedFromIndex = removeIndexEntry(id);
+      if (!hadFolder && !removedFromIndex) {
+        return send(res, 404, JSON.stringify({ error: 'not found' }));
       }
       console.log('brand deleted:', id);
       return send(res, 200, JSON.stringify({ ok: true }));
@@ -646,7 +688,7 @@ function api(req, res, url) {
   return send(res, 404, JSON.stringify({ error: 'unknown api' }));
 }
 
-http.createServer((req, res) => {
+function onRequest(req, res) {
   const url = new URL(req.url, 'http://localhost');
 
   if (url.pathname.startsWith('/__api/')) return api(req, res, url);
@@ -663,7 +705,7 @@ http.createServer((req, res) => {
   const short = url.pathname.match(/^\/([A-Za-z0-9._-]+)\/?$/);
   /* /new — same gallery screen but without a storybook: the creation dialog
      opens on it. A separate URL so the home screen can link to it. */
-  if (short && (short[1] === 'new' || fs.existsSync(path.join(DATA_ROOT, short[1])))) {
+  if (short && (short[1] === 'new' || brandDir(short[1]))) {
     const html = fs.readFileSync(path.join(ROOT, 'packages/engine/gallery.html'), 'utf8')
       .replace('<head>', '<head>\n<base href="/packages/engine/">');
     return send(res, 200, html, TYPES['.html']);
@@ -682,8 +724,26 @@ http.createServer((req, res) => {
     'Cache-Control': 'no-store'
   });
   res.end(req.method === 'HEAD' ? undefined : body);
-}).listen(PORT, '127.0.0.1', () => {
+}
+
+/* Bind both loopbacks: Chrome often resolves localhost to ::1, while older
+   tools hit 127.0.0.1. Skip IPv6 quietly if the OS has none. */
+var ready = 0;
+function onListen() {
+  ready += 1;
+  if (ready !== 1) return;
   console.log('gallery:  http://localhost:' + PORT + '/');
   console.log('engine:   ' + ROOT);
   console.log('data:     ' + DATA_ROOT);
+}
+
+['127.0.0.1', '::1'].forEach(function (host) {
+  const server = http.createServer(onRequest);
+  server.on('error', function (err) {
+    if (host === '::1' && (err.code === 'EADDRINUSE' || err.code === 'EAFNOSUPPORT' ||
+        err.code === 'EADDRNOTAVAIL' || err.code === 'EINVAL')) return;
+    console.error('listen ' + host + ':' + PORT + ' failed:', err.message);
+    process.exit(1);
+  });
+  server.listen(PORT, host, onListen);
 });

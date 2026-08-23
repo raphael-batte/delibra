@@ -165,6 +165,10 @@
       return vars ? s.replace(/\{(\w+)\}/g, function (m, n) {
         return vars[n] !== undefined ? vars[n] : m;
       }) : s;
+    },
+
+    isReference: function () {
+      return SOURCE.id === '_template';
     }
   };
 })();

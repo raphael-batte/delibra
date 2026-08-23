@@ -3,7 +3,7 @@
 
    A test set is nothing but cases: the scaffolding, helpers and runner live
    here. Engine tests run against brands/_template, brand tests against their
-   own brand — the difference is the ?brand= parameter of the test page.
+   own libra — pass ?id=<libra> (preferred with serve.js) or ?brand=<path>.
 
    Usage:
      <script src="…/harness.js"></script>
@@ -17,10 +17,47 @@
 
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
+  function defaultGalleryUrl() {
+    var fromQs = qs.get('gallery');
+    if (fromQs) return fromQs;
+    if (location.pathname.indexOf('/__data/') >= 0) {
+      return '/packages/engine/gallery.html';
+    }
+    return '../gallery.html';
+  }
+
+  function detectLibraId() {
+    var id = qs.get('id');
+    if (id) return id;
+    var m = location.pathname.match(/\/__data\/([A-Za-z0-9._-]+)\//);
+    return m ? m[1] : null;
+  }
+
+  function resolveBrand() {
+    var explicit = qs.get('brand');
+    if (explicit) return Promise.resolve(explicit);
+
+    var id = detectLibraId();
+    if (!id) return Promise.resolve('../../../brands/_template');
+
+    return fetch('/__api/ping', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (info) {
+        if (info && info.brandUrlPrefix) {
+          return info.brandUrlPrefix.replace(/\/+$/, '') + '/' + id;
+        }
+        if (id === '_template') return '../../../brands/_template';
+        return '../../brands/' + id;
+      })
+      .catch(function () {
+        if (id === '_template') return '../../../brands/_template';
+        return '../../brands/' + id;
+      });
+  }
+
   var H = window.H = {
-    /* Path to the gallery and the brand — relative to the test page. */
-    galleryUrl: qs.get('gallery') || '../gallery.html',
-    brand:      qs.get('brand')   || '../../../brands/_template',
+    galleryUrl: defaultGalleryUrl(),
+    brand:      qs.get('brand') || '../../../brands/_template',
     suite:      document.title || 'tests'
   };
 
@@ -85,21 +122,25 @@
     summary.textContent = 'Loading the gallery…';
     var stage = document.getElementById('stage');
     stage.innerHTML = '';
-    var f = document.createElement('iframe');
-    f.style.cssText = 'width:1600px;height:1200px;border:0';
-    /* The brand comes from ?brand= on the test page and is passed straight
-       through: engine tests run on _template, brand tests on their own. */
-    f.src = H.galleryUrl + '?brand=' + encodeURIComponent(H.brand) +
-            '&css=new&test=1&t=' + Date.now();
-    stage.appendChild(f);
 
-    f.addEventListener('load', function () {
-      G = f.contentWindow;
-      D = f.contentDocument;
-      G.__errors = [];
-      G.addEventListener('error', function (e) { G.__errors.push(String(e.message)); });
-      summary.textContent = 'Waiting for previews…';
-      wait(5000).then(runAll);
+    resolveBrand().then(function (brand) {
+      H.brand = brand;
+      var f = document.createElement('iframe');
+      f.style.cssText = 'width:1600px;height:1200px;border:0';
+      f.src = H.galleryUrl + '?brand=' + encodeURIComponent(H.brand) +
+              '&css=new&test=1&t=' + Date.now();
+      stage.appendChild(f);
+
+      f.addEventListener('load', function () {
+        G = f.contentWindow;
+        D = f.contentDocument;
+        G.__errors = [];
+        G.addEventListener('error', function (e) { G.__errors.push(String(e.message)); });
+        summary.textContent = 'Waiting for previews…';
+        wait(5000).then(runAll);
+      });
+    }, function (e) {
+      summary.textContent = 'Failed to resolve brand: ' + e.message;
     });
   }
 

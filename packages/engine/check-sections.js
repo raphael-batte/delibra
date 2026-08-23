@@ -11,7 +11,7 @@
    Why: a storybook that arrived as a file opens without running foreign
    code. This check catches logic seeping back into a package.
 
-   Run:  node packages/engine/check-sections.js brands/sdm
+   Run:  node packages/engine/check-sections.js [path-or-id]
    ========================================================================== */
 'use strict';
 
@@ -19,7 +19,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const brandDir = path.resolve(process.argv[2] || 'brands/sdm');
+const DATA = require('./data-root.js');
+const brandDir = DATA.resolveBrandDir(ROOT, process.argv[2]);
 const rel = p => path.relative(ROOT, p);
 
 if (!fs.existsSync(brandDir)) {

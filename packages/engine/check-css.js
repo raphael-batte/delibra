@@ -14,14 +14,22 @@
                                     variable (--step-i and the like);
      anything listed in the brand's css.allow.json, with a reason.
 
-   Run:  node packages/engine/check-css.js brands/sdm
+   Run:  node packages/engine/check-css.js [path-or-id]
    ========================================================================== */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const brandDir = path.resolve(process.argv[2] || 'brands/sdm');
+const ROOT = path.resolve(__dirname, '..', '..');
+const DATA = require('./data-root.js');
+
+const brandDir = DATA.resolveBrandDir(ROOT, process.argv[2]);
+if (!fs.existsSync(brandDir)) {
+  console.error('no such brand folder: ' + brandDir);
+  console.error('hint: set DELIBRA_DATA or pass path');
+  process.exit(2);
+}
 const manifest = require('./brand-node.js').readManifest(brandDir);
 const compFile = manifest.css && manifest.css.components;
 if (!compFile) {

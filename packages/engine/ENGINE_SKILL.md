@@ -26,12 +26,12 @@ prompt).
 
 | Step | Condition | What to do |
 |------|-----------|------------|
-| 1 | `brands/<id>/SKILL.md` exists | Read it **after** this router. Brand rules override generic ones where they conflict. |
+| 1 | `$DELIBRA_DATA/<id>/manifest.json` or libra folder the user gave you | Read brand `SKILL.md` **after** this router when present. |
 | 2 | `manifest.design.source === 'css'` **or** `tokens.css` already has variables and `token-map.json` is non-empty | **Components path.** Tokens are done. Add or extend `components.css`, `sections.json`, assets. Do **not** re-import or rewrite tokens unless the user asks. |
 | 3 | `manifest.design.url` is set | **Design path.** Read the design with your Figma access (MCP, local bridge, plugin). Map what you read into tokens and sections. See [Reading the design](#reading-the-design). |
 | 4 | No `design.url`, empty tokens, `source` is `blank` or missing | **Stop.** Do not invent tokens or components. Tell the user: add a Figma link in gallery settings, import CSS on the empty screen, or paste a design URL in chat. Wait for a source. |
 | 5 | User pasted a Figma URL in chat but manifest has none | Ask whether to add it to `manifest.design.url` (via gallery settings) or proceed with that URL only for this session — still **read** the file, do not guess. |
-| 6 | Folder was not created in the gallery | Do not create `brands/<id>/` by hand unless the user explicitly asks. Prefer the gallery or `POST /__api/brand` with `brand-scaffold.js`. |
+| 6 | Folder was not created in the gallery | Do not create a libra folder by hand unless the user explicitly asks. Prefer the gallery or `POST /__api/brand` (writes under `DELIBRA_DATA`). |
 
 **Gallery:** `http://localhost:8777/<id>` when `serve.js` runs — the tab reloads
 when files change. Open it to verify; do not describe pixels you have not checked
@@ -98,9 +98,9 @@ a one-off landing page.
 ### Consistency checks before you finish
 
 ```bash
-node packages/engine/check-sections.js brands/<id>
-node packages/engine/check-tokens.js brands/<id>
-node packages/engine/check-css.js brands/<id>
+node packages/engine/check-sections.js [path-or-id]
+node packages/engine/check-tokens.js [path-or-id]
+node packages/engine/check-css.js [path-or-id]
 ```
 
 Fix every reported problem. Do not declare the task complete if a check fails.
@@ -335,9 +335,9 @@ inside the brand package follow the brand’s `locale` — they are brand data.
 
 ```bash
 node packages/engine/check-skill.js
-node packages/engine/check-sections.js brands/<id>
-node packages/engine/check-tokens.js brands/<id>
-node packages/engine/check-css.js brands/<id>
+node packages/engine/check-sections.js [path-or-id]
+node packages/engine/check-tokens.js [path-or-id]
+node packages/engine/check-css.js [path-or-id]
 ```
 
 `check-css.js` honours `css.allow.json` per line — exceptions need a reason.

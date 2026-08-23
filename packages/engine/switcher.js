@@ -30,6 +30,13 @@
   var menuS = document.getElementById('g-menu-suite');
   if (!mark || !name) return;
 
+  if (B.isReference && B.isReference()) {
+    ['g-delete', 'g-settings'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.hidden = true;
+    });
+  }
+
   /* ── Open and close ──────────────────────────────────────────── */
   function closeAll() {
     [menuW, menuS].forEach(function (m) { m.classList.remove('is-open'); });

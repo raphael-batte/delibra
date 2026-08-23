@@ -2,8 +2,10 @@
 
 **Design systems, structured for engineers and AI agents.**
 
+**New here?** → [GETTING-STARTED.md](GETTING-STARTED.md) — clone, run, create your first libra.
+
 Repository name: **`delibra`**. Product name in the UI: **DeLibra**. A **libra**
-is one design-system instance inside the repo.
+is one design-system instance (storybook package), not the git repo.
 
 Turn design systems into agent-ready data. A person reads a libra — tokens,
 components, the code that renders them, side by side with the production CSS.
@@ -59,7 +61,8 @@ Then open <http://localhost:8777/packages/engine/gallery.html>.
 `python3 -m http.server 8777` also works, and everything reads the same — but
 deleting a storybook then only removes it from your list, because a page served
 as plain static files cannot touch folders on disk. The bundled server adds
-exactly that: it is local-only (127.0.0.1) and works strictly inside `brands/`.
+exactly that: it is local-only (loopback IPv4 + IPv6) and works strictly inside
+`DELIBRA_DATA`.
 
 Another brand is a query parameter — the engine has no brand baked in:
 
@@ -86,11 +89,13 @@ Three layers, each answering a different question:
 | `contract.js` (inside the engine suite) | does the brand plug in correctly? | every brand |
 
 Open them in the browser with the server running. Engine tests default to
-`brands/_template` — that is the point: green on SDM and red on the template
-means the engine grew a dependency on SDM.
+`_template` via `?id=_template` — that is the point: green on SDM and red on
+the template means the engine grew a dependency on SDM.
+
+**Node:** `serve.js` runs on Node 14+; the test runner (`node --test`) needs **Node 18+**.
 
 ```bash
-node --test test/*.test.js              # agent prompt, duplicate API, package hygiene
+npm test                                # node --test test/*.test.js (Node 18+)
 node packages/engine/check-package.js   # same hygiene rules, CLI output
 ```
 
@@ -98,17 +103,19 @@ Browser suites (with `node packages/engine/serve.js` running):
 
 | Page | What it checks |
 |------|----------------|
-| `packages/engine/tests/engine.html` | gallery on `_template` |
+| `packages/engine/tests/engine.html` | gallery on `_template` (`?id=_template`) |
+| `/__data/sdm/tests.html` or `?id=sdm` | SDM brand values (data home) |
 | `packages/engine/tests/empty.html` | onboard + centering on `new-libra-4`, duplicate regression |
 
-Command-line checks:
+Command-line checks (default libra: `$DELIBRA_DATA/sdm`, usually `~/.delibra/libras/sdm`):
 
 ```bash
-node packages/engine/check-package.js   # no libra data / personal paths in repo
-node packages/engine/check-skill.js            # the skills' contract
-node packages/engine/check-tokens.js brands/sdm  # dead tokens, phantoms, unapplied
-node packages/engine/check-css.js brands/sdm     # raw hex and px outside var()
-node brands/sdm/check-fonts.js <path-to-site-styles.css>
+node packages/engine/check-package.js
+node packages/engine/check-skill.js
+node packages/engine/check-sections.js          # or pass path / id
+node packages/engine/check-tokens.js
+node packages/engine/check-css.js
+node tools/check-fonts.js <path-to-site-styles.css>
 ```
 
 A token that is declared and shown in the catalogue but applied by no component

@@ -26,8 +26,8 @@ const TEXT_EXT = new Set([
 const SKIP_WALK = new Set(['.git', 'node_modules', '.bridge', '.cursor']);
 
 const ALLOWED_TOP = new Set([
-  'README.md', 'VERSIONING.md', 'BRAND-PACKAGE.md', 'UI-SUITES.md',
-  'index.html', '.gitignore', 'packages', 'brands', 'tools', 'test', 'scripts'
+  'README.md', 'GETTING-STARTED.md', 'VERSIONING.md', 'BRAND-PACKAGE.md', 'UI-SUITES.md',
+  'index.html', 'package.json', '.gitignore', 'packages', 'brands', 'tools', 'test', 'scripts'
 ]);
 
 const FORBIDDEN_PATH = [

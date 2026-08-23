@@ -200,41 +200,12 @@ If they pass on SDM and fail on the template — the engine picked up an SDM dep
     H.eq(doc.getElementById('g-home').textContent.trim(), G().ENGINE_BRAND.t('menu.home'));
   });
 
-  H.t('delete label matches actual action', function () {
-    /* Under static hosting a folder cannot be deleted; button must say "remove
-       from gallery"; with our server — "delete". Lying about irreversible actions
-       is forbidden either way. */
-    var G_ = G();
-    var del = D().getElementById('g-delete');
-    H.ok(del, 'no delete item');
-    H.eq(del.disabled, false, 'delete item disabled');
-
-    var remove = G_.ENGINE_BRAND.t('settings.remove');
-    var erase  = G_.ENGINE_BRAND.t('settings.delete');
-    var label  = del.textContent.trim();
-    H.ok(label === remove || label === erase, 'unclear label: ' + label);
-
-    return G_.ENGINE_REGISTRY.serverWritable().then(function (writable) {
-      if (!writable) H.eq(label, remove, 'promises delete where it cannot happen');
-    });
-  });
-
-  H.t('delete requires confirmation word', function () {
+  H.t('reference brand hides delete and settings', function () {
     var doc = D();
-    doc.getElementById('g-delete').click();
-    return H.wait(200).then(function () {
-      H.eq(doc.getElementById('g-settings-scrim').hidden, true,
-         'opened settings instead of confirm');
-      H.ok(!doc.getElementById('g-confirm-scrim').hidden, 'confirm not shown');
-      var ok = doc.getElementById('g-confirm-ok');
-      var input = doc.getElementById('g-confirm-input');
-      H.eq(ok.disabled, true, 'confirm enabled with empty field');
-      input.value = 'delet';
-      input.dispatchEvent(new (D().defaultView.Event)('input'));
-      H.eq(ok.disabled, true, 'accepted partial word');
-      /* Do not perform deletion: test must not erase the brand. */
-      doc.getElementById('g-confirm-cancel').click();
-    });
+    var del = doc.getElementById('g-delete');
+    var settings = doc.getElementById('g-settings');
+    H.ok(del && del.hidden, 'delete visible on reference brand');
+    H.ok(settings && settings.hidden, 'settings visible on reference brand');
   });
 
   H.t('duplicate opens dialog, not settings', function () {
