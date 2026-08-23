@@ -72,6 +72,15 @@ function brandDir(id) {
   return dir;
 }
 
+/* Short URL /sdm opens a libra only when its folder exists — not for random
+   single-segment paths like /README.md that match brandDir but are repo docs. */
+function isLibraShortUrl(id) {
+  if (id === 'new') return true;
+  const dir = brandDir(id);
+  if (!dir || !fs.existsSync(dir)) return false;
+  return fs.statSync(dir).isDirectory();
+}
+
 function indexFile() { return path.join(DATA_ROOT, 'index.json'); }
 
 function isReferenceBrand(id) {
@@ -705,7 +714,7 @@ function onRequest(req, res) {
   const short = url.pathname.match(/^\/([A-Za-z0-9._-]+)\/?$/);
   /* /new — same gallery screen but without a storybook: the creation dialog
      opens on it. A separate URL so the home screen can link to it. */
-  if (short && (short[1] === 'new' || brandDir(short[1]))) {
+  if (short && isLibraShortUrl(short[1])) {
     const html = fs.readFileSync(path.join(ROOT, 'packages/engine/gallery.html'), 'utf8')
       .replace('<head>', '<head>\n<base href="/packages/engine/">');
     return send(res, 200, html, TYPES['.html']);

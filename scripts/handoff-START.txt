@@ -1,0 +1,37 @@
+DeLibra — quick start (no GitHub)
+=================================
+
+You received two files:
+  • delibra-engine.zip  — the viewer / engine
+  • *.lbr               — a design-system libra (import this)
+
+Requirements
+------------
+  • Node.js 18 or newer  https://nodejs.org
+  • A modern browser (Chrome, Safari, Firefox)
+
+1. Unzip delibra-engine.zip
+
+2. Start the server (keep this terminal open):
+
+     cd delibra-engine/delibra
+     node packages/engine/serve.js
+
+3. Open in the browser:
+
+     http://127.0.0.1:8777/
+
+   If localhost fails, use 127.0.0.1 explicitly.
+
+4. On the home screen: Import libra → choose the .lbr file you received.
+
+5. Open the libra from the home grid.
+
+Troubleshooting
+---------------
+  • "Connection refused" — the server is not running (step 2).
+  • Empty CSS / token panels — you opened a file:// URL; use http://127.0.0.1:8777/
+  • Stale server from an old folder — quit all serve.js processes and restart from
+    delibra-engine/delibra (step 2).
+
+More: delibra/GETTING-STARTED.md inside this folder.

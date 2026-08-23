@@ -69,6 +69,14 @@ describe('serve API — data migration guards', function () {
     });
   });
 
+  it('GET /README.md serves repo docs, not gallery short URL', function () {
+    return request('GET', '/README.md').then(function (r) {
+      assert.equal(r.status, 200);
+      assert.match(r.body, /DeLibra/);
+      assert.doesNotMatch(r.body, /<base href="\/packages\/engine\/">/);
+    });
+  });
+
   it('short URL /_template serves gallery', function () {
     return request('GET', '/_template').then(function (r) {
       assert.equal(r.status, 200);

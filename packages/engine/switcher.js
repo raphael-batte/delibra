@@ -306,6 +306,7 @@
           return window.ENGINE_PACKAGE.importToServer(srcBlob, title, slug)
             .then(function (id) {
               R.setActive(id);
+              R.rename(id, title);
               location.href = R.addressOf({ id: id, brandPath: R.brandRel(id) });
             });
         }
@@ -556,15 +557,18 @@
       location.href = R.addressOf({ id: id, brandPath: brandPath });
     }
 
-    function copySuiteSettings(fromId, toId) {
+    function copySuiteSettings(fromId, toId, newTitle) {
       var settings = R.suiteSettings(fromId);
       if (settings && Object.keys(settings).length) {
-        R.saveSuiteSettings(toId, settings);
+        var copy = Object.assign({}, settings);
+        delete copy.name;
+        R.saveSuiteSettings(toId, copy);
       }
       var css = R.compareCss(fromId);
       if (css) {
         R.saveCompareCss(toId, css, (settings || {}).compareName);
       }
+      if (newTitle) R.rename(toId, newTitle);
     }
 
     function runDuplicate(title) {
@@ -592,7 +596,7 @@
                 });
             })
             .then(function (id) {
-              copySuiteSettings(sourceId, id);
+              copySuiteSettings(sourceId, id, title);
               goToBrand(id, R.brandRel(id));
             });
         }
@@ -611,7 +615,7 @@
           var files = packFiles(pack, title);
           if (writable) {
             return R.createBrand(slug, title, files).then(function (id) {
-              copySuiteSettings(sourceId, id);
+              copySuiteSettings(sourceId, id, title);
               goToBrand(id, R.brandRel(id));
             });
           }
@@ -621,7 +625,7 @@
             files: files
           }, title);
           if (problem) throw new Error(t('new.err.' + problem.error, problem));
-          copySuiteSettings(sourceId, id);
+          copySuiteSettings(sourceId, id, title);
           goToBrand(id, null);
         });
       }).catch(function (err) {

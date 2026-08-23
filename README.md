@@ -2,7 +2,8 @@
 
 **Design systems, structured for engineers and AI agents.**
 
-**New here?** → [GETTING-STARTED.md](GETTING-STARTED.md) — clone, run, create your first libra.
+**New here?** → [GETTING-STARTED.md](GETTING-STARTED.md) — clone, run, create your first libra.  
+**No GitHub?** → [HANDOFF.md](HANDOFF.md) — zip the engine and send a `.lbr` file.
 
 Repository name: **`delibra`**. Product name in the UI: **DeLibra**. A **libra**
 is one design-system instance (storybook package), not the git repo.

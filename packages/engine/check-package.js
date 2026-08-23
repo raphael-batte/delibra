@@ -23,10 +23,10 @@ const TEXT_EXT = new Set([
   '.js', '.md', '.html', '.json', '.css', '.svg', '.txt', '.yml', '.yaml'
 ]);
 
-const SKIP_WALK = new Set(['.git', 'node_modules', '.bridge', '.cursor']);
+const SKIP_WALK = new Set(['.git', 'node_modules', '.bridge', '.cursor', 'dist']);
 
 const ALLOWED_TOP = new Set([
-  'README.md', 'GETTING-STARTED.md', 'VERSIONING.md', 'BRAND-PACKAGE.md', 'UI-SUITES.md',
+  'README.md', 'GETTING-STARTED.md', 'HANDOFF.md', 'VERSIONING.md', 'BRAND-PACKAGE.md', 'UI-SUITES.md',
   'index.html', 'package.json', '.gitignore', 'packages', 'brands', 'tools', 'test', 'scripts'
 ]);
 

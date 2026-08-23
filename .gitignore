@@ -4,6 +4,7 @@
 *.v0.*.bak*
 node_modules/
 .bridge/
+dist/
 
 # Library libras live in DELIBRA_DATA — not in git
 brands/*
