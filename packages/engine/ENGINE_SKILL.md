@@ -1,10 +1,12 @@
 ---
 name: storybook-engine
 description: >
-  Work on the brand-agnostic storybook engine, or wire a new design system into
-  it. Use when adding a section, changing preview chrome, adding a language, or
-  creating a brand package. Triggers: "add a section to the gallery", "wire up a
-  brand", "the storybook shows the wrong…", "translate the gallery".
+  Fill or extend a design-system storybook — the format an agent writes and a
+  person reads. Use when filling a storybook with tokens taken from a design or
+  a stylesheet, adding component sections, or working on the engine itself.
+  Triggers: "fill this storybook", "create a design system from Figma", "take
+  the tokens off the design", "add a section to the gallery", "wire up a brand",
+  "the storybook shows the wrong…", "translate the gallery".
 ---
 
 # Storybook engine

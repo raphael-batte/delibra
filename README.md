@@ -1,6 +1,17 @@
 # Design systems
 
-A brand-agnostic storybook engine plus the design systems it renders.
+**A design-system storybook built for agents.** A person reads it — tokens,
+components, the code that renders them, side by side with the production CSS.
+An agent writes it: you point it at the storybook's folder and its skill, and
+it carries the values over from Figma, or from a stylesheet you already have.
+
+There is no magic button. What the gallery gives an agent is a place to write
+into and a contract to follow; what it gives you is the result, readable and
+comparable. The source of truth stays the files in the folder.
+
+Two ways in: **from a design**, through whatever Figma access your agent has,
+or **from a CSS file** — the gallery reads its custom properties and builds the
+token reference itself.
 
 ```
 packages/engine/    the storybook: chrome, preview frames, diff, i18n

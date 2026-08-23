@@ -8,6 +8,9 @@ description: >
 
 # SDM design system
 
+The brand skill for agents building SDM screens: what the system contains, how
+to read a design into it, and what to do when the two disagree.
+
 ## Source of truth
 
 **`brands/sdm/tokens.css` + `brands/sdm/sdm.css`.** Nothing else.

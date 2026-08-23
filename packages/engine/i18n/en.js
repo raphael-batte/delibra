@@ -4,7 +4,7 @@ window.ENGINE_I18N = window.ENGINE_I18N || {};
 window.ENGINE_I18N.en = {
   /* topbar */
   /* Переключатель сторибуков */
-  'new.agent':         'Fill it with an agent',
+  'new.agent':         'Hand it to an agent',
   'new.agent.hint':     'The values live in your design; an agent moves them here. How it reads Figma is up to you and your setup — the storybook only cares about the three steps below.',
   'new.agent.s1':      'Point your agent at this storybook\'s folder: {path}',
   'new.agent.s2':      'Tell it to follow the engine skill — {skill} — it describes the token file, the descriptor and the sections.',
@@ -24,8 +24,8 @@ window.ENGINE_I18N.en = {
   'new.err.noServer':  'this gallery is served as static files, so it cannot create a folder — the storybook will live in this browser only',
   'new.blank':         'Empty',
   'new.blank.hint':    'A storybook with nothing in it. Fill it from your design or your stylesheet — the engine skill says how.',
-  'onboard.title':     'The storybook is empty',
-  'onboard.lead':      'Nothing here yet — that is how it starts. Here is the shortest way to fill it.',
+  'onboard.title':     'Your agent fills this',
+  'onboard.lead':      'Nothing here yet — that is how it starts. The values live in your design or your stylesheet; here is how they get here.',
   'onboard.later':     'Later',
   'home.tokens.one':     '{n} token',
   'home.tokens.many':    '{n} tokens',
@@ -36,7 +36,7 @@ window.ENGINE_I18N.en = {
   'home.count':        '{n} in this workspace',
   'home.empty':        'nothing here yet',
   'home.new':          '+  New storybook',
-  'home.hint':         'Run it with <code>node packages/engine/serve.js</code>: that gives every storybook its own address and lets new ones be created as folders. Served as static files, storybooks open through <code>?brand=</code> and new ones live in the browser only.',
+  'home.hint':         'A person reads the storybook; an agent fills it. Create an empty one, point your agent at its folder and the engine skill, and it carries the tokens over from your design — or drop in a stylesheet and the gallery reads the custom properties itself.<br><small>Run it with <code>node packages/engine/serve.js</code>: that gives every storybook its own address and lets new ones be created as folders. Served as static files, storybooks open through <code>?brand=</code> and new ones live in the browser only.</small>',
   'menu.new':          'New storybook…',
   'ws.title':          'Settings',
   'ws.language':       'Interface language',
@@ -88,7 +88,7 @@ window.ENGINE_I18N.en = {
   'settings.save':     'Save',
   'settings.done':     'Done',
   'menu.about':        'About',
-  'about.lead':        'A storybook for design systems: tokens, components and the code that renders them, on real mobile and desktop breakpoints. Several systems live side by side; each is a package that can be exported and handed over.',
+  'about.lead':        'A design-system storybook built for agents. A person reads it — tokens, components and the code that renders them, on real mobile and desktop breakpoints. An agent writes it, following the engine skill. Systems live side by side; each is a folder, and a file you can hand over.',
   'about.close':       'Close',
   'about.version':     'Version {v} · contract v{c}',
   'about.engine':      'Engine',

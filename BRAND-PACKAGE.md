@@ -1,5 +1,8 @@
 # Brand package format
 
+This is the format an agent writes and the gallery reads. A person never edits
+it by hand — they read the result and hand the agent the next task.
+
 A brand is a set of files plus a manifest that says what they are. Where those
 files physically live — a folder on the server, one JSON file, a zip — is a
 transport detail. The engine talks to a `BrandSource`, never to a filesystem.
