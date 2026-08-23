@@ -102,7 +102,7 @@ window.ENGINE_I18N.en = {
   'settings.title':    'Libra settings',
   'settings.name':     'Name',
   'settings.description': 'Short description',
-  'settings.description.hint': 'One line about this libra — home card and gallery header. Travels with the package.',
+  'settings.description.hint': 'One line about this libra — gallery header. Travels with the package.',
   'settings.nameFolder': 'The name is local: a folder libra lives on disk and the browser does not write to its manifest. To rename it for good, edit manifest.js.',
   'settings.compare':  'CSS to validate against',
   'settings.compare.hint': 'Belongs to this libra and is kept with it: a file attached globally would compare against the wrong code after switching.',

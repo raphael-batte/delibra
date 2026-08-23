@@ -88,10 +88,9 @@ main { max-width: 1120px; margin: 0 auto; }
 
 .body { padding: 12px 14px 14px; }
 .name { font-size: 13px; font-weight: 600; line-height: 1.25; }
-.desc { margin-top: 3px; font-size: 11px; line-height: 1.25; color: var(--muted); }
 .meta {
   display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px;
-  margin-top: 3px; font-size: 11px; color: var(--muted); line-height: 1.25;
+  margin-top: 4px; font-size: 11px; color: var(--muted); line-height: 1.25;
 }
 .meta:empty { display: none; }
 .badge {
@@ -197,11 +196,6 @@ main { max-width: 1120px; margin: 0 auto; }
     return t(base + suffix, { n: n });
   }
 
-  function defaultDescription(text) {
-    var s = (text || '').trim();
-    return s || t('libra.defaultDescription');
-  }
-
   function summary(tokens, components) {
     var parts = [];
     if (tokens) parts.push(plural('home.tokens', tokens));
@@ -213,7 +207,7 @@ main { max-width: 1120px; margin: 0 auto; }
     var text = summary(tokens, components);
     metaEl.textContent = '';
     if (!text) {
-      metaEl.appendChild(el('span', 'badge', t('home.emptyCard')));
+      metaEl.appendChild(el('span', null, t('home.emptyCard')));
       return;
     }
     metaEl.appendChild(el('span', null, text));
@@ -236,7 +230,6 @@ main { max-width: 1120px; margin: 0 auto; }
     a.appendChild(el('div', 'cover'));
     var body = el('div', 'body');
     body.appendChild(el('div', 'name', suite.title));
-    body.appendChild(el('div', 'desc', defaultDescription(suite.description)));
     var meta = el('div', 'meta');
     if (suite.origin !== 'library') {
       meta.appendChild(el('span', 'badge', t('badge.browserOnly')));
@@ -251,14 +244,12 @@ main { max-width: 1120px; margin: 0 auto; }
     function mapBrand(b, urls) {
       return { id: b.id, title: b.title || b.id, origin: 'library',
                href: '/' + b.id,
-               manifest: urls.manifest,
                tokens: urls.tokens,
                sections: urls.sections };
     }
 
     function urlsFor(id) {
       return {
-        manifest: '/__data/' + id + '/manifest.json',
         tokens: '/__data/' + id + '/tokens.css',
         sections: '/__data/' + id + '/sections.json'
       };
@@ -283,7 +274,6 @@ main { max-width: 1120px; margin: 0 auto; }
           .map(function (b) {
             var urls = b.path
               ? {
-                manifest: '/' + b.path + '/manifest.json',
                 tokens: '/' + b.path + '/tokens.css',
                 sections: '/' + b.path + '/sections.json'
               }
@@ -297,17 +287,15 @@ main { max-width: 1120px; margin: 0 auto; }
     var list = [];
     try { list = JSON.parse(localStorage.getItem('ds:local') || '[]'); } catch (e) {}
     return list.map(function (rec) {
-      var css = '', components = 0, description = '';
+      var css = '', components = 0;
       try {
         var pack = JSON.parse(localStorage.getItem('ds:bundle:' + rec.id) || 'null');
         var m = pack && JSON.parse(pack.files['manifest.json']);
         css = (pack && m && pack.files[m.css.tokens]) || '';
-        description = (m && m.description) || '';
         var sections = pack && JSON.parse(pack.files[m.sections || 'sections.json'] || '[]');
         components = Array.isArray(sections) ? sections.length : 0;
       } catch (e) {}
       return { id: rec.id, title: rec.title || rec.id, origin: 'local',
-               description: description,
                href: 'packages/engine/gallery.html?suite=' + encodeURIComponent(rec.id),
                css: css, components: components };
     });
@@ -336,18 +324,13 @@ main { max-width: 1120px; margin: 0 auto; }
       }
 
       Promise.all([
-        fetch(suite.manifest, { cache: 'no-store' })
-          .then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
         fetch(suite.tokens, { cache: 'no-store' })
           .then(function (r) { return r.ok ? r.text() : ''; }).catch(function () { return ''; }),
         fetch(suite.sections, { cache: 'no-store' })
           .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
       ]).then(function (parts) {
-        var manifest = parts[0] || {};
-        node.querySelector('.desc').textContent =
-          defaultDescription(manifest.description || suite.description);
-        paintCover(node, coverFrom(parts[1]));
-        finish(countTokens(parts[1]), Array.isArray(parts[2]) ? parts[2].length : 0);
+        paintCover(node, coverFrom(parts[0]));
+        finish(countTokens(parts[0]), Array.isArray(parts[1]) ? parts[1].length : 0);
       });
     });
   });

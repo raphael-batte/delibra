@@ -101,7 +101,7 @@ window.ENGINE_I18N.ru = {
   'settings.title':    'Настройки libra',
   'settings.name':     'Название',
   'settings.description': 'Краткое описание',
-  'settings.description.hint': 'Одна строка об этой libra — карточка home и шапка галереи. Уезжает вместе с пакетом.',
+  'settings.description.hint': 'Одна строка об этой libra — шапка галереи. Уезжает вместе с пакетом.',
   'settings.nameFolder': 'Имя локальное: libra на диске лежит папкой, и в манифест браузер не пишет. Чтобы переименовать насовсем — в manifest.js.',
   'settings.compare':  'CSS для сравнения',
   'settings.compare.hint': 'Принадлежит этой libra и хранится вместе с ней: общий файл после переключения сравнивал бы с чужим кодом.',
