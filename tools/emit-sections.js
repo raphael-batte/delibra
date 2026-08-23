@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 /* ==========================================================================
-   Сборка секций бренда: логика → данные.
+   Build brand sections: logic → data.
 
-   Авторский слой (tools/sections/<brand>.js) описывает секции сборщиками
-   разметки. Этот скрипт выполняет его один раз и кладёт результат в
-   brands/<brand>/sections.json — файл, который читает галерея.
+   Authoring layer (tools/sections/<brand>.js) describes sections with markup
+   builders. This script runs it once and writes
+   <brand>/sections.json — the file the gallery reads.
 
-   Зачем так: пакет бренда должен состоять только из данных. Тогда сторибук,
-   присланный файлом, открывается без выполнения чужого кода, а вся логика
-   остаётся в репозитории, где её видно и можно проверить.
+   Brand packages must be data-only: a storybook sent as a file opens without
+   executing foreign code; logic stays in the repo where it can be reviewed.
 
-   Запуск:  node tools/emit-sections.js sdm
+   Run:  node tools/emit-sections.js sdm
    ========================================================================== */
 'use strict';
 
@@ -18,47 +17,50 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
+const DATA = require('../packages/engine/data-root.js');
 const brand = process.argv[2];
 
 if (!brand) {
-  console.error('нужно имя бренда:\n  node tools/emit-sections.js sdm');
+  console.error('brand id required:\n  node tools/emit-sections.js sdm');
   process.exit(2);
 }
 
 const srcFile = path.join(ROOT, 'tools', 'sections', brand + '.js');
-const outFile = path.join(ROOT, 'brands', brand, 'sections.json');
+const dataDir = path.join(DATA.dataRoot(ROOT), brand);
+const repoDir = path.join(ROOT, 'brands', brand);
+const brandDir = fs.existsSync(dataDir) ? dataDir : repoDir;
+const outFile = path.join(brandDir, 'sections.json');
 
 if (!fs.existsSync(srcFile)) {
-  console.error('нет авторского слоя: ' + path.relative(ROOT, srcFile));
+  console.error('no authoring layer: ' + path.relative(ROOT, srcFile));
   process.exit(2);
 }
 if (!fs.existsSync(path.dirname(outFile))) {
-  console.error('нет папки бренда: ' + path.relative(ROOT, path.dirname(outFile)));
+  console.error('no brand folder: ' + path.relative(ROOT, path.dirname(outFile)));
   process.exit(2);
 }
 
 const sections = require(srcFile)();
 
-/* Проверяем то же, что потом проверит check-sections: пусть ошибка всплывёт
-   на сборке, а не в браузере через полчаса. */
+/* Same checks as check-sections — fail at build time, not in the browser. */
 const problems = [];
 sections.forEach((s, i) => {
-  if (!s.id)    problems.push(`секция #${i}: нет id`);
-  if (!s.title) problems.push(`${s.id || '#' + i}: нет title`);
+  if (!s.id)    problems.push(`section #${i}: missing id`);
+  if (!s.title) problems.push(`${s.id || '#' + i}: missing title`);
   (s.examples || []).forEach((ex, j) => {
     const where = `${s.id}/${ex.label || '#' + j}`;
-    if (!ex.label) problems.push(`${s.id}: пример #${j} без label`);
+    if (!ex.label) problems.push(`${s.id}: example #${j} missing label`);
     const forms = ['html', 'rows'].filter(k => ex[k] !== undefined);
-    if (forms.length !== 1) problems.push(`${where}: должна быть ровно одна форма тела, а не ${forms.join('+') || 'ни одной'}`);
-    if (ex.wrap && !ex.rows) problems.push(`${where}: wrap допустим только вместе с rows`);
-    if (ex.html && ex.html.indexOf('data-pick') < 0) problems.push(`${where}: в разметке нет data-pick`);
-    if (typeof ex.html === 'function' || typeof ex.rows === 'function') problems.push(`${where}: функция вместо данных`);
+    if (forms.length !== 1) problems.push(`${where}: exactly one body form required, got ${forms.join('+') || 'none'}`);
+    if (ex.wrap && !ex.rows) problems.push(`${where}: wrap requires rows`);
+    if (ex.html && ex.html.indexOf('data-pick') < 0) problems.push(`${where}: markup missing data-pick`);
+    if (typeof ex.html === 'function' || typeof ex.rows === 'function') problems.push(`${where}: function instead of data`);
   });
 });
 
 if (problems.length) {
   problems.forEach(p => console.error('  ✗ ' + p));
-  console.error('\nне записано: ' + problems.length + ' проблем(ы)');
+  console.error('\nnot written: ' + problems.length + ' problem(s)');
   process.exit(1);
 }
 
@@ -66,4 +68,4 @@ fs.writeFileSync(outFile, JSON.stringify(sections, null, 2) + '\n');
 
 const examples = sections.reduce((n, s) => n + (s.examples || []).length, 0);
 const size = (fs.statSync(outFile).size / 1024).toFixed(1);
-console.log(`${path.relative(ROOT, outFile)} — ${sections.length} секций, ${examples} примеров, ${size} КБ`);
+console.log(`${path.relative(ROOT, outFile)} — ${sections.length} sections, ${examples} examples, ${size} KB`);

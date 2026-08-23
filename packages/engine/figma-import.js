@@ -60,7 +60,8 @@
         title: title || t('new.figmaName', { file: fileName }),
         note: t('new.figmaDesc', { file: fileName }),
         deferred: t('new.figmaDeferred', { file: fileName }),
-        designUrl: designUrl || null
+        designUrl: designUrl || null,
+        source: 'figma'
       });
       if (built.error) return { error: built.error };
 

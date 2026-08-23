@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Переключатель сторибуков — макет</title>
+<title>Storybook switcher — mock</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Макет, а не реализация: данные подставные, действия ничего не делают.
-   Цель — посмотреть оба меню в настоящем размере рядом с сайдбаром,
-   до того как под ними появится BrandSource. */
+/* Mock, not implementation: stub data, actions do nothing.
+   Goal — see both menus at real size beside the sidebar before BrandSource exists. */
 :root {
   --bg: #FBFCFD; --white-pure: #FFFFFF; --border: #E3E8F0;
   --text-primary: #333; --text-heading: #000; --text-muted: #757575;
@@ -27,8 +26,8 @@ body { margin: 0; background: var(--bg); color: var(--text-primary);
   padding: 16px 12px 40px;
 }
 
-/* Шапка сайдбара: слева плитка (меню воркспейса), справа имя с шевроном
-   (меню активного сторибука). Две цели клика, две разные области. */
+/* Sidebar header: tile left (workspace menu), name with chevron right (active
+   storybook menu). Two click targets, two areas. */
 .brandbar { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
 
 .brandmark {
@@ -50,7 +49,7 @@ body { margin: 0; background: var(--bg); color: var(--text-primary);
 .brandname b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .brandname svg { width: 14px; height: 14px; flex: none; opacity: .55; }
 
-/* ── Меню ─────────────────────────────────────────────────────────── */
+/* ── Menus ─────────────────────────────────────────────────────────── */
 .menu {
   position: absolute; z-index: 40; min-width: 268px;
   padding: 6px; border: 1px solid var(--border); border-radius: 12px;
@@ -86,7 +85,7 @@ body { margin: 0; background: var(--bg); color: var(--text-primary);
   letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
 }
 
-/* ── Остальной сайдбар — чтобы меню было видно в контексте ────────── */
+/* ── Rest of sidebar — so menus are visible in context ────────── */
 .nav-group { padding: 18px 8px 6px; font-size: 10px; font-weight: 700;
              letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
 .nav-item { padding: 7px 8px; border-radius: 8px; font-size: 13px; color: var(--text-primary); }
@@ -100,7 +99,7 @@ body { margin: 0; background: var(--bg); color: var(--text-primary);
 .note code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
 .note b { color: var(--text-heading); }
 
-/* ── Диалог ────────────────────────────────────────────────────────── */
+/* ── Dialog ────────────────────────────────────────────────────────── */
 .scrim {
   position: fixed; inset: 0; z-index: 60; display: none;
   align-items: center; justify-content: center;
@@ -141,7 +140,7 @@ body { margin: 0; background: var(--bg); color: var(--text-primary);
 <div class="shell">
   <aside class="sidebar">
     <div class="brandbar">
-      <div class="brandmark" id="mark" title="Сторибуки">
+      <div class="brandmark" id="mark" title="Storybooks">
         <svg viewBox="0 0 24 24" fill="none" stroke="#012B5D" stroke-width="1.8"
              stroke-linejoin="round"><path d="M5 4h9l5 5v11H5z"/><path d="M9 9h5"/><path d="M9 13h6"/></svg>
       </div>
@@ -152,99 +151,93 @@ body { margin: 0; background: var(--bg); color: var(--text-primary);
       </button>
     </div>
 
-    <!-- Меню воркспейса: что существует независимо от открытого сторибука -->
+    <!-- Workspace menu: what exists independent of the open storybook -->
     <div class="menu" id="menu-workspace">
-      <!-- Один пункт, а не два: «создать» и «импортировать» — две ветки одного
-           намерения «завести новый сторибук», и разводить их по разным строкам
-           значит заставлять выбирать до того, как показали варианты.
-           Тот же диалог показывается на пустом старте. -->
-      <button class="mi" id="new-item"><span class="tick"></span><span class="grow">New storybook…</span></button>
+      <!-- One item, not two: "create" and "import" are branches of one intent
+           "start a new storybook" — splitting them into rows forces choosing
+           before showing options. Same dialog on empty start. -->
+      <button class="mi" id="new-item"><span class="grow">New libra</span></button>
       <hr>
-      <div class="section-label">Storybooks</div>
-      <button class="mi"><span class="tick">✓</span><span class="grow">SDM Design System</span><span class="badge">Library</span></button>
-      <button class="mi"><span class="tick"></span><span class="grow">ACME</span><span class="badge local">Local</span></button>
-      <button class="mi"><span class="tick"></span><span class="grow">Template</span><span class="badge">Library</span></button>
-      <hr>
-      <button class="mi"><span class="tick"></span><span class="grow">Settings…</span></button>
-      <button class="mi"><span class="tick"></span><span class="grow">About</span></button>
+      <button class="mi"><span class="grow">Home</span></button>
+      <button class="mi"><span class="grow">Settings</span></button>
+      <button class="mi"><span class="grow">About</span></button>
     </div>
 
-    <!-- Меню активного сторибука -->
+    <!-- Active storybook menu -->
     <div class="menu" id="menu-suite">
       <button class="mi"><span class="grow">Settings…</span></button>
       <button class="mi"><span class="grow">Duplicate</span></button>
       <button class="mi"><span class="grow">Export as file</span></button>
-      <button class="mi"><span class="grow">Copy link</span><span class="kbd">⌘L</span></button>
       <hr>
-      <!-- Library-бренд лежит папкой на диске: браузер её удалить не может,
-           поэтому пункт выключен, а рабочий путь — Duplicate выше. -->
-      <button class="mi danger" disabled title="Библиотечный бренд лежит на диске — сделайте копию через Duplicate">
+      <!-- Library brand lives as a folder on disk: browser cannot delete it,
+           so item disabled; working path is Duplicate above. -->
+      <button class="mi danger" disabled title="Library brand lives on disk — make a copy via Duplicate">
         <span class="grow">Delete…</span>
       </button>
     </div>
 
-    <div class="nav-group">Токены</div>
-    <div class="nav-item active">Цвета</div>
-    <div class="nav-item">Радиусы</div>
-    <div class="nav-item">Тени и кольца</div>
-    <div class="nav-item">Размытие</div>
-    <div class="nav-item">Типографика</div>
-    <div class="nav-group">Примитивы</div>
-    <div class="nav-item">Кнопки</div>
-    <div class="nav-item">Бейджи</div>
+    <div class="nav-group">Tokens</div>
+    <div class="nav-item active">Colors</div>
+    <div class="nav-item">Radii</div>
+    <div class="nav-item">Shadows & rings</div>
+    <div class="nav-item">Blur</div>
+    <div class="nav-item">Typography</div>
+    <div class="nav-group">Primitives</div>
+    <div class="nav-item">Buttons</div>
+    <div class="nav-item">Badges</div>
   </aside>
 
   <main class="main">
-    <div class="topbar"><h2>Дизайн-система и компоненты сайта</h2></div>
+    <div class="topbar"><h2>Design system and site components</h2></div>
     <p class="note">
-      Макет двух меню. <b>Плитка слева</b> — уровень воркспейса: создать, импортировать,
-      переключиться между сторибуками, общие настройки и About.
-      <b>Имя с шевроном</b> — уровень активного сторибука: его настройки, копия, экспорт, удаление.
-      Граница ровно как у Figma: квадрат — приложение, имя — документ.
+      Mock of two menus. <b>Tile on the left</b> — workspace level: create, import,
+      switch between storybooks, shared settings and About.
+      <b>Name with chevron</b> — active storybook level: its settings, copy, export, delete.
+      Boundary exactly like Figma: square — app, name — document.
     </p>
     <p class="note">
-      Бейдж <b>Library / Local</b> не украшение: библиотечный бренд лежит папкой на диске
-      и переживёт очистку хранилища, локальный живёт в браузере и нет.
-      Поэтому <code>Delete</code> у библиотечного выключен — браузер не может удалить папку,
-      а пункт, который делает не то, что обещает, хуже отсутствующего.
+      The <b>Library / Local</b> badge is not decoration: a library brand lives as a folder on disk
+      and survives storage cleanup; a local one lives in the browser and does not.
+      That is why <code>Delete</code> is disabled for library brands — the browser cannot delete a folder,
+      and a menu item that does not match its action is worse than none.
     </p>
   </main>
 </div>
 
-<!-- ── Диалог создания ──────────────────────────────────────────────────
-     Он же экран пустого старта: если открытых сторибуков нет, показываем
-     это сразу, без меню. -->
+<!-- ── Create dialog ──────────────────────────────────────────────────
+     Also the empty-start screen: if no storybooks are open, show this
+     immediately, without a menu. -->
 <div class="scrim" id="scrim">
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
     <h3 id="dlg-title">New storybook</h3>
-    <p class="dialog__lead">С чего начать?</p>
+    <p class="dialog__lead">Where to start?</p>
 
     <div class="choices">
       <button class="choice">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         <b>Create from scratch</b>
-        <span>Копия шаблона: нейтральные токены и одна кнопка. Дальше правите под свой бренд.</span>
+        <span>A copy of the template: neutral tokens and one button. Edit for your brand from there.</span>
       </button>
       <button class="choice">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
         <b>Import from file</b>
-        <span>Файл <code>.ds.json</code>, который прислали коллеги или выгрузили сами.</span>
+        <span>A <code>.dsz</code> file from a colleague or your own export.</span>
       </button>
     </div>
 
-    <p class="dialog__note">Локальный сторибук живёт в этом браузере. Чтобы передать
-      его или сохранить, выгрузите файл через <b>Export as file</b>.</p>
+    <p class="dialog__note">A local storybook lives in this browser. To share
+      or back it up, export a file via <b>Export as file</b>.</p>
 
-    <div class="dialog__actions"><button class="mi" id="dlg-close" style="width:auto">Отмена</button></div>
+    <div class="dialog__actions"><button class="mi" id="dlg-close" style="width:auto">Cancel</button></div>
   </div>
 </div>
 
 <script>
 (function () {
   'use strict';
-  /* Позиционируем меню под своей целью и держим открытым только одно. */
+  /* Position menu under its trigger and keep only one open. */
   function wire(triggerId, menuId, align) {
     var trigger = document.getElementById(triggerId);
     var menu = document.getElementById(menuId);

@@ -1,10 +1,10 @@
-/* Один компонент. Больше шаблону не нужно: он проверяет движок, а не дизайн. */
+/* One component — enough to exercise the engine, not a full design. */
 .t-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  height: 40px; padding-inline: 20px;
+  height: var(--btn-h); padding-inline: var(--btn-px);
   border: 0; border-radius: var(--r-card);
   background: var(--blue); color: var(--white-pure);
-  font-family: var(--font-family); font-size: 14px; font-weight: 600;
+  font-family: var(--font-family); font-size: var(--btn-fs); font-weight: 600;
   cursor: pointer;
 }
 .t-btn--ghost {

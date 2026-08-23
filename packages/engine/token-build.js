@@ -8,10 +8,12 @@
    ========================================================================== */
 (function (root, factory) {
   'use strict';
-  var api = factory();
+  var api = factory(typeof module === 'object' && module.exports
+    ? require('./brand-scaffold.js')
+    : root.ENGINE_SCAFFOLD);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.ENGINE_TOKEN_BUILD = api;
-}(typeof self !== 'undefined' ? self : this, function () {
+}(typeof self !== 'undefined' ? self : this, function (SCAFFOLD) {
   'use strict';
 
   var COLOR = /^(#|rgb|hsl|color\()/i;
@@ -25,8 +27,8 @@
   function isLength(v)   { return LEN.test(v.trim()); }
   function px(v)         { return parseFloat(v); }
 
-  /* Заголовок группы из префикса имени: --brand-blue → Brand. Имя, которое
-     дал автор стилей, информативнее любой нашей классификации. */
+  /* Group heading from the name prefix: --brand-blue → Brand. The author's
+     own naming says more than any classification of ours. */
   function groupOf(name) {
     var parts = name.replace(/^--/, '').split('-');
     var head = parts.length > 1 ? parts[0] : 'other';
@@ -38,10 +40,9 @@
                .replace(/^./, function (c) { return c.toUpperCase(); });
   }
 
-  /* Заголовки разделов в дескрипторе — данные бренда, а не интерфейс.
-     Если брать их из языкового пака импортирующего, пакет уедет коллеге с
-     русскими заголовками поверх английской галереи. Поэтому канонические
-     английские: это имена разделов справочника, а не текст интерфейса. */
+  /* Section headings live in brand data, not in the UI, so they are English
+     by convention — otherwise a package exported from a Russian gallery would
+     carry Russian headings into an English one. */
   var TITLES = {
     colors:   'Colours',
     gradients:'Gradients',
@@ -53,7 +54,7 @@
     other:    'Other tokens'
   };
 
-  /* Разбор → дескриптор токен-секций того же вида, что token-map.json. */
+  /* Parsed vars → a token-section descriptor shaped like token-map.json. */
   function toTokenMap(vars, note) {
     var all = {};
     ['base', 'desktop', 'mobile'].forEach(function (ctx) {
@@ -65,7 +66,7 @@
     var names = Object.keys(all).sort();
     if (!names.length) return null;
 
-    var colorGroups = {};   // заголовок → список свотчей
+    var colorGroups = {};   // heading → list of swatches
     var gradients = [];
     var radii = [];
     var fonts = [];
@@ -86,8 +87,8 @@
       if (/(^--r-|radius)/.test(n))      { radii.push([n, label(n)]); return; }
       if (/^--font|font-size|^--fs-/.test(n) && isLength(v)) { fonts.push([n, label(n)]); return; }
       if (isLength(v)) {
-        /* Размер шрифта и отступ на глаз не различить, поэтому опираемся на
-           имя, а по величине только сортируем: 10–96 обычно типографика. */
+        /* Font size and spacing are indistinguishable by value, so go by name
+           and use the number only for sorting: 10–96 is usually type. */
         (px(v) >= 10 && px(v) <= 96 && /size|text|lead|title/.test(n) ? fonts : sizes)
           .push([n, label(n)]);
         return;
@@ -103,8 +104,8 @@
     if (groups.length || gradients.length) {
       map.colors = {
         title: TITLES.colors,
-        /* Единственное место, где сказано про отсутствие компонентов так,
-           чтобы это было видно: первая секция каталога. */
+        /* The one place that says "no components yet" where it will be seen:
+           the first section of the catalogue. */
         desc: note,
         groups: groups,
         gradients: gradients.length ? { title: TITLES.gradients, items: gradients } : undefined
@@ -119,9 +120,9 @@
       }) };
     }
     if (fonts.length) {
-      /* Дескриптор типографики ждёт префиксы (--font-h1 → -size/-lh). У чужого
-         файла таких пар обычно нет, поэтому показываем их таблицей размеров:
-         честнее, чем делать вид, что шкала собралась. */
+      /* The type descriptor expects prefixed pairs (--font-h1 → -size/-lh).
+         A foreign file rarely has them, so show a size table instead of
+         pretending a scale came together. */
       map.sizes = map.sizes || { title: TITLES.sizes, groups: [] };
       map.sizes.groups.push({ title: TITLES.type, rows: fonts.map(function (r) {
         return [r[0], ''];
@@ -158,22 +159,13 @@
       });
     });
 
-    var manifest = {
-      id: 'storybook',
+    /* Same shell as an empty storybook, only with tokens in it: the manifest
+       shape lives in one place. */
+    var manifest = SCAFFOLD.manifest({
       title: meta.title,
-      version: '0.1.0',
-      engine: 1,
-      css: { tokens: 'tokens.css', components: 'components.css' },
-      sections: 'sections.json',
-      tokenMap: 'token-map.json',
-      legacyNames: null,
-      assetsBase: 'assets/',
-      font: { family: null, href: null },
-      breakpoints: { mobile: 900, desktopMin: 901 },
-      preview: { mobileWidth: 390, desktopWidth: 1440, container: 1170 },
-      compare: { legacy: null }
-    };
-    if (meta.designUrl) manifest.design = { url: meta.designUrl };
+      design: meta.designUrl,
+      source: meta.source
+    });
 
     var why = {};
     names.forEach(function (n) { why[n] = meta.deferred || meta.note || ''; });

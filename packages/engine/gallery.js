@@ -1,58 +1,58 @@
 /* ==========================================================================
    Storybook engine
    --------------------------------------------------------------------------
-   Секции описаны в gallery-specs.js (window.GALLERY).
-   Каждый пример рендерится в iframe _frame.html: мобильный 390px и
-   десктопный — по ширине контейнера бренда (ужимается трансформом). Реальный @media срабатывает сам —
-   никаких !important-зеркал.
+   Sections are described in gallery-specs.js (window.GALLERY).
+   Each example renders in iframe _frame.html: mobile 390px and desktop at the
+   brand container width (scaled with transform). Real @media fires on its own —
+   no !important mirrors.
    ========================================================================== */
 (function () {
   'use strict';
 
   var B = window.ENGINE_BRAND;
 
-  /* Сторибук не открыт — каталог рисовать не из чего. Это штатный случай
-     (первый заход, ссылка на чужой пакет), а не ошибка: галерея молчит, а
-     switcher показывает экран создания. Без этой проверки движок падал на
-     попытке собрать секции без бренда — и вместе с ним не запускался
-     switcher, то есть человек видел пустой экран без объяснений. */
+  /* No storybook open — nothing to draw a catalog from. Normal case (first visit,
+     link to someone else's package), not an error: the gallery stays quiet and
+     switcher shows the creation screen. Without this check the engine crashed
+     building sections without a brand — and switcher never started, so the user
+     saw a blank screen with no explanation. */
   if (!window.ENGINE_SPECS || !window.BRAND_MANIFEST) {
     window.GALLERY = [];
     return;
   }
 
-  /* Каталог = секции токенов (движок рисует их по дескриптору бренда)
-     плюс компонентные секции самого бренда. Композиция здесь, а не в бренде:
-     иначе каждый новый бренд обязан помнить, что токены надо приклеить. */
+  /* Catalog = token sections (engine draws them from the brand descriptor)
+     plus the brand's component sections. Composition lives here, not in the brand:
+     otherwise every new brand must remember to attach tokens. */
   var SPECS = window.ENGINE_SPECS.tokenSections(window.BRAND_TOKENS)
                 .concat(window.BRAND_SECTIONS || []);
   window.GALLERY = SPECS;
   var M = window.BRAND_MANIFEST || {};
   var t = B.t;
 
-  /* Десктопный фрейм — настоящий вьюпорт бренда: только в нём контейнер
-     получает свою ширину и 3-колоночная сетка даёт честные колонки.
-     Значение приходит из манифеста, движок своего не знает. */
+  /* Desktop frame is the brand's real viewport: only there does the container
+     get its width and a 3-column grid gives honest columns. Value comes from the
+     manifest; the engine has no default of its own. */
   var PREVIEW = M.preview || {};
   var DESKTOP_W = PREVIEW.desktopWidth || 1440;
   var MOBILE_W  = PREVIEW.mobileWidth  || 390;
   var CONTAINER = PREVIEW.container    || 1170;
 
-  /* Масштаб превью — свой у каждой панели: 50 / 75 / 100 %.
-     Общий по умолчанию берём из localStorage (стартовое значение 75%),
-     но выбор в конкретной панели меняет только её. */
-  var SCALE_KEY = B.key('gallery-scale');   // ключи разведены по брендам
+  /* Preview scale is per panel: 50 / 75 / 100 %.
+     Shared default from localStorage (starts at 75%), but choosing in one panel
+     changes only that panel. */
+  var SCALE_KEY = B.key('gallery-scale');   // keys scoped per brand
   var defaultScale = parseFloat(localStorage.getItem(SCALE_KEY) || '0.75');
   if (!(defaultScale > 0)) defaultScale = 0.75;
 
-  /* Галерея всегда рендерит дизайн-систему (tokens.css + sdm.css).
-     Переключателя «Новый ДС / Текущий сайт» больше нет: он менял стили внутри
-     превью, но токен-секции от него не зависят, а у компонентов, которых в
-     styles.css нет вовсе, режим давал голую разметку — это выглядело поломкой,
-     а не сравнением. Для сравнения есть тоггл «Сравнить с кодом». */
+  /* Gallery always renders the design system (tokens.css + components.css).
+     The "New DS / Current site" switch is gone: it changed styles inside previews,
+     but token sections did not depend on it, and components missing from styles.css
+     showed bare markup — that looked broken, not like comparison. Use the
+     "Compare with code" toggle for comparison. */
   var mode = 'new';
 
-  /* ── Реестр фреймов ────────────────────────────────────────────────── */
+  /* ── Frame registry ────────────────────────────────────────────────── */
   var frames = [];
   var frameSeq = 0;
 
@@ -60,17 +60,17 @@
     if (iframe.contentWindow) iframe.contentWindow.postMessage(msg, '*');
   }
 
-  /* ── Единственная точка, где создаётся превью ─────────────────────────
-     Любой рендер объекта — мобильный, десктопный или скрытый эталон для
-     сравнения — это один и тот же _frame.html. Отличаются только ширина и
-     набор CSS. Ниже собрана вся обвязка: адрес с cache-buster'ом и
-     рукопожатие g:css → g:render. Дублировать её нельзя: разъедется. */
+  /* ── Single place where previews are created ─────────────────────────
+     Any object render — mobile, desktop, or hidden reference for comparison —
+     is the same _frame.html. Only width and CSS set differ. All wiring lives
+     below: URL with cache-buster and g:css → g:render handshake. Do not
+     duplicate it — it will drift. */
   function mountFrame(opts) {
     var id = opts.id || ('f' + (++frameSeq));
     var iframe = document.createElement('iframe');
-    /* У папки фрейм сам подтянет манифест и соберёт ссылки на CSS — ему
-       достаточно пути. У пакета файлов на сервере нет: адрес остаётся
-       голым, а стили приезжают сообщением сразу после загрузки. */
+    /* For a folder the frame loads the manifest and CSS links itself — path
+       is enough. A package has no server files: URL stays bare and styles arrive
+       by message right after load. */
     var fromFolder = B.source.kind === 'folder';
     iframe.src = '_frame.html?' + (fromFolder ? 'brand=' + encodeURIComponent(B.rel) + '&' : '') +
                  'css=' + opts.cssMode + '&id=' + id +
@@ -96,7 +96,7 @@
       if (opts.userCss) w.postMessage({ type: 'g:usercss', text: opts.userCss }, '*');
       else if (fromFolder) w.postMessage({ type: 'g:css', mode: opts.cssMode }, '*');
       w.postMessage({ type: 'g:render', html: assetUrls(opts.html) }, '*');
-      // даём кадр на применение стилей, потом сообщаем о готовности
+      // give a frame for styles to apply, then signal ready
       setTimeout(function () {
         rec.ready = true;
         if (rec.onready) rec.onready(rec);
@@ -105,8 +105,8 @@
     return rec;
   }
 
-  /* Пути ассетов в разметке примера. У папки их резолвит <base> во фрейме,
-     у пакета базы нет — подставляем blob-ссылки на файлы из памяти. */
+  /* Asset paths in example markup. Folder resolves them via <base> in the frame;
+     package has no base — substitute blob URLs for in-memory files. */
   function assetUrls(html) {
     if (!html || B.source.kind === 'folder') return html;
     return String(html).replace(/(src|href)="([^"]+)"/g, function (all, attr, path) {
@@ -116,7 +116,7 @@
     });
   }
 
-  /* Видимое превью в колонке галереи */
+  /* Visible preview in a gallery column */
   function makeFrame(html, width, isDesktop) {
     var wrap = document.createElement('div');
     wrap.className = 'g-frame-wrap';
@@ -133,26 +133,23 @@
     return rec;
   }
 
-  /* Единый масштаб для ОБЕИХ панелей.
-     Раньше мобильный фрейм рисовался 1:1, а десктопный ужимался трансформом
-     под ширину колонки. При узком окне десктоп сжимался до ~60%, и кнопка
-     52px выглядела МЕНЬШЕ мобильной 48px — сравнивать размеры было нельзя.
-     Теперь обе панели масштабируются одинаково, коэффициент показан в
-     подписи, а кнопка «1:1» отключает ужимание совсем. */
-  /* Масштаб выбирается вручную: 50 / 75 / 100 %. На 100% широкая десктопная
-     панель может не влезть в колонку — тогда правый край просто обрезается
-     (overflow: hidden), а высота остаётся по содержимому. Ужимать
-     автоматически нельзя: панели съезжали бы в разные масштабы и сравнивать
-     размеры было бы невозможно — ровно та ошибка, что была раньше. */
-  /* Применяем масштаб одной панели. На 100% широкий десктопный фрейм может
-     не влезть в колонку — правый край режется overflow:hidden, высота идёт
-     по содержимому. */
+  /* One scale for BOTH panels.
+     Previously mobile drew 1:1 and desktop shrank with transform to column width.
+     In a narrow window desktop hit ~60% and a 52px button looked SMALLER than
+     mobile 48px — sizes could not be compared. Now both panels scale the same,
+     factor shown in the label, and 1:1 disables shrinking entirely. */
+  /* Scale is chosen manually: 50 / 75 / 100 %. At 100% a wide desktop panel may
+     not fit the column — right edge is clipped (overflow: hidden), height follows
+     content. Auto-shrink is forbidden: panels would land at different scales and
+     comparing sizes would be impossible — exactly the old bug. */
+  /* Apply scale to one panel. At 100% a wide desktop frame may not fit the
+     column — right edge clipped by overflow:hidden, height from content. */
   function applyFrameScale(f) {
     var k = f.scale || defaultScale;
     f.iframe.style.transform = k === 1 ? 'none' : 'scale(' + k + ')';
-    // коробка всегда во всю ширину панели: иначе справа от узкого мобильного
-    // фрейма просвечивал фон страницы и заливка выглядела обрезанной.
-    // Сам фрейм прижат к левому краю, лишнее по ширине режется.
+    // box always full panel width: otherwise beside a narrow mobile frame
+    // page background showed through and fill looked cropped.
+    // Frame flush left; excess width is clipped.
     f.wrap.style.width = '100%';
     f.wrap.style.overflow = 'hidden';
     if (f.contentH) f.wrap.style.height = (f.contentH * k) + 'px';
@@ -161,7 +158,7 @@
   function applyScale() { frames.forEach(applyFrameScale); }
 
 
-  /* ── Сообщения из фреймов ──────────────────────────────────────────── */
+  /* ── Messages from frames ──────────────────────────────────────────── */
   window.addEventListener('message', function (e) {
     var d = e.data || {};
     var rec = frames.filter(function (f) { return f.id === d.frameId; })[0];
@@ -174,7 +171,7 @@
     else if (d.type === 'g:pick') openOverlay(d);
   });
 
-  /* ── Оверлей с кодом ───────────────────────────────────────────────── */
+  /* ── Code overlay ───────────────────────────────────────────────── */
   var ov = document.getElementById('g-overlay');
   var ovBody = document.getElementById('g-ov-body');
   var current = null, tab = 'html';
@@ -246,13 +243,13 @@
     });
   });
 
-  /* ── Рендер секций ─────────────────────────────────────────────────── */
+  /* ── Render sections ─────────────────────────────────────────────────── */
   var host = document.getElementById('g-sections');
   var nav = document.getElementById('g-nav');
   var tokenSections = [];
 
-  /* Шапка панели: слева что за вьюпорт, справа выбор масштаба.
-     Селекты во всех панелях показывают одно значение и меняют его глобально. */
+  /* Panel header: viewport label on the left, scale picker on the right.
+     Selects in all panels show one value and change it globally. */
   function paneLabel(text, rec) {
     var box = el('div', 'g-pane-label');
     box.appendChild(el('span', null, text));
@@ -269,7 +266,7 @@
     sel.value = String(rec.scale || defaultScale);
     sel.addEventListener('change', function () {
       rec.scale = parseFloat(sel.value) || defaultScale;
-      // запоминаем как стартовое значение для следующих загрузок
+      // remember as default for future loads
       localStorage.setItem(SCALE_KEY, String(rec.scale));
       applyFrameScale(rec);
     });
@@ -284,6 +281,10 @@
     return n;
   }
 
+  function sectionHref(id) {
+    return location.pathname + location.search + '#' + id;
+  }
+
   var lastGroup = null;
   SPECS.forEach(function (spec) {
     if (spec.group && spec.group !== lastGroup) {
@@ -291,7 +292,8 @@
       lastGroup = spec.group;
     }
     var a = el('a', null, spec.title);
-    a.href = '#' + spec.id;
+    a.href = sectionHref(spec.id);
+    a.dataset.sectionId = spec.id;
     nav.appendChild(a);
 
     var sec = el('section', 'g-section');
@@ -311,13 +313,13 @@
     (spec.examples || []).forEach(function (ex) {
       var box = el('div', 'g-example');
 
-      /* У примера ровно одна форма тела: либо снимок разметки бренда (html),
-         либо дескриптор строк каталога (rows) — их движок рисует сам, чтобы
-         его собственная вёрстка не оказалась запечённой в каждом пакете. */
+      /* Each example has exactly one body shape: brand markup snapshot (html) or
+         catalog row descriptor (rows) — the engine draws those so its own layout
+         is not baked into every package. */
       var html = ex.rows ? window.ENGINE_SPECS.renderRows(ex) : ex.html;
       var htmlDesktop = ex.htmlDesktop || html;
 
-      box.__html = htmlDesktop;                 // нужна режиму «Фигма ↔ код»
+      box.__html = htmlDesktop;                 // needed by Figma ↔ code mode
       if (ex.label) box.appendChild(el('p', 'g-example-label', ex.label));
       if (ex.note) box.appendChild(el('p', 'g-example-note', ex.note));
 
@@ -325,12 +327,11 @@
 
       if (!ex.wide) {
         var mp = el('div', 'g-pane g-pane--mobile');
-        /* Ширину мобильного фрейма можно задать примеру.
-           Для блоков это 390 — настоящий телефон. Для примитивов (кнопки,
-           плитки), где рядом идёт колонка метаданных, узкий вьюпорт только
-           мешает: важен размер самого компонента, а не устройства. Ставим
-           900 — это всё ещё мобильная ветка @media (max-width: 900px),
-           но места хватает и раскладка совпадает с десктопной. */
+        /* Mobile frame width can be set per example.
+           Blocks use 390 — a real phone. For primitives (buttons, tiles) with a
+           metadata column beside, a narrow viewport only gets in the way: the
+           component size matters, not the device. Use 900 — still the mobile
+           @media (max-width: 900px) branch, but enough room and layout matches desktop. */
         var mw = ex.mobileWidth || 390;
         var mRec = makeFrame(html, mw, false);
         mp.appendChild(paneLabel(t('pane.mobile', { w: mw >= 900 ? '≤900' : mw }), mRec));
@@ -354,21 +355,26 @@
   function renderTokenSections() {
     tokenSections.forEach(function (t) { t.slot.innerHTML = t.spec.render(mode); });
   }
-  // спеки перерисовывают токен-секции, когда догрузят и распарсят CSS-файлы
+  // specs redraw token sections after CSS files load and parse
   window.GALLERY_REFRESH = renderTokenSections;
 
-  /* ── Скролл-спай ───────────────────────────────────────────────────
-     Одна точка правды: при смене активного раздела обновляем подсветку в
-     сайдбаре, заголовок в шапке и якорь в адресной строке.
+  /* ── Scroll spy ───────────────────────────────────────────────────
+     Single source of truth: when the active section changes, update sidebar
+     highlight, header title, and address-bar anchor.
 
-     Считаем по геометрии на скролл, а не через IntersectionObserver: IO не
-     срабатывает во фрейме, обрезанном родителем (так устроен tests.html), и
-     промахивается, когда секция выше вьюпорта. Обход всех секций дешёвый —
-     их два десятка — и throttled через requestAnimationFrame. */
-  var DEFAULT_TITLE = M.defaultTitle || t('topbar.defaultTitle');
+     Compute from scroll geometry, not IntersectionObserver: IO does not fire in a
+     frame clipped by its parent (as in tests.html) and misses when a section is
+     above the viewport. Walking all sections is cheap — a couple dozen — and
+     throttled via requestAnimationFrame. */
+  var defaultTitle = (M.description && M.description.trim()) || M.defaultTitle || t('topbar.defaultTitle');
   var titleEl = document.getElementById('g-current');
-  var activeId;          // undefined, а не null: первый setActive(null) должен отрисоваться
+  var activeId;          // undefined, not null: first setActive(null) must paint
   var spyTick = false;
+
+  function setDefaultTitle(text) {
+    defaultTitle = (text && text.trim()) || t('topbar.defaultTitle');
+    if (!activeId) titleEl.textContent = defaultTitle;
+  }
 
   function sectionTitle(id) {
     var head = document.querySelector('#' + id + ' .g-section-head h2');
@@ -380,47 +386,47 @@
     activeId = id;
 
     Array.prototype.forEach.call(nav.querySelectorAll('a'), function (a) {
-      a.classList.toggle('is-active', !!id && a.getAttribute('href') === '#' + id);
+      a.classList.toggle('is-active', !!id && a.dataset.sectionId === id);
     });
-    titleEl.textContent = id ? sectionTitle(id) : DEFAULT_TITLE;
+    titleEl.textContent = id ? sectionTitle(id) : defaultTitle;
 
-    /* replaceState, а не pushState: иначе «Назад» отматывал бы по разделу за
-       клик. Адрес собираем полностью: относительный «#id» резолвится через
-       <base>, и на коротком адресе /sdm якорь уводил на /packages/engine/. */
+    /* replaceState, not pushState: otherwise Back would step through sections per
+       click. Build the full URL: relative "#id" resolves via <base>, and on short
+       /sdm the anchor jumped to /packages/engine/. */
     if (id) {
       if (location.hash !== '#' + id) {
         history.replaceState(null, '', location.pathname + location.search + '#' + id);
       }
     } else if (location.hash) {
-      // вернулись к самому верху — якорь тоже снимаем
+      // back at the very top — clear the anchor too
       history.replaceState(null, '', location.pathname + location.search);
     }
   }
 
-  /* Прокручивается панель контента, а не окно: спай обязан слушать её.
-     Фолбэк на документ оставлен для случая, когда панели нет (тесты
-     монтируют галерею в узком фрейме). */
+  /* The content panel scrolls, not the window: spy must listen to it.
+     Document fallback remains when there is no panel (tests mount the gallery in
+     a narrow frame). */
   function scroller() {
     return document.getElementById('g-panel') || document.documentElement;
   }
 
   function pickActive() {
-    // у самого верха раздел ещё не выбран — показываем общий заголовок
+    // at the very top no section is selected — show the default title
     if (scroller().scrollTop < 8) { setActive(null); return; }
 
     var secs = document.querySelectorAll('.g-section');
     var found = null;
     for (var i = 0; i < secs.length; i++) {
-      if (secs[i].offsetParent === null) continue;      // скрытая секция
-      // граница чуть ниже шапки: раздел считается текущим, как только дошёл до неё
+      if (secs[i].offsetParent === null) continue;      // hidden section
+      // boundary just below header: section is current once it reaches it
       if (secs[i].getBoundingClientRect().top <= 80) found = secs[i].id;
       else break;
     }
     setActive(found);
   }
 
-  /* Троттлим по времени, а не через requestAnimationFrame: rAF тормозится
-     в почти невидимом фрейме (так открыт tests.html), и спай замолкал. */
+  /* Throttle by time, not requestAnimationFrame: rAF stalls in a nearly invisible
+     frame (tests.html), and spy went silent. */
   function scheduleSpy() {
     if (spyTick) return;
     spyTick = true;
@@ -431,30 +437,29 @@
     .addEventListener('scroll', scheduleSpy, { passive: true });
   window.addEventListener('resize', scheduleSpy);
 
-  // стартовое состояние: из хеша, иначе по текущей позиции
+  // initial state: from hash, else from current position
   (function initSpy() {
     var id = (location.hash || '').replace('#', '');
     if (id && document.getElementById(id)) setActive(id);
     else { setActive(null); pickActive(); }
   })();
 
-  /* ── Живая перезагрузка ────────────────────────────────────────────
-     Сторибук правится часто, а открытая вкладка легко остаётся на старой
-     версии: cache-buster работает только при настоящей загрузке документа.
-     Раз в 2 секунды спрашиваем Last-Modified у исходников и перезагружаем
-     страницу, как только что-то изменилось. */
+  /* ── Live reload ────────────────────────────────────────────
+     Storybooks change often and an open tab easily stays on an old version:
+     cache-buster only works on a real document load. Every 2 seconds ask
+     Last-Modified on sources and reload once something changed. */
   (function watch() {
-    /* Движковые файлы лежат рядом, брендовые — в папке бренда. */
+    /* Engine files sit next door; brand files in the brand folder. */
     var WATCH = ['gallery.html', 'gallery.js', '_frame.html', 'brand.js']
-      .concat([M.specs, M.tokenMap, M.legacyNames,
+      .concat([M.sections || M.specs, M.tokenMap, M.legacyNames,
                M.css && M.css.tokens, M.css && M.css.components]
         .filter(Boolean).map(B.path));
-    var stamps = {}, dirty = false, quiet = 0, note = null;
+    var stamps = {}, dirty = false, quiet = 0, note = null, bootstrapped = false;
 
-    /* Стеклянный оверлей на всю страницу: правка стилей на лету перерисовывает
-       десятки iframe, и полусобранное состояние мелькает заметнее, чем плашка
-       в углу. Матовое стекло гасит эту рябь и честно показывает, что галерея
-       занята. Хром берёт цвета из токенов бренда, с фолбэком на нейтральный. */
+    /* Full-page glass overlay: live style edits redraw dozens of iframes and a
+       half-built state flickers worse than a corner badge. Frosted glass dampens
+       that shimmer and honestly shows the gallery is busy. Chrome takes brand
+       token colours with a neutral fallback. */
     function banner(text) {
       if (!note) {
         note = document.createElement('div');
@@ -464,8 +469,8 @@
                            '<span class="g-reload__text"></span>' +
                          '</div>';
         document.body.appendChild(note);
-        // reflow: без него браузер схлопывает начальное состояние с конечным
-        //  и появление происходит рывком, без перехода
+        // reflow: without it the browser collapses initial and final state
+        //  and appearance jumps with no transition
         void note.offsetWidth;
         note.classList.add('is-on');
       }
@@ -483,19 +488,23 @@
         var changed = false;
         WATCH.forEach(function (f, i) {
           if (!vals[i]) return;
-          if (stamps[f] && stamps[f] !== vals[i]) changed = true;
+          if (bootstrapped) {
+            if (stamps[f] && stamps[f] !== vals[i]) changed = true;
+            if (!stamps[f] && vals[i]) changed = true;
+          }
           stamps[f] = vals[i];
         });
-        // Правки идут пачками (токены → css → спеки). Перезагружаться на
-        // первом же изменении — значит поймать середину пачки и показать
-        // полусобранную галерею. Ждём, пока файлы не «успокоятся».
+        bootstrapped = true;
+        // Edits arrive in batches (tokens → css → specs). Reloading on the
+        // first change means catching mid-batch and showing a
+        // half-built gallery. Wait until files "settle".
         if (changed) {
           dirty = true;
           quiet = 0;
           banner(t('reload.changed'));
         } else if (dirty) {
           quiet++;
-          if (quiet >= 2) {          // ~4 секунды без изменений
+          if (quiet >= 2) {          // ~4 seconds with no changes
             banner(t('reload.reloading'));
             setTimeout(function () { location.reload(); }, 200);
             return;
@@ -509,20 +518,20 @@
 
 
   /* ══════════════════════════════════════════════════════════════════════
-     Режим «Фигма ↔ код»
+     Figma ↔ code mode
      ----------------------------------------------------------------------
-     Под каждым примером показываем, чем текущая вёрстка (styles.css)
-     отличается от дизайн-системы (токены + компоненты бренда). Одну и ту же
-     разметку рендерим во втором, скрытом фрейме со вторым набором стилей
-     и сравниваем вычисленные значения — руками ничего не описано.
+     Under each example we show how current markup (styles.css) differs from the
+     design system (tokens + brand components). The same markup renders in a second,
+     hidden frame with a second stylesheet and we compare computed values — nothing
+     hand-described.
      ══════════════════════════════════════════════════════════════════ */
-  /* ── CSS для сравнения ──────────────────────────────────────────────
-     Галерея — референс ДС. С чем сравнивать, приносит сам разработчик:
-     прикладывает свой файл, и тоггл становится доступен. Пока файла нет,
-     сравнивать не с чем — тоггл заблокирован. */
+  /* ── CSS for comparison ──────────────────────────────────────────────
+     Gallery is the DS reference. The developer brings what to compare against:
+     attach a file and the toggle unlocks. With no file there is nothing to
+     compare — toggle stays disabled. */
   var compareCss = null;
   var diffOn = false;
-  var diffBtn = document.getElementById('g-diff');   // checkbox-тоггл
+  var diffBtn = document.getElementById('g-diff');   // checkbox toggle
   var diffLabel = document.getElementById('g-diff-label');
   var cssName = document.getElementById('g-css-name');
 
@@ -539,7 +548,7 @@
       diffLabel.setAttribute('data-hint', t('topbar.compare.hint'));
     }
 
-    // приложили другой файл — прежние расчёты недействительны
+    // attached a different file — previous calculations invalid
     if (diffOn) setDiff(false);
     Array.prototype.forEach.call(document.querySelectorAll('.g-example'), function (box) {
       if (box.__probes) {
@@ -551,12 +560,11 @@
     if (window.GALLERY_SET_SITE_CSS) window.GALLERY_SET_SITE_CSS(compareCss);
   }
 
-  /* Выбор файла обрабатывает диалог настроек: там же стоит кнопка
-     «Сохранить», и применять файл раньше неё — значит менять сторибук,
-     пока человек ещё думает и может нажать «Отмена». */
+  /* File picking is handled in settings: Save lives there, and applying the file
+     before that means changing the storybook while the user may still Cancel. */
 
-  /* Восстановление приложенного CSS: делаем это после первой отрисовки,
-     чтобы не задерживать показ каталога разбором чужого файла. */
+  /* Restore attached CSS after first paint so catalog display is not delayed
+     parsing someone else's file. */
   (function restoreCompareCss() {
     var R = window.ENGINE_REGISTRY;
     if (!R) return;
@@ -569,7 +577,7 @@
 
 
   var DIFF_PROPS = [
-    /* Подписи берутся из языкового пака по ключу prop.<свойство>. */
+    /* Labels come from the language pack via prop.<property> keys. */
     'fontSize', 'fontWeight', 'lineHeight', 'color', 'backgroundColor',
     'borderTopLeftRadius', 'boxShadow', 'paddingTop', 'paddingLeft',
     'columnGap', 'rowGap', 'height', 'minHeight'
@@ -601,7 +609,7 @@
       DIFF_PROPS.forEach(function (p) {
         var va = ca[p], vb = cb[p];
         if (!va || !vb || va === vb) return;
-        // высоту сравниваем только при заметной разнице — она плавает от текста
+        // compare height only on a noticeable diff — it drifts with text
         if ((p === 'height' || p === 'minHeight') &&
             Math.abs(parseFloat(va) - parseFloat(vb)) < 4) return;
         rows.push({ sel: sel, prop: t('prop.' + p), now: va, was: vb });
@@ -632,11 +640,10 @@
     box.appendChild(el);
   }
 
-  /* Сравнение НЕ зависит от переключателя вида: держим два собственных
-     скрытых фрейма — один с CSS бренда, другой с приложенным — и сравниваем их
-     между собой. Раньше эталоном служил основной фрейм, и в режиме
-     «Текущий сайт» кнопка сравнивала код сам с собой. */
-  /* Скрытый эталон для сравнения — тот же mountFrame, только за экраном */
+  /* Comparison does NOT depend on the view switch: we keep two own hidden frames —
+     one with brand CSS, one with attached — and compare them. Previously the main
+     frame was the reference and in "Current site" mode the button compared code to itself. */
+  /* Hidden comparison reference — same mountFrame, just off-screen */
   function makeProbe(html, cssMode) {
     var host = document.createElement('div');
     host.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + DESKTOP_W +
@@ -654,7 +661,7 @@
     host.appendChild(rec.iframe);
     document.body.appendChild(host);
     rec.host = host;
-    rec.frame = rec.iframe;   // имя, под которым его знает buildDiffFor
+    rec.frame = rec.iframe;   // name buildDiffFor knows it by
     return rec;
   }
 
@@ -668,7 +675,7 @@
     function finish() {
       if (finished) return;
       finished = true;
-      // скрытые фреймы больше не нужны — освобождаем память
+      // hidden frames no longer needed — free memory
       pr.ds.host.remove();
       pr.code.host.remove();
       if (done) done();
@@ -688,23 +695,21 @@
 
     pr.ds.onready = pr.code.onready = paint;
 
-    // страховка: если фрейм не догрузился, не держим очередь вечно
+    // safety: if a frame never loads, do not hold the queue forever
     setTimeout(function () {
       if (finished) return;
       if (!pr.ds.ready || !pr.code.ready) {
-        renderDiff(box, [], 'error');   // честно, а не молчаливое «совпадает»
+        renderDiff(box, [], 'error');   // honest, not a silent "matches"
       } else { paint(); }
       finish();
     }, 8000);
   }
 
-  /* Сборка ленивая и по очереди.
-     Раньше на каждый пример сразу создавалась пара скрытых фреймов — на
-     42 примерах это больше 80 iframe одновременно, каждый со своими
-     токены, компоненты и приложенный CSS. Часть просто не успевала загрузиться,
-     и панели навсегда зависали на «Считаю различия…».
-     Теперь считаем только то, что попало в поле зрения, и не больше двух
-     примеров одновременно. */
+  /* Lazy queued build.
+     Previously every example immediately got a pair of hidden frames — 42 examples
+     meant 80+ iframes at once, each with tokens, components, and attached CSS. Some
+     never finished loading and panels stuck forever on "Computing differences…".
+     Now we only compute what enters the viewport, at most two examples at a time. */
   var diffQueue = [], diffBusy = 0, diffIO = null;
   var DIFF_PARALLEL = 2;
 
@@ -725,11 +730,10 @@
   }
 
   function setDiff(on) {
-    /* Токен-секции рисуются один раз и про сравнение узнают только отсюда:
-       без перерисовки колонка «в приложенном CSS» появлялась бы лишь после
-       перезагрузки страницы. */
+    /* Token sections render once and learn about comparison only here: without
+       redraw the "in attached CSS" column appeared only after reload. */
     setTimeout(function () { if (window.GALLERY_REFRESH) window.GALLERY_REFRESH(); }, 0);
-    if (on && !compareCss) return;   // сравнивать не с чем
+    if (on && !compareCss) return;   // nothing to compare against
     diffOn = on;
     diffBtn.checked = on;
 
@@ -759,12 +763,11 @@
 
   diffBtn.addEventListener('change', function () { setDiff(diffBtn.checked); });
 
-  /* Небольшой публичный API — им пользуются тесты (tests.html) и он же
-     удобен из консоли: сборка панелей ленивая и завязана на прокрутку,
-     а так можно попросить конкретный раздел посчитаться прямо сейчас. */
-  /* Показать в дравере произвольный файл системы. Тот же оверлей, что у
-     компонентов: заводить второй ради текста файла незачем — человек и так
-     знает это окно. Вкладки прячем: у файла нет второй стороны. */
+  /* Small public API — used by tests (tests.html) and handy from the console:
+     panel build is lazy and scroll-driven; this lets a section compute now. */
+  /* Show an arbitrary system file in the drawer. Same overlay as components: no
+     need for a second one for file text — the user already knows this window.
+     Hide tabs: a file has no second side. */
   window.GALLERY_API_FILE = function (opts) {
     current = null;
     document.getElementById('g-ov-title').textContent = opts.title || '';
@@ -784,6 +787,7 @@
     isDiffOn: function () { return diffOn; },
     spy: function () { pickActive(); return activeId || null; },
     setCompareCss: setCompareCss,
+    setDefaultTitle: setDefaultTitle,
     hasCompareCss: function () { return !!compareCss; },
     diffSection: function (id) {
       if (!diffOn) setDiff(true);
@@ -801,11 +805,11 @@
         function (s) { return s.id; });
     }
   };
-  // выбор раздела сбрасывает режим
+  // choosing a section resets the mode
   nav.addEventListener('click', function () { if (diffOn) setDiff(false); });
 
-  /* Первый проход: до этого токен-секции рисовал setMode, которого больше нет.
-     Спеки дёрнут GALLERY_REFRESH ещё раз, когда догрузят и разберут CSS. */
+  /* First pass: token sections used to be drawn by setMode, which is gone.
+     Specs will call GALLERY_REFRESH again after CSS loads and parses. */
   renderTokenSections();
 
   setTimeout(applyScale, 300);

@@ -1,63 +1,150 @@
 ---
-name: storybook-engine
+name: delibra-engine
 description: >
-  Fill or extend a design-system storybook — the format an agent writes and a
-  person reads. Use when filling a storybook with tokens taken from a design or
-  a stylesheet, adding component sections, or working on the engine itself.
-  Triggers: "fill this storybook", "create a design system from Figma", "take
-  the tokens off the design", "add a section to the gallery", "wire up a brand",
-  "the storybook shows the wrong…", "translate the gallery".
+  Fill or extend a design-system libra — structured data an agent writes and a
+  person reads in DeLibra. Always start at ## Router. Use when filling a libra with
+  tokens from a design or stylesheet, adding component sections, or working on
+  the engine. Triggers: "fill this libra", "copy fill prompt", "create a
+  design system from Figma", "take the tokens off the design", "add a section
+  to DeLibra", "wire up a brand", "the libra shows the wrong…".
 ---
 
-# Storybook engine
+# DeLibra engine
 
 The engine renders a design system it knows nothing about. Everything specific
 to a brand arrives through a manifest. If a change to the engine mentions a
 brand by name, the change is in the wrong file.
+
+**Read this skill top-down. When the user gives a storybook folder path, start
+at [## Router](#router) — do not skip it.**
+
+## Router
+
+Run this decision tree **before writing any file**. Open
+`brands/<id>/manifest.json` in the folder the user gave you (or in their fill
+prompt).
+
+| Step | Condition | What to do |
+|------|-----------|------------|
+| 1 | `brands/<id>/SKILL.md` exists | Read it **after** this router. Brand rules override generic ones where they conflict. |
+| 2 | `manifest.design.source === 'css'` **or** `tokens.css` already has variables and `token-map.json` is non-empty | **Components path.** Tokens are done. Add or extend `components.css`, `sections.json`, assets. Do **not** re-import or rewrite tokens unless the user asks. |
+| 3 | `manifest.design.url` is set | **Design path.** Read the design with your Figma access (MCP, local bridge, plugin). Map what you read into tokens and sections. See [Reading the design](#reading-the-design). |
+| 4 | No `design.url`, empty tokens, `source` is `blank` or missing | **Stop.** Do not invent tokens or components. Tell the user: add a Figma link in gallery settings, import CSS on the empty screen, or paste a design URL in chat. Wait for a source. |
+| 5 | User pasted a Figma URL in chat but manifest has none | Ask whether to add it to `manifest.design.url` (via gallery settings) or proceed with that URL only for this session — still **read** the file, do not guess. |
+| 6 | Folder was not created in the gallery | Do not create `brands/<id>/` by hand unless the user explicitly asks. Prefer the gallery or `POST /__api/brand` with `brand-scaffold.js`. |
+
+**Gallery:** `http://localhost:8777/<id>` when `serve.js` runs — the tab reloads
+when files change. Open it to verify; do not describe pixels you have not checked
+there.
+
+**Done means:** all checks in [Checks](#checks) pass for that brand, not “looks
+about right”.
+
+## Output contract (strict — no hallucination)
+
+Everything you write must be **traceable** and **gallery-shaped**.
+
+### Traceability
+
+- **Every token name and value** comes from one of:
+  1. A field you read from the design (Figma MCP, bridge, variables export);
+  2. An existing line in `tokens.css` / `token-map.json`;
+  3. A CSS file the user imported (already in the package);
+  4. An explicit user choice after you ran the [Mismatch protocol](#mismatch-protocol).
+- **Never** fill gaps from memory, screenshots, “typical” palettes, or other
+  design systems.
+- **Never** add a component, section, or token “for completeness” unless it
+  exists in the design or the user asked for it.
+- If you cannot read the design, **stop** and say what is missing — see
+  [When the bridge is not answering](#when-the-bridge-is-not-answering).
+
+### File roles (one source of truth each)
+
+| File | Holds | Must not hold |
+|------|--------|----------------|
+| `tokens.css` | Custom properties only (`:root`, optional `@media` blocks) | Component selectors, layout rules |
+| `components.css` | Classes, layout, states — **only** `var(--*)` for colours and sizes | Raw `#hex`, raw `px`/`rem` (except `0`, `none`, `1px`/`2px` hairlines) |
+| `token-map.json` | Which tokens appear in which **token catalogue** sections | Markup, component logic |
+| `sections.json` | Component **gallery** sections (examples as data) | `render()` functions |
+| `assets/` | Icons, images referenced from examples | — |
+
+### Visual and CSS discipline (storybook UI style)
+
+Write so the gallery looks like a **token-first design system reference**, not
+a one-off landing page.
+
+- **Token-first:** declare values once in `tokens.css`; components consume
+  `var(--*)` only.
+- **Desktop-first:** default rules for desktop; **one**
+  `@media (max-width: <manifest.breakpoints.mobile>px)` block at the **end** of
+  `components.css` for mobile overrides. Put paired mobile/desktop values in
+  tokens (`--x` / `--x-m` or separate custom properties), not duplicated rules
+  everywhere.
+- **Naming:** short BEM-like classes (`.card`, `.card__title`, `.btn--ghost`).
+  One component family per block; modifiers with `--`. Match names already in
+  the brand before inventing new ones.
+- **Chrome tokens:** every brand needs at least the gallery chrome set:
+  `--bg`, `--white-pure`, `--border`, `--text-primary`, `--text-heading`,
+  `--text-muted`, `--font-family`, plus one radius and one brand accent — see
+  `brands/_template/tokens.css`.
+- **Token-map section titles** in the descriptor are **English** catalogue
+  labels (`Colours`, `Radii`, `Type scale`, …) — they are data, not UI i18n.
+- **Sections:** one gallery example per **distinct** component or variant; every
+  example must include `data-pick="<selector>"` on a clickable node.
+- **Prefer catalogue `rows`** for button/size/icon matrices; use `html` snapshots
+  for composed blocks (cards, heroes). Never snapshot the engine’s own row
+  chrome into `html` — use `rows` instead.
+
+### Consistency checks before you finish
+
+```bash
+node packages/engine/check-sections.js brands/<id>
+node packages/engine/check-tokens.js brands/<id>
+node packages/engine/check-css.js brands/<id>
+```
+
+Fix every reported problem. Do not declare the task complete if a check fails.
 
 ## Run it
 
 The gallery **must be served over `http://`**:
 
 ```bash
-cd design-systems && python3 -m http.server 8777
+node packages/engine/serve.js 8777
 ```
 
-Open `http://localhost:8777/packages/engine/gallery.html`, or another brand with
-`?brand=../../brands/_template`.
+Open `http://localhost:8777/<id>` or
+`http://localhost:8777/packages/engine/gallery.html?brand=../../brands/_template`.
 
 Opened as `file://`, the browser refuses `document.styleSheets[].cssRules` and
 blocks `fetch` of local files. The CSS tab and every token section come up empty
-— with no error explaining why. If a token section is blank, check the protocol
-before debugging anything else.
+— with no error explaining why.
 
 ## Layout
 
 ```
 packages/engine/
-  gallery.html      chrome, styles, the loader that boots a brand
-  gallery.js        sections, preview panes, scale, diff, live reload
-  _frame.html       the sandbox iframe: real @media, real breakpoints
-  engine-specs.js   CSS var parser, swatches, token-section renderers
-  rows.js           catalogue rows — shared by the gallery and the emitter
-  brand.js          brand resolution, i18n lookup, version gate
-  i18n/en.js        default language pack
+  ENGINE_SKILL.md   this file — router + contract
+  gallery.html      chrome, loader
+  gallery.js        sections, preview, diff, live reload
+  _frame.html       sandbox iframe — real @media
+  engine-specs.js   var parser, swatches, token-section renderers
+  brand-scaffold.js empty package shape (same as gallery create)
+  token-build.js    CSS/Figma variables → token-map (deterministic)
 brands/<id>/        DATA ONLY — nothing here is executed
-  manifest.json     the contract — see below
-  tokens.css        custom properties only
-  <components>.css  components, written against those properties
-  token-map.json    descriptor: which tokens appear in which token section
-  sections.json     component sections
-  legacy.json       optional: old names of the same tokens in production code
+  manifest.json
+  tokens.css
+  components.css    (or brand-named file from manifest.css.components)
+  token-map.json
+  sections.json
+  assets/
+  SKILL.md          optional brand runbook — read when present
 tools/
-  sections/<id>.js  the authoring layer: builders that produce the sections
-  emit-sections.js  runs it, writes brands/<id>/sections.json
+  sections/<id>.js  optional authoring layer → emit-sections.js
 ```
 
-**A brand package contains only data.** Every file the gallery loads from a
-brand is parsed, never executed — that is what lets a storybook arrive as a
-file and be opened without running someone else's code. Logic lives in the
-repository, under `tools/`.
+**A brand package contains only data.** Logic lives under `packages/engine/` and
+`tools/`.
 
 ## The manifest
 
@@ -65,141 +152,195 @@ repository, under `tools/`.
 {
   "id": "acme",
   "title": "ACME Design System",
+  "description": "Tokens and components",
   "version": "0.1.0",
   "engine": 1,
-  "locale": "en",
-
-  "css": { "tokens": "tokens.css", "components": "acme.css" },
+  "css": { "tokens": "tokens.css", "components": "components.css" },
   "sections": "sections.json",
   "tokenMap": "token-map.json",
-  "legacyNames": null,
-  "assetsBase": "assets/",
-
-  "design": { "url": "https://figma.com/design/…" },
-  "font": { "family": "'Inter', sans-serif", "href": "https://fonts.googleapis.com/…" },
+  "design": { "source": "blank", "url": "https://figma.com/design/…" },
   "breakpoints": { "mobile": 900, "desktopMin": 901 },
-  "preview": { "mobileWidth": 390, "desktopWidth": 1440, "container": 1170 },
-  "compare": { "legacy": null }
+  "preview": { "mobileWidth": 390, "desktopWidth": 1440, "container": 1170 }
 }
 ```
 
-`id` prefixes storage keys, `engine` is the contract major (see VERSIONING.md),
-`locale` may be omitted for English. `design.url` is optional and points at the
-file this system comes from — it is handed to you with the folder, and nothing
-fetches it on its own. The older `manifest.js` form still loads,
-but a brand in that shape cannot be exported or imported.
+`design.source` is one of `blank`, `css`, `figma`, `import`. The gallery sets
+it when the storybook is created. **`id` in the file is overwritten to match the
+folder name** on disk.
 
-Every path is relative **to the brand folder**, never to the engine. The engine
-resolves them; inside the preview frame a `<base>` does the same for markup, so
-a section can write `assets/icons/x.svg` and it lands in the brand.
+`description` is a one-line summary for humans (home card, lists). Default:
+`Tokens and components`. It is not the top-bar section title.
 
-## Adding a component section
+Paths in the manifest are relative to the brand folder.
 
-Sections are edited in `tools/sections/<brand>.js` — builders, loops, whatever
-is convenient — and then emitted:
+## Reading the design
+
+Do not eyeball a screenshot or invent from a thumbnail.
+
+**Order of work:**
+
+1. Confirm access (MCP tool, local bridge, or user-provided export).
+2. Read **variables/styles** when the file uses Figma variables — map them to
+   `--*` names in `tokens.css` and entries in `token-map.json`.
+3. For components, read **structure** (frames, auto-layout, text, fills), not
+   flattened images alone.
+4. Keep `get_screenshot` (or equivalent) and compare after markup exists.
+
+| Design field | Maps to |
+|--------------|---------|
+| Variables / styles | `tokens.css` + `token-map.json` |
+| Frame name / type | Existing component or new section |
+| Auto-layout gap, padding | spacing tokens + component rules |
+| Fills, strokes | colour tokens — match names, do not hardcode in components |
+| Typography | `--font-*` / size tokens |
+| Corner radius | `--r-*` |
+| Icons / images | export to `assets/`, reference in section `html` |
+
+If a value does not map cleanly, use the [Mismatch protocol](#mismatch-protocol)
+— do not silently round or rename.
+
+## When the bridge is not answering
+
+Say the **specific** failure. Do not guess values or continue from memory.
+
+| Situation | What to tell the user |
+|-----------|------------------------|
+| No Figma tool in the agent | How to enable Figma MCP or the local bridge they use |
+| `list_files` / file list empty | Open the design file in Figma; keep the plugin running |
+| Selection empty | Select the target frame or page, not an empty canvas |
+| Wrong or stale `fileKey` | Re-save or re-link the file; update `design.url` in settings |
+| Port / bridge mismatch | Which bridge the repo expects (e.g. Hopp on 1994) vs what is running |
+
+Then **stop** until access works, unless the user explicitly asks to work from
+CSS or a pasted export only.
+
+## Mismatch protocol
+
+When the design shows something the storybook does not have yet:
+
+1. **Do not invent** a token name or value.
+2. **Stop and offer three options** with consequences:
+   ```
+   Mismatch: <what exactly, with design value if known>
+   A — <option>: <what it means for tokens/sections>
+   B — <option>: …
+   C — <option>: …
+   ```
+3. Implement **only** the option the user chooses.
+4. Record new tokens in `tokens.css` + `token-map.json`; new rules in
+   `components.css`; new examples in `sections.json`.
+
+Typical mismatches: colour off the palette, spacing off the scale, new component
+family, desktop/mobile pair not yet in tokens.
+
+## Writing tokens
+
+- Group colours by name prefix in `token-map.json` (`--brand-*`, `--text-*`, …).
+- Every declared `--*` in `tokens.css` must appear somewhere in `token-map.json`
+  (or in `tokens.deferred.json` with a reason if not yet used in components).
+- Unclassifiable tokens go in an **Other tokens** group — never drop them.
+- Use the same grouping logic as `token-build.js` when importing CSS or
+  variables (colours, radii, type scale, spacing, shadows, other).
+
+## Adding component sections
+
+**New storybook (no `tools/sections/<id>.js` yet):** write `sections.json`
+directly as JSON matching the contract below, then run
+`check-sections.js`.
+
+**Existing brand with `tools/sections/<id>.js`:** edit the JS builder and run:
 
 ```bash
-node tools/emit-sections.js <brand>
+node tools/emit-sections.js <id>
 ```
 
-The result lands in `brands/<brand>/sections.json`, which is what the gallery
-reads. Never hand-edit that file: the next emit overwrites it.
+Never hand-edit `sections.json` if an emit script owns it — the next emit
+overwrites your changes.
 
 ```js
 {
-  id: 'cards',                    // becomes the URL anchor
-  group: 'Blocks',                // sidebar grouping
+  id: 'cards',
+  group: 'Blocks',
   title: 'Cards',
-  code: '.card',                  // what renders it, shown next to the title
+  code: '.card',
   desc: 'One sentence on what is worth noticing.',
   examples: [
-    { label: 'Default', html: card('Title', 'Body') },
-    { label: 'Dark',    html: card('Title', 'Body', true), note: 'Not in production yet.' }
+    { label: 'Default', html: '<div class="card" data-pick=".card">…</div>' }
   ]
 }
 ```
 
-**Two shapes of example, exactly one per example:**
+**Example shapes — exactly one per example:**
 
-- `html` — a snapshot of the brand's own markup. Needs `data-pick`.
-- `rows` — a descriptor for the engine's catalogue rows, with an optional
-  `wrap` around them:
+- `html` — brand markup with `data-pick`.
+- `rows` — catalogue rows (`btn`, `tile`, `spec`, `gap`) with optional `wrap`.
 
-```js
-{ label: 'Sizes',
-  wrap: { tag: 'div', class: 'card card--dark', pick: '.card--dark' },
-  rows: [
-    { kind: 'btn',  size: 'SM', cls: '.btn-sm', text: 'Sign in', heights: '40 / 40' },
-    { kind: 'gap',  size: 8 },
-    { kind: 'tile', name: 'Icon', cls: '.icon', meta: 'M 24 · D 36', sample: '<img …>' }
-  ] }
-```
+Load-bearing rules:
 
-Use `rows` whenever the example is a list of variants with a metadata column:
-that markup belongs to the engine, and freezing a snapshot of it would put a
-copy of the engine's own chrome into every brand package.
-
-Rules that are load-bearing:
-
-- **Every example needs at least one `data-pick="<selector>"`.** That attribute
-  is what makes a node clickable and what fills the code overlay. Without it the
-  example is decoration.
-- **One example per distinct thing.** This is a storybook, not an asset dump:
-  three tints of the same card are one example, not three.
-- **`wide: true`** for anything full-bleed (heroes, scrolling rails); otherwise
-  the sandbox gutter stacks on the component's own padding and the content comes
-  out half width.
-- **`htmlDesktop`** only when the two breakpoints genuinely differ in markup.
+- Every example has at least one `data-pick="<selector>"`.
+- One example per distinct thing — not an asset dump.
+- `wide: true` for full-bleed layouts.
+- `htmlDesktop` only when markup genuinely differs by breakpoint.
 
 ## Adding a token section
 
-You do not. Token sections are rendered by the engine from the brand's
-`token-map.json` — a data descriptor, no markup:
+You do not add token sections by hand in the gallery UI. You edit
+`token-map.json`:
 
-```js
-window.BRAND_TOKENS = {
-  colors: { title: 'Colours', groups: [{ title: 'Brand', swatches: [['--blue', 'Primary', 'CTA']] }] },
-  radii:  { title: 'Radii', scale: ['--r-8'], semantic: [['--r-card', 'cards']] },
-  sizes:  { title: 'Sizes', groups: [{ title: 'Buttons', rows: [['--btn-h', 'button height']] }] }
-};
+```json
+{
+  "colors": {
+    "title": "Colours",
+    "groups": [{ "title": "Brand", "swatches": [["--blue", "Primary", "CTA"]] }]
+  },
+  "radii": {
+    "title": "Radii",
+    "scale": ["--r-8"],
+    "semantic": [["--r-card", "cards"]]
+  }
+}
 ```
 
-Sections you omit simply do not appear. Keeping this as data is deliberate: a
-brand that arrives as a file must not be executed to show its palette.
+If the engine lacks a renderer shape, add it in `engine-specs.js` for **all**
+brands — never a one-brand fork in the engine.
 
-If a token section needs a shape the engine does not have, add the renderer to
-`engine-specs.js` for **all** brands — never a special case for one.
+## Golden path (how humans start)
+
+1. User creates a storybook in the gallery → `brands/<id>/` + `index.json`.
+2. User opens this repo in their agent and copies the **fill prompt** (folder
+   path + pointer to this skill).
+3. You run [## Router](#router), then write files.
+4. Gallery tab reloads; user reviews tokens and components there.
+
+Do not create parallel folders or skip the router because the prompt sounds
+urgent.
 
 ## Language
 
-All chrome strings go through `t('key')`. `i18n/en.js` is the default and must
-carry every key; other packs may be partial, and a missing key falls back to
-English rather than rendering blank. Static markup uses `data-i18n`,
-`data-i18n-title`, `data-i18n-hint`, `data-i18n-aria`.
-
-Section titles, token labels and demo content stay in the brand's language —
-they are brand data, not chrome.
+Chrome strings use `t('key')` in `i18n/en.js`. Section titles and token labels
+inside the brand package follow the brand’s `locale` — they are brand data.
 
 ## Forbidden
 
-- Editing `gallery.js`, `_frame.html` or `engine-specs.js` to make one brand
-  look right. If a brand needs it, it belongs in the manifest or the descriptor.
-- Hardcoding a brand's viewport, container, font, or file names in the engine.
-- A section without `data-pick`, or without a test asserting the invariant it
-  exists to demonstrate.
-- Assuming `file://` works. It does not, and it fails silently.
+- Inventing token names, hex values, or components not read from a source and
+  not approved via the mismatch protocol.
+- Writing raw `#hex` or raw `px`/`rem` in `components.css` (see `check-css.js`).
+- Editing `gallery.js`, `_frame.html`, or `engine-specs.js` to fix one brand.
+- A section example without `data-pick`.
+- Creating `brands/<id>/` outside the gallery flow without explicit user request.
+- Assuming `file://` or guessing Figma data when tools fail.
+- Describing the gallery state you have not verified after writing files.
 
 ## Checks
 
 ```bash
-node packages/engine/check-skill.js              # required anchors, forbidden strings, dates
-node packages/engine/check-sections.js <brand>   # the package is data, and the section contract
-node packages/engine/check-tokens.js <brand>     # dead, phantom and unapplied tokens
-node packages/engine/check-css.js <brand>        # raw hex and px outside var()
+node packages/engine/check-skill.js
+node packages/engine/check-sections.js brands/<id>
+node packages/engine/check-tokens.js brands/<id>
+node packages/engine/check-css.js brands/<id>
 ```
 
-`check-css.js` reads `brands/<id>/css.allow.json` for deliberate exceptions —
-each keyed by line number with a reason, so an exception cannot be silent.
+`check-css.js` honours `css.allow.json` per line — exceptions need a reason.
 
-Engine tests run against `brands/_template`. A brand passing while the template
-fails means the engine grew a dependency on that brand.
+Engine tests use `brands/_template`. A brand passing while the template fails
+means the engine regressed.

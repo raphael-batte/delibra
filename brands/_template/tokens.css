@@ -1,8 +1,7 @@
-/* Токены шаблона. Ровно те имена, без которых не встаёт хром галереи, —
-   этот список и есть контракт бренда перед движком. Значения нейтральные:
-   шаблон не должен выглядеть чьим-то брендом. */
+/* Template tokens — names required for gallery chrome (brand ↔ engine contract).
+   Values are neutral: the template must not look like someone else's brand. */
 :root {
-  /* Обязательный минимум для хрома */
+  /* Minimum for chrome */
   --bg:            #F7F7F8;
   --white-pure:    #FFFFFF;
   --white-pure-rgb: 255 255 255;
@@ -14,7 +13,10 @@
   --blue-accent:   #1B54C8;
   --font-family:   system-ui, -apple-system, sans-serif;
 
-  /* Один пример каждого вида токена — чтобы секции было чем наполнить */
+  /* One example per token kind — enough to fill catalogue sections */
   --r-card:  12px;
   --space-m: 16px;
+  --btn-h:   40px;
+  --btn-px:  20px;
+  --btn-fs:  14px;
 }

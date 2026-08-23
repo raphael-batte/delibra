@@ -1,42 +1,29 @@
-/* ──────────────────────────────────────────────────────────────────────────
-   Резолюция бренда.
+/* ==========================================================================
+   Brand resolution.
 
-   Движок нигде не знает имени дизайн-системы: она приходит параметром
-   ?brand=<путь>, и все пути манифеста приводятся к абсолютным ОТ ПАПКИ
-   БРЕНДА, а не от папки движка. Это принципиально: gallery.html и
-   _frame.html лежат в packages/engine, а tokens.css — в brands/<id>,
-   поэтому любой относительный путь из манифеста без этого шага порвётся.
+   The engine never knows a design system by name: it arrives as an address,
+   and manifest paths resolve from the BRAND folder, not the engine's. The
+   gallery lives in packages/engine while tokens.css lives in brands/<id>, so
+   without that step every relative path in a manifest would break.
 
-   Бренд обязан отдаваться тем же http-сервером, что и галерея: движок
-   читает CSS через fetch и вкидывает его в iframe. Для бренда из чужого
-   репозитория достаточно симлинка внутрь brands/.
-   ────────────────────────────────────────────────────────────────────── */
+   A brand must be served by the same http server as the gallery: its CSS is
+   read over fetch. A brand from another repository works through a symlink.
+   ========================================================================== */
 (function () {
   'use strict';
 
-  /* Дефолтного бренда нет. Раньше пустой заход молча открывал шаблон, и
-     человек видел чужую систему вместо предложения завести свою. Без
-     параметров галерея показывает экран создания; ?brand= и ?suite=
-     по-прежнему открывают систему напрямую — ими пользуются тесты и ссылки. */
+  /* No default brand: an empty visit used to open the template silently, so
+     people saw someone else's system instead of an offer to start their own. */
 
-  /* Версия движка и версия контракта — разные вещи.
-     ENGINE_VERSION растёт с каждым релизом движка (SemVer).
-     CONTRACT_MAJOR меняется только когда ломается формат манифеста:
-     бренд объявляет `engine: 1`, и движок отказывается его открывать,
-     если цифры разошлись. Это дешевле, чем ловить пустой экран. */
+  /* Engine version and contract version are different things: the contract
+     only moves when the manifest format breaks. See VERSIONING.md. */
   var ENGINE_VERSION = '1.0.0';
   var CONTRACT_MAJOR = 1;
 
-  /* Откуда открыт сторибук, в порядке убывания «человечности»:
-
-       /sdm            — короткий адрес, его и видит пользователь;
-       ?brand=<путь>   — служебный вход: тесты, ссылки, статический сервер,
-                         где короткие адреса невозможны;
-       ?suite=<id>     — пакет, живущий в браузере.
-
-     Короткий адрес узнаём по <base>: сервер вставляет его, когда отдаёт
-     галерею не по её собственному пути. Без base мы открыты напрямую, и
-     путь в адресе — это путь к файлу движка, а не имя сторибука. */
+  /* Where the storybook was opened from: /sdm is the address people see,
+     ?brand= is the working entrance for tests and static servers, ?suite= is
+     a package in the browser. The <base> tag is how we tell a short address
+     from the engine's own path. */
   var qs = new URLSearchParams(location.search);
   var suiteId = qs.get('suite');
   var rel = qs.get('brand') || null;
@@ -46,12 +33,17 @@
     var servedShort = document.querySelector('base') &&
                       location.pathname.indexOf('/packages/') !== 0;
     var m = servedShort && location.pathname.match(/^\/([A-Za-z0-9._-]+)\/?$/);
-    /* /new — не сторибук, а экран создания: слово занято интерфейсом, и
-       папку с таким именем открывать по нему нельзя. */
+    /* /new is the create screen, not a storybook: the word belongs to the
+       interface, so a folder of that name cannot claim the address. */
     if (m && m[1] === 'new') m = null;
     if (m) {
       short = m[1];
-      rel = '../../brands/' + short;
+      var cfg = window.ENGINE_CONFIG || {};
+      if (cfg.brandUrlPrefix) {
+        rel = cfg.brandUrlPrefix.replace(/\/+$/, '') + '/' + short;
+      } else {
+        rel = '../../brands/' + short;
+      }
     }
   }
 
@@ -59,28 +51,22 @@
 
   function brandBase() {
     if (!rel) return '';
-    // нормализуем к абсолютному пути с завершающим слэшем
+    // normalise to an absolute path with a trailing slash
     var url = new URL(rel.replace(/\/+$/, '') + '/', location.href);
     return url.pathname;
   }
 
   var base = brandBase();
 
-  /* ── BrandSource: папка на сервере ─────────────────────────────────
-     url(p)      → адрес, который браузер может загрузить
-     text(p)     → содержимое файла строкой
-     manifest()  → разобранный манифест
-     Для папки манифест приходит тегом <script> из загрузчика галереи,
-     поэтому здесь он просто отдаётся; у пакета в памяти на этом месте
-     будет разбор bundle. */
+  /* BrandSource: a folder on the server. url() gives an address the browser
+     can load, text() the contents, manifest() the parsed manifest. */
   var SOURCE = {
     kind: 'folder',
     base: base,
     rel:  rel,
 
-    /* Идентификатор сторибука — имя ПАПКИ, а не manifest.id. Копия бренда
-       уносит с собой чужой id, и по нему настройки, приложенный CSS и
-       удаление уходили бы в исходный бренд. Папка уникальна по определению. */
+    /* Identity is the FOLDER, not manifest.id: a copied brand carries the
+       original's id, and settings and deletion would address the original. */
     id: base.replace(/\/+$/, '').split('/').pop(),
 
     url: function (p) {
@@ -96,12 +82,8 @@
       });
     },
 
-    /* Синхронное чтение данных бренда. Нужно потому, что галерея собирает
-       себя одним проходом при загрузке документа, а не по промисам; для
-       локального файла это десятки миллисекунд. У пакета в памяти на этом
-       месте окажется чтение из объекта — без запроса вовсе.
-       Возвращает null, если файла нет: необязательные части бренда
-       (карта старых имён, дескриптор токенов) отсутствуют штатно. */
+    /* Synchronous because the gallery assembles itself in one pass while the
+       document loads. Missing file returns null: optional parts are normal. */
     json: function (p, bust) {
       if (!p) return null;
       var xhr = new XMLHttpRequest();
@@ -110,26 +92,25 @@
       if (xhr.status && xhr.status >= 400) return null;
       try { return JSON.parse(xhr.responseText); }
       catch (e) {
-        throw new Error('не разобрался JSON: ' + SOURCE.url(p) + ' — ' + e.message);
+        throw new Error('could not parse JSON: ' + SOURCE.url(p) + ' — ' + e.message);
       }
     },
 
     manifest: function () { return window.BRAND_MANIFEST || null; },
 
-    /* Можно ли править этот сторибук из браузера. Папку — нельзя: её
-       правят в IDE, и запись из галереи разошлась бы с диском. */
+    /* Whether the browser may edit this storybook. A folder is edited in an
+       IDE, so writing from the gallery would drift from disk. */
     writable: false
   };
 
-  /* Пакет из хранилища подменяет собой папку целиком: интерфейс тот же,
-     поэтому дальше по коду разницы нет. Читаем пакет здесь, чтобы к моменту
-     загрузки данных бренда источник уже был готов. */
+  /* A package replaces the folder wholesale — same interface, so nothing
+     downstream knows the difference. */
   var missingSuite = false;
   if (suiteId && window.ENGINE_BUNDLE && window.ENGINE_REGISTRY) {
     var pack = window.ENGINE_REGISTRY.bundle(suiteId);
     if (pack) SOURCE = window.ENGINE_BUNDLE.source(suiteId, pack);
-    /* Ссылка на пакет живёт только в том браузере, где он лежит. Открытая
-       в другом месте, она должна сказать об этом, а не показать пустоту. */
+    /* A link to a package only works where the package is; elsewhere it must
+       say so rather than show an empty gallery. */
     else missingSuite = true;
   }
 
@@ -141,11 +122,11 @@
     missingSuite: missingSuite,
     contract: CONTRACT_MAJOR,
 
-    /* Несовместимость возвращается строкой-объяснением, null — если всё в порядке. */
+    /* Returns a sentence explaining the mismatch, or null when compatible. */
     incompatible: function (m) {
       if (!m) return 'Brand manifest not found.';
       var need = m.engine;
-      if (need === undefined) return null;          // старые бренды не блокируем
+      if (need === undefined) return null;          // pre-contract brands stay openable
       if (Number(need) === CONTRACT_MAJOR) return null;
       return 'Brand "' + (m.id || '?') + '" targets engine contract v' + need +
              ', this engine speaks v' + CONTRACT_MAJOR + '.';
@@ -154,36 +135,33 @@
     get base() { return SOURCE.base; },
     get rel()  { return SOURCE.rel; },
 
-    /* путь внутри бренда → абсолютный.
-       Тонкая обёртка над source.url(): оставлена, потому что ею пользуются
-       загрузчики и брендовые секции. */
+    /* A path inside the brand to an absolute one. Kept as a thin wrapper
+       because loaders and brand sections call it. */
     path: function (p) { return SOURCE.url(p); },
 
-    /* Источник бренда: папка на сервере или пакет в памяти. Интерфейс один,
-       поэтому весь остальной движок про разницу не знает.
-       См. BRAND-PACKAGE.md. */
+    /* Folder on the server or package in memory — one interface, so the rest
+       of the engine never branches on it. See BRAND-PACKAGE.md. */
     get source() { return SOURCE; },
 
-    /* ключ localStorage, разведённый по сторибукам (по папке или id пакета) */
+    /* localStorage key, scoped per storybook (folder name or package id) */
     key: function (name) { return SOURCE.id + ':' + name; },
 
-    /* Язык интерфейса. Это язык хрома, а не бренда, поэтому решает
-       настройка воркспейса; manifest.locale — лишь значение по умолчанию
-       для того, кто ничего не выбирал. Иначе две дизайн-системы в одной
-       галерее говорили бы на разных языках. */
+    /* The chrome's language, not the brand's: the workspace setting wins and
+       manifest.locale is only its default. Otherwise two systems side by side
+       would speak two languages. */
     locale: function () {
       var chosen = window.ENGINE_REGISTRY && window.ENGINE_REGISTRY.settings().locale;
       if (chosen) return chosen;
       return (window.BRAND_MANIFEST && window.BRAND_MANIFEST.locale) || 'en';
     },
 
-    /* строка локали с подстановками: t('pane.mobile', {w: 390}) */
+    /* A localised string with substitutions: t('pane.mobile', {w: 390}) */
     t: function (key, vars) {
       var packs = window.ENGINE_I18N || {};
       var loc = window.ENGINE_BRAND.locale();
       var s = (packs[loc] && packs[loc][key]);
-      if (s === undefined) s = (packs.en && packs.en[key]);   // фолбэк на английский
-      if (s === undefined) return key;                         // видно, что ключа нет
+      if (s === undefined) s = (packs.en && packs.en[key]);   // fall back to English
+      if (s === undefined) return key;                         // a missing key stays visible
       return vars ? s.replace(/\{(\w+)\}/g, function (m, n) {
         return vars[n] !== undefined ? vars[n] : m;
       }) : s;

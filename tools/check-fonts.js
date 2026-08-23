@@ -1,7 +1,7 @@
 const fs=require('fs');
 const strip=s=>s.replace(/\/\*[\s\S]*?\*\//g,'');
 
-// разбираем файл на правила с учётом @media
+// parse file into rules, accounting for @media
 function parse(css){
   css=strip(css);
   const out=[]; // {sel, decls, bp}
@@ -13,7 +13,7 @@ function parse(css){
       out.push({sel, body:m[2], bp});
     }
   }
-  // вырезаем media-блоки с балансировкой
+  // extract media blocks with brace balancing
   const spans=[]; const mre=/@media([^{]+)\{/g; let m;
   while((m=mre.exec(css))){
     let d=1,i=mre.lastIndex;
@@ -46,7 +46,7 @@ function resolve(val,v,bp,depth){
     return x===undefined?'?':resolve(x,v,bp,depth+1);
   }).trim();
 }
-// значение свойства для селектора: последнее объявление, base затем брейкпоинт
+// property value for selector: last declaration, base then breakpoint
 function prop(rules,v,selRe,name,bp){
   let val=null;
   ['base',bp].forEach(b=>{
@@ -58,25 +58,25 @@ function prop(rules,v,selRe,name,bp){
   return val===null?null:resolve(val,v,bp);
 }
 
-/* Сверка типографики: sdm.css + tokens.css против боевого styles.css.
-   Запуск:  node check-fonts.js   (из папки Design system) */
-/* Путь к вёрстке сайта — аргументом: репозиторий дизайн-системы больше не
-   лежит рядом с сайтом, и жёсткий '../ui2026' здесь означал бы, что пакет
-   работает только на одной машине. Это миграционная сверка «ДС ↔ сайт»,
-   отдельная джоба, а не гейт: она сузится и умрёт, когда сайт переедет.
+/* Typography cross-check: sdm.css + tokens.css vs production styles.css.
+   Run:  node check-fonts.js   (from Design system folder) */
+/* Path to site markup — pass as argument: the design-system repo no longer
+   sits next to the site, and a hardcoded '../ui2026' would mean the package
+   only works on one machine. This is a migration cross-check "DS ↔ site",
+   a separate job, not a gate: it will shrink and die when the site moves.
 
-   Запуск:  node check-fonts.js <путь к styles.css> */
+   Run:  node check-fonts.js <path to styles.css> */
 const path=require('path');
-/* Скрипт живёт в tools/, а токены — в папке бренда: путь строим от корня
-   репозитория, а не от расположения скрипта. */
+/* Script lives in tools/, tokens in the brand folder: build path from repo
+   root, not from script location. */
 const here=path.resolve(__dirname,'..','brands','sdm');
 const sitePath=process.argv[2];
 if(!sitePath){
-  console.error('нужен путь к styles.css сайта:\n  node tools/check-fonts.js ../sdm/ui2026/app/styles.css');
+  console.error('need path to site styles.css:\n  node tools/check-fonts.js ../sdm/ui2026/app/styles.css');
   process.exit(2);
 }
 if(!fs.existsSync(sitePath)){
-  console.error('файл не найден: '+sitePath);
+  console.error('file not found: '+sitePath);
   process.exit(2);
 }
 const site=parse(fs.readFileSync(sitePath,'utf8'));
@@ -114,18 +114,18 @@ const targets=[
 ];
 const props=['font-size','font-weight','line-height'];
 
-/* Осознанные расхождения — не баги, а решения ДС.
-   Ключ: 'брейкпоинт|селектор|свойство'. */
+/* Intentional mismatches — not bugs, but DS decisions.
+   Key: 'breakpoint|selector|property'. */
 const ALLOW = {
   'D|.feature h3|font-size':
-    'в коде 15px лежит в @media (min-width:901) and (max-height:900) — высотное условие, не десктоп',
-  'D|.feature h3|line-height': 'то же высотное условие',
+    'code has 15px in @media (min-width:901) and (max-height:900) — height condition, not desktop',
+  'D|.feature h3|line-height': 'same height condition',
   'M|.feature h3|font-size':
-    'в styles.css:4080 блок .features на мобайле скрыт целиком, мобильного значения нет; берём Figma 16/600',
-  'M|.feature h3|line-height': 'см. выше'
+    'in styles.css:4080 .features block is hidden on mobile, no mobile value; use Figma 16/600',
+  'M|.feature h3|line-height': 'see above'
 };
 let bad=0;
-console.log('расхождение | селектор | свойство | ДС → код');
+console.log('mismatch | selector | property | DS → code');
 targets.forEach(([name,re])=>{
   const R=new RegExp(re);
   ['M','D'].forEach(bp=>{
@@ -140,4 +140,4 @@ targets.forEach(([name,re])=>{
     });
   });
 });
-console.log('\nвсего расхождений: '+bad);
+console.log('\ntotal mismatches: '+bad);

@@ -1,17 +1,17 @@
 /* ==========================================================================
-   Engine specs — всё, что умеет рисовать токены, не зная, чьи они.
+   Engine specs — everything that can draw tokens without knowing whose they are.
    --------------------------------------------------------------------------
-   Здесь живут три слоя:
-     1. разбор CSS-переменных (три контекста: base / desktop / mobile);
-     2. примитивы каталога — свотчи, таблицы размеров, строки со сравнением
-        мобильной и десктопной величины;
-     3. tokenSections(map) — готовые секции «Цвета / Радиусы / Тени / Размытие /
-        Типографика / Размеры», собранные по дескриптору бренда.
+   Three layers live here:
+     1. CSS custom property parsing (three contexts: base / desktop / mobile);
+     2. catalog primitives — swatches, size tables, rows comparing mobile and
+        desktop values;
+     3. tokenSections(map) — ready sections Colors / Radii / Shadows / Blur /
+        Typography / Sizes, assembled from the brand descriptor.
 
-   Бренд не переписывает эту разметку: он отдаёт данные (token-map.js) и
-   получает секции. Из-за этого секции токенов — данные, а не код, что
-   понадобится, когда бренды начнут приезжать файлом извне: выполнять чужой
-   JS ради палитры нельзя, отрисовать чужие данные — можно.
+   The brand does not rewrite this markup: it supplies data (token-map.js) and
+   receives sections. Token sections are therefore data, not code — needed when
+   brands arrive as external files: you cannot execute foreign JS for a palette,
+   but you can render foreign data.
    ========================================================================== */
 (function () {
   'use strict';
@@ -20,8 +20,8 @@
   var MAN = window.BRAND_MANIFEST || {};
   var t = BRAND.t;
 
-  /* Карта старых имён приходит от бренда: движок не знает, как в чужом
-     боевом коде назывались те же токены. */
+  /* Legacy name map comes from the brand: the engine does not know what the same
+     tokens were called in foreign production code. */
   var LEGACY = window.BRAND_LEGACY || {};
   var VARS = {
     tokens: { base: {}, desktop: {}, mobile: {} },
@@ -32,10 +32,10 @@
 
   function parseVars(css) {
     var ctx = { base: {}, desktop: {}, mobile: {} };
-    // вырезаем комментарии, чтобы закомментированные токены не попадали в разбор
+    // strip comments so commented-out tokens do not enter the parse
     css = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-    // @media-блоки с балансировкой скобок
+    // @media blocks with balanced braces
     var mediaRe = /@media([^{]+)\{/g, m;
     var spans = [];
     while ((m = mediaRe.exec(css))) {
@@ -57,7 +57,7 @@
       }
     }
 
-    // base — всё, что вне @media
+    // base — everything outside @media
     var rest = '', cursor = 0;
     spans.forEach(function (sp) { rest += css.slice(cursor, sp.from); cursor = sp.to; });
     rest += css.slice(cursor);
@@ -73,13 +73,12 @@
 
   var BUST = window.GALLERY_BUST || '';
 
-  /* Файлы читаются с диска на каждой перезагрузке, поэтому можно попасть в
-     момент, когда редактор уже обрезал файл, но ещё не дописал. Тогда мы бы
-     молча нарисовали пустую палитру. Пустой или подозрительно короткий ответ
-     перечитываем — до трёх попыток. */
-  /* Чтение файла бренда. У пакета в памяти он уже прочитан — перечитывать
-     нечего и незачем ждать. Повторы нужны только папке: файл могли
-     перезаписывать ровно в момент загрузки страницы. */
+  /* Files are read from disk on every reload, so you can hit the moment the editor
+     truncated the file but has not finished writing. We would silently draw an
+     empty palette. Empty or suspiciously short responses are re-read — up to three tries. */
+  /* Read a brand file. For a package in memory it is already read — nothing to
+     re-read and no need to wait. Retries are only for folders: the file may have
+     been rewritten exactly while the page loaded. */
   function grabFile(file) {
     var src = BRAND.source;
     if (src.kind !== 'folder') return Promise.resolve(src.text(file) || '');
@@ -109,8 +108,8 @@
       grabFile(MAN.css.components)
     ]).then(function (res) {
       var tokens = parseVars(res[0]);
-      // файл мог быть прочитан в момент перезаписи — тогда разбор пуст.
-      // Ждём и перечитываем, вместо того чтобы показывать пустую палитру.
+      // file may have been read mid-write — parse is empty then.
+      // Wait and re-read instead of showing an empty palette.
       if (Object.keys(tokens.base).length === 0 && attempt < 4) {
         return new Promise(function (r) { setTimeout(r, 400 * attempt); })
           .then(function () { return load(attempt + 1); });
@@ -125,8 +124,8 @@
 
   load(1);
 
-  /* CSS для сравнения приходит из шапки: разработчик прикладывает свой файл.
-     Пока его нет, VARS.site пуст и свотчи не показывают колонку «что в коде». */
+  /* CSS for comparison comes from the header: the developer attaches a file.
+     Until then VARS.site is empty and swatches show no "what's in the code" column. */
   window.GALLERY_SET_SITE_CSS = function (text) {
     VARS.site = text ? parseVars(text) : { base: {}, desktop: {}, mobile: {} };
     VARS.hasSite = !!text;
@@ -134,7 +133,7 @@
   };
 
 
-  /* Значение токена. bp: 'desktop' | 'mobile' | undefined (= desktop) */
+  /* Token value. bp: 'desktop' | 'mobile' | undefined (= desktop) */
   function val(name, mode, bp, depth) {
     depth = depth || 0;
     if (depth > 6) return null;
@@ -145,7 +144,7 @@
         : (src.desktop[n] !== undefined ? src.desktop[n] : src.base[n]);
     };
     var v = pick(name);
-    // в боевом коде тот же цвет может жить под старым именем
+    // in production code the same colour may live under a legacy name
     if (v === undefined && mode === 'current' && LEGACY[name]) v = pick(LEGACY[name]);
     if (v === undefined) return null;
     var m = String(v).match(/^var\(\s*(--[\w-]+)\s*\)$/);
@@ -153,7 +152,7 @@
     return v;
   }
 
-  /* Все известные имена токенов в наборе */
+  /* All known token names in the set */
   function allNames(set) {
     var out = {};
     ['base', 'desktop', 'mobile'].forEach(function (k) {
@@ -162,7 +161,7 @@
     return Object.keys(out);
   }
 
-  /* Сравнение значений: регистр, пробелы, короткая запись hex (#fff === #FFFFFF) */
+  /* Compare values: case, spaces, short hex (#fff === #FFFFFF) */
   function norm(v) {
     if (v == null) return v;
     return String(v).trim().toLowerCase().replace(/\s+/g, ' ')
@@ -174,9 +173,8 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  /* Любой размерный токен показываем сразу на обоих брейкпоинтах.
-     Если значения совпадают — так и пишем, чтобы это было видно явно,
-     а не выглядело как «забыли указать». */
+  /* Show any size token on both breakpoints at once.
+     If values match — say so explicitly, not as if we forgot to specify. */
   function bp(name) {
     var m = val(name, 'new', 'mobile');
     var d = val(name, 'new', 'desktop');
@@ -190,10 +188,10 @@
     return '<code>' + esc(x.m) + '</code> → <code>' + esc(x.d) + '</code>';
   }
 
-  /* Таблица размеров: одна строка = токен, отдельные колонки M и D */
+  /* Size table: one row per token, separate M and D columns */
   function sizeTable(rows) {
-    /* Колонка с приложенным CSS появляется только при включённом сравнении:
-       без него она пустая на всю таблицу. */
+    /* Attached-CSS column appears only when comparison is on: otherwise empty
+       for the whole table. */
     var compare = comparing();
 
     return '<table class="g-table"><thead><tr>' +
@@ -213,13 +211,12 @@
       }).join('') + '</tbody></table>';
   }
 
-  /* Что в приложенном CSS. Возвращает пустую строку, пока сравнение
-     выключено: палитра — это сама дизайн-система, и постоянный рассказ о
-     чужом файле в ней шум. Включили тоггл — расхождения обязаны быть видны
-     не только у компонентов, но и у токенов: именно там они и заводятся. */
-  /* Род токена по имени. Без него поиск «того же значения» находит ложных
-     друзей: 48px есть и у радиуса, и у отступа, и у заголовка — совпадение
-     числа ничего не значит, если это разные вещи. */
+  /* What's in the attached CSS. Returns empty while comparison is off: the palette
+     IS the design system, and constant talk about a foreign file is noise. Turn the
+     toggle on — mismatches must show for components AND tokens: that's where they start. */
+  /* Token kind by name. Without it value lookup finds false friends: 48px exists
+     for radius, spacing, and heading — matching numbers mean nothing if they are
+     different things. */
   function kindOf(name) {
     var n = name.replace(/^--/, '');
     if (/(^|-)(font|fs|lh|text|title|caption|lead)(-|$)/.test(n)) return 'type';
@@ -230,10 +227,10 @@
     return 'other';
   }
 
-  /* Тот же токен под другим именем. Сравнение по имени этого не находит: в
-     боевом коде размеры типографики обычно живут своим набором (--m-fs-*),
-     и честный ответ «такого имени нет» практически бесполезен — значение-то
-     на месте. Ищем по значению внутри того же рода и называем найденное. */
+  /* Same token under another name. Name comparison misses this: in production,
+     typography sizes usually live in their own set (--m-fs-*), and an honest
+     "no such name" is useless — the value is there. Search by value within the
+     same kind and report what we find. */
   function sameValueName(name, value) {
     if (value == null) return null;
     var target = norm(value);
@@ -248,8 +245,8 @@
       Object.keys(set).forEach(function (n) {
         if (norm(set[n]) !== target) return;
         if (kindOf(n) !== kind) return;
-        /* Из нескольких носителей одного значения предпочитаем имя,
-           похожее на наше: --m-fs-h1 полезнее, чем --m-fs-32. */
+        /* Among several carriers of one value prefer a name like ours:
+           --m-fs-h1 beats --m-fs-32. */
         var score = words.filter(function (w) { return n.indexOf(w) >= 0; }).length;
         if (!best || score > best.score) best = { name: n, score: score };
       });
@@ -266,16 +263,15 @@
     var codeName = (VARS.site.base[name] === undefined && LEGACY[name]) ? LEGACY[name] : name;
 
     if (inCode == null) {
-      /* Имени нет — но значение может лежать под другим. У сайта так и
-         устроено: мобильные размеры живут набором --m-fs-*, и «такого нет»
-         формально верно, а по делу бесполезно. Ищем по обоим брейкпоинтам:
-         десктопного значения там может не быть вовсе. */
+      /* Name missing — value may live under another. Sites work that way: mobile
+         sizes use --m-fs-*, and "not there" is formally true but useless. Search
+         both breakpoints: desktop value may be absent entirely. */
       var alias = sameValueName(name, mine) ||
                   sameValueName(name, val(name, 'new', 'mobile'));
       if (alias) return '<span class="g-ok">' + t('tok.sameValueAs', { name: esc(alias) }) + '</span>';
 
-      /* «Такого токена нет» — то же расхождение, что и другое значение:
-         одна причина разбираться, значит один цвет. */
+      /* "No such token" is the same mismatch as a different value: one reason to
+         investigate, one colour. */
       return '<span class="g-warn">' + t('tok.notInCode') + '</span>';
     }
     if (norm(inCode) !== norm(mine)) {
@@ -288,24 +284,22 @@
     return '<span class="g-ok">' + t('tok.matchesCode') + '</span>';
   }
 
-  /* Сравнение включено? Токен-секции спрашивают об этом в нескольких
-     местах — держим один ответ. */
+  /* Is comparison on? Token sections ask in several places — one answer. */
   function comparing() {
     return !!(VARS.ready && VARS.hasSite &&
               window.GALLERY_API && window.GALLERY_API.isDiffOn());
   }
 
-  /* Строка с расхождением под токеном — пустая, пока сравнение выключено. */
+  /* Mismatch row under a token — empty while comparison is off. */
   function noteRow(name) {
     var note = codeNote(name);
     return note ? '<div class="g-swatch-use">' + note + '</div>' : '';
   }
 
-  /* ── Свотчи ────────────────────────────────────────────────────────── */
-  /* Палитра — это сама дизайн-система, поэтому свотч ВСЕГДА показывает
-     значение из tokens.css и не зависит от переключателя CSS. Переключатель
-     управляет тем, чем нарисованы компоненты, а не тем, какого цвета бренд.
-     Строкой ниже — справка о том, что сейчас лежит в боевом коде. */
+  /* ── Swatches ────────────────────────────────────────────────────────── */
+  /* The palette IS the design system, so a swatch ALWAYS shows tokens.css and
+     does not depend on the CSS switch. The switch controls what draws components,
+     not brand colour. The line below notes what production code has now. */
   function swatch(name, label, use) {
     var v = val(name, 'new');
     var chip = v
@@ -322,8 +316,7 @@
       '</div></div>';
   }
 
-  /* Градиент показываем самой плашкой: hex у него нет, поэтому под ней —
-     сокращённая запись стопов из tokens.css. */
+  /* Show a gradient as the chip itself: no hex, so below — abbreviated stops from tokens.css. */
   function gradientSwatch(name, label, use) {
     var v = val(name, 'new');
     var stops = v ? v.replace(/^(linear|conic|radial)-gradient\(/, '').replace(/\)$/, '')
@@ -339,7 +332,7 @@
       '</div></div>';
   }
 
-  /* Градиенты приходят списком из дескриптора: их состав — дело бренда. */
+  /* Gradients arrive as a list from the descriptor: composition is the brand's job. */
   function gradientGroup(title, items) {
     if (!items || !items.length) return '';
     return '<h3 class="g-group-title">' + esc(title) + '</h3>' +
@@ -358,22 +351,22 @@
     return '<h3 class="g-group-title">' + esc(title) + '</h3>' + swatches(list);
   }
 
-  /* Подзаголовок с необязательным пояснением справа. */
+  /* Subheading with optional note on the right. */
   function h3(title, extra) {
     return '<h3 class="g-group-title">' + esc(title) +
       (extra ? ' <span class="g-group-note">' + esc(extra) + '</span>' : '') + '</h3>';
   }
 
-  /* ── Хелперы разметки примеров ─────────────────────────────────────
-     Живут в packages/engine/rows.js: их использует и галерея, и скрипт,
-     который собирает данные бренда. data-pick делает узел кликабельным. */
+  /* ── Example markup helpers ─────────────────────────────────────
+     Live in packages/engine/rows.js: used by the gallery and the script that
+     assembles brand data. data-pick makes a node clickable. */
   var ROWS = window.ENGINE_ROWS;
 
   /* ══════════════════════════════════════════════════════════════════
-     Секции токенов из дескриптора бренда.
+     Token sections from the brand descriptor.
 
-     Каждая секция сначала проверяет, что CSS вообще прочитан: без этого
-     она молча рисовала пустоту, и выглядело это как «пропали цвета».
+     Each section first checks CSS was read: otherwise it silently drew emptiness
+     that looked like "colours disappeared".
      ══════════════════════════════════════════════════════════════════ */
 
   function guard(render) {
@@ -384,7 +377,7 @@
     };
   }
 
-  /* Общая обвязка: id и группа задаются движком, тексты — брендом. */
+  /* Shared wrapper: id and group from the engine, copy from the brand. */
   function section(id, d, render) {
     return {
       id: id, group: d.group || t('tok.group'), title: d.title, code: d.code, desc: d.desc,
@@ -402,8 +395,8 @@
   }
 
   function radiiSection(d) {
-    /* Оба радиуса рядом: слева мобильный, справа десктопный — расхождение
-       видно сразу, без переключения панелей. */
+    /* Both radii side by side: mobile left, desktop right — mismatch visible
+       without switching panels. */
     function box(name, label) {
       var x = bp(name);
       var half = function (v) {
@@ -444,8 +437,8 @@
         '<div class="g-swatch-use">' + esc(use || '') + '</div>' +
         noteRow(name) + '</div></div>';
     }
-    /* Градиентная рамка — не тень: она рисуется двумя фонами и
-       background-clip, поэтому и демонстрируется отдельно. */
+    /* Gradient border is not a shadow: two backgrounds and background-clip,
+       so it is demonstrated separately. */
     function borderBox(name, use) {
       return '<div class="g-swatch">' +
         '<div class="g-gradborder-demo" style="background:' +
@@ -471,8 +464,8 @@
     return section('blur', d, function () {
       return '<div class="g-swatches">' + (d.rows || []).map(function (r) {
         var v = val(r[0], 'new');
-        /* Подложка нарочно контрастная: на гладком градиенте размытие не
-           читается. Размыта только правая половина — слева исходник. */
+        /* Backdrop deliberately contrasty: blur is unreadable on a smooth gradient.
+           Only the right half is blurred — source on the left. */
         return '<div class="g-swatch">' +
           '<div class="g-blur-demo">' +
             '<div class="g-blur-demo__veil" style="backdrop-filter:' + v +
@@ -522,9 +515,8 @@
         }).join('') + '</tbody></table>';
     }
 
-    /* Специмен в двух колонках: размеры подставлены явными пикселями из
-       токенов, поэтому оба брейкпоинта видны одновременно и не зависят от
-       того, насколько широко открыто окно. */
+    /* Specimen in two columns: sizes set as explicit pixels from tokens, so both
+       breakpoints show at once regardless of window width. */
     function column(which, title) {
       var skip = d.specimenSkip || [];
       return '<div><div class="g-pane-label g-specimen-head">' + esc(title) + '</div>' +
@@ -573,9 +565,8 @@
     });
   }
 
-  /* Публичная сборка: бренд отдаёт дескриптор, получает готовые секции.
-     Отсутствующий раздел просто не появляется — шаблонному бренду не нужно
-     объявлять размытие, чтобы открыться. */
+  /* Public assembly: brand supplies descriptor, gets ready sections.
+     Missing section simply does not appear — template brand need not declare blur to open. */
   function tokenSections(map) {
     map = map || {};
     var built = [
@@ -589,14 +580,14 @@
     return built.filter(Boolean);
   }
 
-  /* Хелперы, которыми бренд рисует свои компонентные секции. */
+  /* Helpers the brand uses to draw its component sections. */
   window.ENGINE_SPECS = {
     tokenSections: tokenSections,
-    parseVars: parseVars,          // нужен импорту дизайн-системы из CSS-файла
+    parseVars: parseVars,          // needed to import a design system from a CSS file
     val: val, bp: bp, bpCell: bpCell, esc: esc, norm: norm,
     swatch: swatch, swatches: swatches, group: group, h3: h3,
     sizeTable: sizeTable, vars: VARS,
-    /* строки каталога — из общего модуля */
+    /* catalog rows — from the shared module */
     row: ROWS.row, specRow: ROWS.specRow, btnRow: ROWS.btnRow, tileRow: ROWS.tileRow,
     renderRows: ROWS.renderRows
   };

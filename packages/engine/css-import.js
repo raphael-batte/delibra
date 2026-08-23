@@ -18,7 +18,8 @@
         deferred: t('new.cssDeferred', { file: filename }),
         /* Keep the original file rather than a regenerated one: comments and
            order are part of what the author wrote. */
-        css: css
+        css: css,
+        source: 'css'
       });
       if (built.error) return { error: built.error };
 

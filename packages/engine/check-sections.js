@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /* ==========================================================================
-   check-sections — пакет бренда обязан состоять из данных.
+   check-sections — a brand package must consist of data.
 
-   Проверяет две вещи:
-     · файлы данных бренда (манифест, токен-карта, карта старых имён,
-       секции) разбираются как JSON и не содержат исполняемого кода;
-     · секции соответствуют контракту: у примера ровно одна форма тела —
-       снимок разметки (html) либо дескриптор строк каталога (rows).
+   Checks two things:
+     · the brand data files (manifest, token map, legacy map, sections) parse
+       as JSON and carry no executable code;
+     · sections match the contract: an example has exactly one body form —
+       a markup snapshot (html) or a catalogue row descriptor (rows).
 
-   Смысл: сторибук, приехавший файлом, открывается без выполнения чужого
-   кода. Проверка ловит момент, когда в пакет снова просачивается логика.
+   Why: a storybook that arrived as a file opens without running foreign
+   code. This check catches logic seeping back into a package.
 
-   Запуск:  node packages/engine/check-sections.js brands/sdm
+   Run:  node packages/engine/check-sections.js brands/sdm
    ========================================================================== */
 'use strict';
 
@@ -23,58 +23,57 @@ const brandDir = path.resolve(process.argv[2] || 'brands/sdm');
 const rel = p => path.relative(ROOT, p);
 
 if (!fs.existsSync(brandDir)) {
-  console.error('нет такой папки бренда: ' + brandDir);
+  console.error('no such brand folder: ' + brandDir);
   process.exit(2);
 }
 
 const problems = [];
 const fail = m => problems.push(m);
 
-/* ── Манифест ────────────────────────────────────────────────────────── */
+/* ── Manifest ────────────────────────────────────────────────────────── */
 const manifestJson = path.join(brandDir, 'manifest.json');
 const manifestJs   = path.join(brandDir, 'manifest.js');
 
 if (!fs.existsSync(manifestJson)) {
   fail(fs.existsSync(manifestJs)
-    ? `${rel(manifestJs)}: манифест ещё код — нужен manifest.json`
-    : `${rel(brandDir)}: нет manifest.json`);
+    ? `${rel(manifestJs)}: the manifest is still code — manifest.json is required`
+    : `${rel(brandDir)}: no manifest.json`);
 }
 
 const manifest = fs.existsSync(manifestJson)
   ? JSON.parse(fs.readFileSync(manifestJson, 'utf8'))
   : {};
 
-/* ── Ни одного исполняемого файла в пакете ───────────────────────────── */
-/* tests.html и *.md — не часть пакета: это оснастка репозитория. */
+/* ── Not a single executable file in the package ─────────────────────── */
+/* tests.html and *.md are not part of the package: repository tooling. */
 const NOT_PACKAGE = new Set(['tests.html']);
 fs.readdirSync(brandDir).forEach(name => {
   if (name.endsWith('.js') && !NOT_PACKAGE.has(name)) {
-    fail(`${rel(path.join(brandDir, name))}: исполняемый файл в пакете бренда`);
+    fail(`${rel(path.join(brandDir, name))}: executable file in a brand package`);
   }
 });
 
-/* ── Данные разбираются ──────────────────────────────────────────────── */
+/* ── Data parses ─────────────────────────────────────────────────────── */
 function readData(field, target) {
   const file = manifest[field];
   if (!file) return null;
   const full = path.join(brandDir, file);
   if (!file.endsWith('.json')) {
-    fail(`${field}: ${file} — данные бренда должны быть JSON`);
+    fail(`${field}: ${file} — brand data must be JSON`);
     return null;
   }
-  if (!fs.existsSync(full)) { fail(`${field}: файла нет — ${rel(full)}`); return null; }
+  if (!fs.existsSync(full)) { fail(`${field}: file missing — ${rel(full)}`); return null; }
   try { return JSON.parse(fs.readFileSync(full, 'utf8')); }
-  catch (e) { fail(`${rel(full)}: не разбирается — ${e.message}`); return null; }
+  catch (e) { fail(`${rel(full)}: does not parse — ${e.message}`); return null; }
 }
 
 readData('tokenMap');
 readData('legacyNames');
 const sections = readData('sections');
 
-/* ── Контракт секций ─────────────────────────────────────────────────── */
-/* Правила живут в общем модуле: ими же проверяется файл, который приносят
-   через «Импорт» в галерее. Разъехаться они не должны — иначе импорт примет
-   то, что эта проверка отвергает. */
+/* ── Sections contract ───────────────────────────────────────────────── */
+/* The rules live in a shared module: the same ones validate a file brought in
+   through Import in the gallery, so the two cannot drift apart. */
 const contract = require('./sections-contract.js');
 if (sections) contract.check(sections).forEach(fail);
 
@@ -83,6 +82,6 @@ problems.forEach(p => console.log('  ✗ ' + p));
 if (!problems.length) {
   const count = sections ? sections.length : 0;
   const examples = sections ? sections.reduce((n, s) => n + (s.examples || []).length, 0) : 0;
-  console.log(`  ✓ ${name}: ${count} секций, ${examples} примеров — только данные`);
+  console.log(`  ✓ ${name}: ${count} sections, ${examples} examples — data only`);
 }
 process.exit(problems.length ? 1 : 0);

@@ -1,11 +1,16 @@
-# Design systems
+# DeLibra
 
-**A design-system storybook built for agents.** A person reads it — tokens,
+**Design systems, structured for engineers and AI agents.**
+
+Repository name: **`delibra`**. Product name in the UI: **DeLibra**. A **libra**
+is one design-system instance inside the repo.
+
+Turn design systems into agent-ready data. A person reads a libra — tokens,
 components, the code that renders them, side by side with the production CSS.
-An agent writes it: you point it at the storybook's folder and its skill, and
+An agent writes it: you point it at the libra's folder and its skill, and
 it carries the values over from Figma, or from a stylesheet you already have.
 
-There is no magic button. What the gallery gives an agent is a place to write
+There is no magic button. What DeLibra gives an agent is a place to write
 into and a contract to follow; what it gives you is the result, readable and
 comparable. The source of truth stays the files in the folder.
 
@@ -14,10 +19,24 @@ or **from a CSS file** — the gallery reads its custom properties and builds th
 token reference itself.
 
 ```
-packages/engine/    the storybook: chrome, preview frames, diff, i18n
-brands/sdm/         SDM: tokens, components, sections, assets — data only
-brands/_template/   empty brand — proof the engine is actually detached
+packages/engine/    DeLibra engine: chrome, preview frames, diff, i18n
+brands/_template/   empty reference brand — engine contract tests only
 tools/              logic that produces brand data, and CLI checks
+```
+
+**Engine repo and libra data are separate.** All storybooks live in a data
+directory on disk — not in git:
+
+```bash
+export DELIBRA_DATA=~/Work/libras    # optional; default ~/.delibra/libras
+node packages/engine/serve.js
+```
+
+Each libra is `$DELIBRA_DATA/<id>/` plus an entry in `$DELIBRA_DATA/index.json`.
+Migrate existing folders out of the repo once:
+
+```bash
+node scripts/migrate-brands-to-data.js
 ```
 
 A brand package contains data and nothing else — no file inside `brands/` is
@@ -48,9 +67,8 @@ Another brand is a query parameter — the engine has no brand baked in:
 gallery.html?brand=../../brands/_template
 ```
 
-Paths inside a manifest resolve from the brand folder, so a brand living
-outside this repo works through a symlink into `brands/`, as long as the same
-server can reach it.
+Paths inside a manifest resolve from the brand folder. With `serve.js`, libras
+load from `/__data/<id>/` while files live under `DELIBRA_DATA/<id>/`.
 
 ## Versioning
 
@@ -71,9 +89,22 @@ Open them in the browser with the server running. Engine tests default to
 `brands/_template` — that is the point: green on SDM and red on the template
 means the engine grew a dependency on SDM.
 
+```bash
+node --test test/*.test.js              # agent prompt, duplicate API, package hygiene
+node packages/engine/check-package.js   # same hygiene rules, CLI output
+```
+
+Browser suites (with `node packages/engine/serve.js` running):
+
+| Page | What it checks |
+|------|----------------|
+| `packages/engine/tests/engine.html` | gallery on `_template` |
+| `packages/engine/tests/empty.html` | onboard + centering on `new-libra-4`, duplicate regression |
+
 Command-line checks:
 
 ```bash
+node packages/engine/check-package.js   # no libra data / personal paths in repo
 node packages/engine/check-skill.js            # the skills' contract
 node packages/engine/check-tokens.js brands/sdm  # dead tokens, phantoms, unapplied
 node packages/engine/check-css.js brands/sdm     # raw hex and px outside var()

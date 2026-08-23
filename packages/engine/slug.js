@@ -1,14 +1,12 @@
 /* ==========================================================================
-   Слаг сторибука — общий для браузера и сервера.
+   Storybook slug — shared by browser and server.
 
-   Слаг это одновременно имя папки и адрес: /sdm. Поэтому он латиницей, в
-   нижнем регистре и без сюрпризов для файловой системы. Кириллицу
-   транслитерируем, а не выбрасываем: «Мой бренд» должен стать /moy-brend,
-   а не /storybook-2.
+   The slug is both the folder name and the address (/sdm), so it stays lower
+   case ASCII. Cyrillic is transliterated, not dropped: «Мой бренд» becomes
+   /moy-brend rather than /storybook-2.
 
-   Считают его двое: браузер показывает предсказание во втором шаге диалога,
-   сервер выносит финал — только он знает, какие имена уже заняты. Правила
-   обязаны совпадать, поэтому модуль один.
+   Both sides compute it — the browser previews it in step two of the dialog,
+   the server decides, since only it knows which names are taken.
    ========================================================================== */
 (function (root, factory) {
   'use strict';
@@ -41,9 +39,8 @@
     return s || FALLBACK;
   }
 
-  /* Свободное имя рядом с занятыми: new-storybook → new-storybook-2.
-     `taken` — массив или функция-предикат: сервер смотрит на диск, браузер
-     на список сторибуков. */
+  /* A free name next to the taken ones: new-storybook → new-storybook-2.
+     `taken` is an array or a predicate — disk on the server, list in the browser. */
   function unique(name, taken) {
     var busy = typeof taken === 'function'
       ? taken
@@ -54,7 +51,7 @@
     for (var n = 2; n < 1000; n++) {
       if (!busy(base + '-' + n)) return base + '-' + n;
     }
-    /* Тысяча одноимённых — уже не про интерфейс: разводим временем. */
+    /* A thousand of the same name is past UI territory: fall back to time. */
     return base + '-' + Date.now().toString(36);
   }
 

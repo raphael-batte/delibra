@@ -1,0 +1,22 @@
+{
+  "tokens": [
+    "--bg",
+    "--white-pure-rgb",
+    "--border",
+    "--text-primary",
+    "--text-heading",
+    "--text-muted",
+    "--blue-accent",
+    "--space-m"
+  ],
+  "why": {
+    "--bg": "gallery chrome contract — catalogue swatch, not .t-btn",
+    "--white-pure-rgb": "gallery header chrome — rgb(var(--white-pure-rgb) / α)",
+    "--border": "gallery chrome contract — catalogue swatch",
+    "--text-primary": "gallery chrome contract — catalogue swatch",
+    "--text-heading": "gallery chrome contract — catalogue swatch",
+    "--text-muted": "gallery chrome contract — catalogue swatch",
+    "--blue-accent": "catalogue swatch — no .t-btn state yet",
+    "--space-m": "spacing scale — no component uses it in the template"
+  }
+}

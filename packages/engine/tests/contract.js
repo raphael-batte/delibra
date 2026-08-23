@@ -1,52 +1,52 @@
 /* ==========================================================================
-   Контракт «бренд ↔ движок».
+   The brand ↔ engine contract.
 
-   Хром галереи нарисован токенами бренда: заголовки, границы, ссылки, фон.
-   Если бренд их не объявил, галерея открывается — и выглядит сломанной без
-   единой ошибки в консоли. Поэтому список обязательных имён проверяется явно
-   и одинаково для всех брендов, включая шаблон.
+   The gallery chrome is drawn with brand tokens: headings, borders, links,
+   background. If a brand does not declare them the gallery still opens and
+   simply looks broken, without a single console error — so the required names
+   are checked explicitly, for every brand including the template.
    ========================================================================== */
 (function () {
   'use strict';
 
   var REQUIRED = [
-    '--bg', '--white-pure', '--white-pure-rgb',   // хром шапки: rgb(var(--white-pure-rgb) / .88)
+    '--bg', '--white-pure', '--white-pure-rgb',   // header chrome: rgb(var(--white-pure-rgb) / .88)
     '--border',
     '--text-primary', '--text-heading', '--text-muted',
     '--blue', '--font-family'
   ];
 
-  /* Манифест: поля, без которых движку нечего грузить. */
+  /* Manifest: the fields without which the engine has nothing to load. */
   var REQUIRED_MANIFEST = ['id', 'title', 'css'];
 
   window.H.contractTests = function () {
     var H = window.H;
 
-    H.g('Контракт бренда');
+    H.g('Brand contract');
 
-    H.t('манифест объявляет обязательные поля', function () {
+    H.t('manifest declares the required fields', function () {
       var m = H.gallery().win.BRAND_MANIFEST || {};
       var missing = REQUIRED_MANIFEST.filter(function (k) { return !m[k]; });
-      H.eq(missing.length, 0, 'нет полей: ' + missing.join(', '));
-      H.ok(m.css.tokens && m.css.components, 'css.tokens и css.components обязательны');
+      H.eq(missing.length, 0, 'missing fields: ' + missing.join(', '));
+      H.ok(m.css.tokens && m.css.components, 'css.tokens and css.components are required');
     });
 
-    H.t('бренд объявляет токены, которыми нарисован хром', function () {
+    H.t('brand declares the tokens the chrome is drawn with', function () {
       var win = H.gallery().win;
       var root = win.getComputedStyle(win.document.documentElement);
       var missing = REQUIRED.filter(function (n) {
         return !String(root.getPropertyValue(n)).trim();
       });
-      H.eq(missing.length, 0, 'не объявлены: ' + missing.join(', '));
+      H.eq(missing.length, 0, 'not declared: ' + missing.join(', '));
     });
 
-    H.t('версия контракта совпадает с движковой', function () {
+    H.t('contract version matches the engine', function () {
       var win = H.gallery().win;
       var problem = win.ENGINE_BRAND.incompatible(win.BRAND_MANIFEST);
       H.eq(problem, null, problem || '');
     });
 
-    H.t('бренд не тянет файлы из-за пределов своей папки', function () {
+    H.t('brand does not pull files from outside its folder', function () {
       var win = H.gallery().win, doc = H.gallery().doc;
       var base = win.ENGINE_BRAND.base;
       var stray = [];
@@ -59,7 +59,7 @@
           if (u.indexOf(base) !== 0) stray.push(u);
         });
       });
-      H.eq(stray.length, 0, 'ссылки наружу: ' + stray.slice(0, 3).join(', '));
+      H.eq(stray.length, 0, 'outside links: ' + stray.slice(0, 3).join(', '));
     });
   };
 })();

@@ -7,11 +7,11 @@
 <link rel="stylesheet" href="harness.css">
 </head>
 <body>
-<h1>Тесты движка</h1>
-<p class="sub">Гоняются на <code>brands/_template</code>: движок обязан работать с любым брендом.
-Если они зелёные на SDM и красные на шаблоне — движок оброс зависимостью от SDM.
-<button id="rerun">Перезапустить</button></p>
-<div id="summary">Запускаю…</div>
+<h1>Engine tests</h1>
+<p class="sub">Run against <code>brands/_template</code>: the engine must work with any brand.
+If they pass on SDM and fail on the template — the engine picked up an SDM dependency.
+<button id="rerun">Rerun</button></p>
+<div id="summary">Running…</div>
 <div id="out"></div>
 <div id="stage"></div>
 
@@ -23,17 +23,17 @@
   function D() { return H.gallery().doc; }
   function G() { return H.gallery().win; }
 
-  H.g('Каркас');
-  H.t('галерея отрисовала все секции', function () {
+  H.g('Shell');
+  H.t('gallery rendered all sections', function () {
     var drawn = D().querySelectorAll('.g-section').length;
     var declared = G().GALLERY.length;
-    H.ok(drawn > 0, 'галерея не отрисовала ни одной секции');
-    H.eq(drawn, declared, 'отрисовано секций против объявленных');
+    H.ok(drawn > 0, 'gallery rendered zero sections');
+    H.eq(drawn, declared, 'rendered sections vs declared');
   });
-  H.t('нет ошибок в консоли галереи', function () {
-    H.eq((G().__errors || []).length, 0, 'ошибок ' + JSON.stringify(G().__errors || []));
+  H.t('no errors in gallery console', function () {
+    H.eq((G().__errors || []).length, 0, 'errors ' + JSON.stringify(G().__errors || []));
   });
-  H.t('все картинки во фреймах загрузились', function () {
+  H.t('all images in frames loaded', function () {
     var broken = [];
     D().querySelectorAll('iframe').forEach(function (f) {
       try {
@@ -42,70 +42,71 @@
         });
       } catch (e) {}
     });
-    H.eq(broken.length, 0, 'битые: ' + broken.slice(0, 3).join(', '));
+    H.eq(broken.length, 0, 'broken: ' + broken.slice(0, 3).join(', '));
   });
-  H.t('обе панели в одном масштабе', function () {
+  H.t('both panes at same scale', function () {
     var m = D().querySelector('.g-pane--mobile iframe');
     var d = D().querySelector('.g-pane--desktop iframe');
-    H.eq(m.style.transform, d.style.transform, 'масштабы панелей');
+    H.eq(m.style.transform, d.style.transform, 'pane scales');
   });
 
-  H.g('Навигация');
-  H.t('наверху в шапке общий заголовок', function () {
+  H.g('Navigation');
+  H.t('topbar shows default title at top', function () {
     var t1 = D().getElementById('g-current');
-    H.ok(t1, 'нет заголовка в шапке');
+    H.ok(t1, 'no title in topbar');
     G().scrollTo(0, 0);
     G().GALLERY_API.spy();
-    H.eq(t1.textContent.trim(), G().ENGINE_BRAND.t('topbar.defaultTitle'),
-       'в шапке не заголовок по умолчанию');
+    H.eq(t1.textContent.trim(),
+      (G().BRAND_MANIFEST.description && G().BRAND_MANIFEST.description.trim()) ||
+        G().ENGINE_BRAND.t('topbar.defaultTitle'),
+       'topbar is not the default title');
   });
-  H.t('прокрутка меняет якорь, заголовок совпадает с ним', function () {
-    /* Проверяем согласованность, а не конкретную секцию: у короткого бренда
-       последняя секция физически не может доехать до верха вьюпорта, и
-       требовать именно её — значит проверять высоту страницы, а не спай. */
+  H.t('scroll updates anchor, title matches', function () {
+    /* Check consistency, not a specific section: on a short brand the last
+       section physically cannot reach the top of the viewport, and requiring
+       it would test page height, not spy. */
     var before = G().location.hash;
     var sections = D().querySelectorAll('.g-section');
     sections[sections.length - 1].scrollIntoView();
-    // спай считает по скроллу; во фрейме, обрезанном родителем, события
-    // приходят с задержкой — просим пересчитать явно
+    // spy uses scroll geometry; in a parent-clipped frame events lag — force recalc
     G().GALLERY_API.spy();
     return H.wait(400).then(function () {
       var hash = G().location.hash;
-      H.ok(hash && hash !== before, 'якорь не изменился: ' + before + ' → ' + hash);
+      H.ok(hash && hash !== before, 'anchor did not change: ' + before + ' → ' + hash);
       var current = D().querySelector(hash + ' .g-section-head h2');
-      H.ok(current, 'якорь указывает на несуществующую секцию ' + hash);
+      H.ok(current, 'anchor points to missing section ' + hash);
       H.eq(D().getElementById('g-current').textContent.trim(),
-         current.textContent.trim(), 'заголовок в шапке не совпал с секцией из якоря');
+         current.textContent.trim(), 'topbar title does not match anchor section');
     });
   });
-  H.t('переключателя CSS больше нет', function () {
-    H.eq(D().getElementById('g-switch'), null, '#g-switch остался в разметке');
+  H.t('CSS switcher removed', function () {
+    H.eq(D().getElementById('g-switch'), null, '#g-switch still in markup');
   });
 
-  H.g('Сравнить с кодом');
-  H.t('без приложенного CSS тоггл заблокирован', function () {
+  H.g('Compare with code');
+  H.t('diff toggle disabled without attached CSS', function () {
     var b = D().getElementById('g-diff');
-    H.ok(b, 'нет тоггла');
-    H.eq(b.type, 'checkbox', 'это не переключатель');
-    H.eq(b.disabled, true, 'должен быть заблокирован, пока нет файла');
+    H.ok(b, 'no toggle');
+    H.eq(b.type, 'checkbox', 'not a checkbox');
+    H.eq(b.disabled, true, 'should be disabled until file attached');
     G().GALLERY_API.setDiff(true);
-    H.eq(b.checked, false, 'включился без файла');
+    H.eq(b.checked, false, 'turned on without file');
   });
-  H.t('после загрузки CSS тоггл разблокирован', function () {
-    /* Раньше тест тянул styles.css сайта — то есть движковый тест зависел от
-       чужого репозитория. Достаточно любого валидного CSS. */
+  H.t('diff toggle enabled after CSS load', function () {
+    /* Previously the test pulled the site's styles.css — an engine test depending
+       on a foreign repo. Any valid CSS is enough. */
     return Promise.resolve('.t-btn { height: 41px }').then(function (text) {
         G().GALLERY_API.setCompareCss(text, 'probe.css');
-        H.eq(D().getElementById('g-diff').disabled, false, 'остался заблокированным');
-        H.eq(G().GALLERY_API.hasCompareCss(), true, 'CSS не сохранён');
+        H.eq(D().getElementById('g-diff').disabled, false, 'still disabled');
+        H.eq(G().GALLERY_API.hasCompareCss(), true, 'CSS not saved');
         G().GALLERY_API.setDiff(true);
-        H.eq(D().getElementById('g-diff').checked, true, 'не включился');
+        H.eq(D().getElementById('g-diff').checked, true, 'did not turn on');
       });
   });
-  H.t('панели различий считаются', function () {
-    // сборка ленивая и завязана на прокрутку — просим раздел посчитаться явно
-    H.ok(G().GALLERY_API, 'галерея не отдала GALLERY_API');
-    H.ok(G().GALLERY_API.diffSection('buttons') > 0, 'в разделе нет примеров');
+  H.t('diff panels compute', function () {
+    // lazy build tied to scroll — ask section to compute explicitly
+    H.ok(G().GALLERY_API, 'gallery did not expose GALLERY_API');
+    H.ok(G().GALLERY_API.diffSection('buttons') > 0, 'no examples in section');
     return H.wait(9000).then(function () {
       var boxes = D().querySelectorAll('#buttons .g-example');
       var got = 0, stuck = 0, err = 0;
@@ -117,131 +118,140 @@
         if (h.indexOf(G().ENGINE_BRAND.t('diff.computing')) >= 0) stuck++;
         if (h.indexOf(G().ENGINE_BRAND.t('diff.failed')) >= 0) err++;
       });
-      H.ok(got > 0, 'панелей в секции нет');
-      H.eq(stuck, 0, stuck + ' зависли на «Считаю различия…»');
-      H.eq(err, 0, err + ' завершились ошибкой');
+      H.ok(got > 0, 'no panels in section');
+      H.eq(stuck, 0, stuck + ' stuck on "Computing differences…"');
+      H.eq(err, 0, err + ' failed with error');
     });
   });
-  H.t('выбор раздела сбрасывает режим', function () {
+  H.t('section pick resets diff mode', function () {
     G().GALLERY_API.setDiff(true);
-    D().querySelector('#g-nav a[href^="#"]').click();
+    D().querySelector('#g-nav a[data-section-id]').click();
     return H.wait(300).then(function () {
-      H.ok(!D().getElementById('g-diff').checked, 'тоггл остался включённым');
-      H.eq(D().querySelectorAll('.g-diff').length, 0, 'панели не убрались');
+      H.ok(!D().getElementById('g-diff').checked, 'toggle stayed on');
+      H.eq(D().querySelectorAll('.g-diff').length, 0, 'panels not removed');
     });
   });
 
 
-  /* ── Проверки, которых раньше не было ────────────────────────────── */
+  /* ── Checks that were missing before ────────────────────────────── */
 
-  H.g('Устойчивость');
-  H.t('токен-секции собраны по дескриптору бренда', function () {
+  H.g('Resilience');
+  H.t('token sections match brand descriptor', function () {
     var declared = Object.keys(G().BRAND_TOKENS || {}).length;
     var drawn = G().GALLERY.filter(function (s) {
       return ['colors', 'radii', 'shadows', 'blur', 'typography', 'sizes'].indexOf(s.id) >= 0;
     }).length;
-    H.eq(drawn, declared, 'секций токенов против объявленных в token-map');
+    H.eq(drawn, declared, 'token sections vs token-map');
   });
 
-  H.t('вкладка CSS в оверлее непустая', function () {
+  H.t('overlay CSS tab is non-empty', function () {
     var pick = D().querySelector('[data-pick]') ||
                (function () {
                  var f = D().querySelector('iframe');
                  try { return f.contentDocument.querySelector('[data-pick]'); } catch (e) { return null; }
                })();
-    H.ok(pick, 'ни одного data-pick — не на чем открыть оверлей');
+    H.ok(pick, 'no data-pick to open overlay');
     pick.click();
     return H.wait(300).then(function () {
       var body = D().getElementById('g-ov-body');
-      H.ok(body && body.textContent.trim().length > 0, 'оверлей пуст');
+      H.ok(body && body.textContent.trim().length > 0, 'overlay empty');
       var close = D().getElementById('g-ov-close');
       if (close) close.click();
     });
   });
 
-  H.t('mountFrame — единственный способ создать превью', function () {
-    /* Инвариант держался договорённостью. Любой iframe в галерее обязан быть
-       нашим фреймом с параметром brand: иначе кто-то смонтировал превью в
-       обход и оно не получит ни стилей бренда, ни сообщений. */
+  H.t('mountFrame is the only preview path', function () {
+    /* Invariant held by convention. Every gallery iframe must be our frame with
+       brand=: otherwise someone mounted a preview bypassing it and it gets no
+       brand styles or messages. */
     var bad = [];
     D().querySelectorAll('iframe').forEach(function (f) {
-      if (f.src.indexOf('_frame.html') < 0 || f.src.indexOf('brand=') < 0) bad.push(f.src || '(без src)');
+      if (f.src.indexOf('_frame.html') < 0 || f.src.indexOf('brand=') < 0) bad.push(f.src || '(no src)');
     });
-    H.eq(bad.length, 0, 'мимо mountFrame: ' + bad.slice(0, 2).join(', '));
+    H.eq(bad.length, 0, 'bypassed mountFrame: ' + bad.slice(0, 2).join(', '));
   });
 
-  H.t('пустой файл токенов даёт подсказку, а не пустоту', function () {
-    /* Проверяем поведение, а не текст: движок обязан объяснить, почему пусто. */
+  H.t('broken tokens file shows hint, not blank', function () {
+    /* Test behaviour, not copy: engine must explain why it is empty. */
     var hint = G().ENGINE_BRAND.t('token.brokenTokens');
-    H.ok(hint && hint !== 'token.brokenTokens', 'нет строки подсказки в языковом паке');
+    H.ok(hint && hint !== 'token.brokenTokens', 'no hint string in locale pack');
     H.ok(G().ENGINE_SPECS.vars.ready || G().ENGINE_SPECS.vars.broken,
-       'парсер не сообщил ни о готовности, ни о поломке');
+       'parser reported neither ready nor broken');
   });
 
-  H.g('Язык');
-  H.t('бренд без locale открывается по-английски', function () {
+  H.g('Locale');
+  H.t('brand without locale opens in English', function () {
     var m = G().BRAND_MANIFEST;
-    if (m.locale) { H.ok(true, 'у бренда задан locale — проверка не применима'); return; }
+    if (m.locale) { H.ok(true, 'brand has locale — check N/A'); return; }
     H.eq(D().querySelector('[data-i18n="topbar.attach"]').textContent, 'Attach CSS');
   });
-  H.t('отсутствующий ключ падает на английский, а не в пустоту', function () {
+  H.t('missing key falls back to key, not empty', function () {
     var t = G().ENGINE_BRAND.t;
-    H.ok(t('overlay.copyHtml').length > 0, 'пустая строка вместо значения');
-    H.eq(t('no.such.key'), 'no.such.key', 'несуществующий ключ должен возвращать сам ключ');
+    H.ok(t('overlay.copyHtml').length > 0, 'empty string instead of value');
+    H.eq(t('no.such.key'), 'no.such.key', 'missing key should return the key');
   });
 
-  H.g('Переключатель');
-  H.t('список сторибуков собран и активный отмечен', function () {
-    var rows = D().querySelectorAll('#g-suite-list .g-mi');
-    H.ok(rows.length > 0, 'список пуст — не прочитан brands/index.json');
-    var ticked = [].filter.call(rows, function (r) {
-      return r.querySelector('.tick').textContent.trim() === '✓';
-    });
-    H.eq(ticked.length, 1, 'отмеченных сторибуков должно быть ровно один');
-    H.ok(ticked[0].querySelector('.grow').textContent.trim().length > 0, 'у активного пустое имя');
+  H.g('Switcher');
+  H.t('workspace menu: Home instead of libra list', function () {
+    var doc = D();
+    doc.getElementById('g-mark').click();
+    H.ok(doc.getElementById('g-home'), 'no Home item');
+    H.ok(!doc.getElementById('g-suite-list'), 'libra list still in menu');
+    H.eq(doc.getElementById('g-home').textContent.trim(), G().ENGINE_BRAND.t('menu.home'));
   });
 
-  H.t('удаление подписано тем, что оно на самом деле сделает', function () {
-    /* Под статикой папку удалить нельзя, и кнопка обязана говорить
-       «убрать из галереи»; со своим сервером — «удалить». Врать о
-       последствиях необратимого действия нельзя ни в одну сторону. */
+  H.t('delete label matches actual action', function () {
+    /* Under static hosting a folder cannot be deleted; button must say "remove
+       from gallery"; with our server — "delete". Lying about irreversible actions
+       is forbidden either way. */
     var G_ = G();
     var del = D().getElementById('g-delete');
-    H.ok(del, 'нет пункта удаления');
-    H.eq(del.disabled, false, 'пункт удаления заблокирован');
+    H.ok(del, 'no delete item');
+    H.eq(del.disabled, false, 'delete item disabled');
 
     var remove = G_.ENGINE_BRAND.t('settings.remove');
     var erase  = G_.ENGINE_BRAND.t('settings.delete');
     var label  = del.textContent.trim();
-    H.ok(label === remove || label === erase, 'непонятная подпись: ' + label);
+    H.ok(label === remove || label === erase, 'unclear label: ' + label);
 
     return G_.ENGINE_REGISTRY.serverWritable().then(function (writable) {
-      if (!writable) H.eq(label, remove, 'обещает удаление там, где его не будет');
+      if (!writable) H.eq(label, remove, 'promises delete where it cannot happen');
     });
   });
 
-  H.t('удаление требует ввести слово', function () {
+  H.t('delete requires confirmation word', function () {
     var doc = D();
     doc.getElementById('g-delete').click();
     return H.wait(200).then(function () {
-      doc.getElementById('g-settings-delete').click();
-      return H.wait(200);
-    }).then(function () {
+      H.eq(doc.getElementById('g-settings-scrim').hidden, true,
+         'opened settings instead of confirm');
+      H.ok(!doc.getElementById('g-confirm-scrim').hidden, 'confirm not shown');
       var ok = doc.getElementById('g-confirm-ok');
       var input = doc.getElementById('g-confirm-input');
-      H.eq(ok.disabled, true, 'подтверждение доступно с пустым полем');
+      H.eq(ok.disabled, true, 'confirm enabled with empty field');
       input.value = 'delet';
       input.dispatchEvent(new (D().defaultView.Event)('input'));
-      H.eq(ok.disabled, true, 'приняло неполное слово');
-      /* Само удаление не выполняем: тест не должен стирать бренд. */
+      H.eq(ok.disabled, true, 'accepted partial word');
+      /* Do not perform deletion: test must not erase the brand. */
       doc.getElementById('g-confirm-cancel').click();
     });
   });
 
-  H.g('Сравнение с кодом');
+  H.t('duplicate opens dialog, not settings', function () {
+    var doc = D();
+    doc.getElementById('g-mark').click();
+    doc.getElementById('g-duplicate').click();
+    return H.wait(200).then(function () {
+      H.eq(doc.getElementById('g-dup-scrim').hidden, false, 'duplicate dialog did not open');
+      H.eq(doc.getElementById('g-settings-scrim').hidden, true, 'opened settings');
+      doc.getElementById('g-dup-cancel').click();
+    });
+  });
 
-  /* Подкладываем CSS строкой и смотрим пометки в DOM: внутренние функции
-     наружу не вынесены, да и проверять надо то, что видит человек. */
+  H.g('Code comparison');
+
+  /* Inject CSS as a string and inspect DOM notes: internal functions are not
+     exported, and we should verify what the user sees. */
   function withCompare(css) {
     var G_ = G();
     G_.GALLERY_API.setCompareCss(css, 'probe.css');
@@ -254,48 +264,48 @@
       function (el) { return el.textContent.trim(); });
   }
 
-  H.t('без сравнения у токенов нет ни одной пометки', function () {
+  H.t('tokens have no notes without compare', function () {
     G().GALLERY_API.setDiff(false);
     return H.wait(500).then(function () {
-      H.eq(notes('colors').length, 0, 'палитра говорит о коде, когда её не спрашивали');
-      H.eq(notes('sizes').length, 0, 'размеры говорят о коде, когда их не спрашивали');
+      H.eq(notes('colors').length, 0, 'colors notes code when not asked');
+      H.eq(notes('sizes').length, 0, 'sizes notes code when not asked');
     });
   });
 
-  H.t('расхождение значения помечено как расхождение', function () {
-    /* У шаблона --blue синий; подкладываем красный под тем же именем. */
+  H.t('value mismatch marked as mismatch', function () {
+    /* Template has --blue blue; inject red under the same name. */
     return withCompare(':root { --blue: #FF0000; }').then(function () {
       var warn = notes('colors').filter(function (text) {
         return text.indexOf('#FF0000') >= 0 || text.toUpperCase().indexOf('FF0000') >= 0;
       });
-      H.ok(warn.length > 0, 'другое значение не показано: ' + notes('colors').join(' · '));
+      H.ok(warn.length > 0, 'other value not shown: ' + notes('colors').join(' · '));
     });
   });
 
-  H.t('токен под другим именем находится по значению', function () {
+  H.t('token found by value under other name', function () {
     var G_ = G();
-    /* Имени --r-card в подложенном файле нет, а значение 12px есть под своим:
-       так устроен боевой код, где радиусы живут отдельным набором. */
+    /* No --r-card in injected file; 12px exists under its own name — as in
+       production where radii live in a separate set. */
     return withCompare(':root { --m-radius-12: 12px; }').then(function () {
       var found = notes('radii').filter(function (text) {
         return text.indexOf('--m-radius-12') >= 0;
       });
-      H.ok(found.length > 0, 'не нашёлся по значению: ' + notes('radii').join(' · '));
+      H.ok(found.length > 0, 'not found by value: ' + notes('radii').join(' · '));
     });
   });
 
-  H.t('то же значение другого рода находкой не считается', function () {
-    /* Главный кейс: 12px у радиуса и 12px у заголовка — разные вещи, и
-       предлагать одно как имя другого хуже, чем промолчать. */
+  H.t('same value of different kind not matched', function () {
+    /* Main case: 12px for radius and 12px for heading are different things;
+       suggesting one as the name of the other is worse than silence. */
     return withCompare(':root { --font-h1-size: 12px; }').then(function () {
       var wrong = notes('radii').filter(function (text) {
         return text.indexOf('--font-h1-size') >= 0;
       });
-      H.eq(wrong.length, 0, 'радиусу предложено имя из типографики');
+      H.eq(wrong.length, 0, 'radius offered typography name');
     });
   });
 
-  H.t('колонка «в приложенном CSS» появляется вместе со сравнением', function () {
+  H.t('"in attached CSS" column appears with compare', function () {
     var G_ = G();
     var heads = function () {
       return [].map.call(D().querySelectorAll('#sizes table th'),
@@ -304,69 +314,76 @@
     var label = G_.ENGINE_BRAND.t('tok.inCode');
 
     return withCompare(':root { --space-m: 16px; }').then(function () {
-      H.ok(heads().indexOf(label) >= 0, 'колонки нет при включённом сравнении');
+      H.ok(heads().indexOf(label) >= 0, 'column missing with compare on');
       G_.GALLERY_API.setDiff(false);
       return H.wait(500);
     }).then(function () {
-      H.eq(heads().indexOf(label), -1, 'колонка осталась после выключения');
+      H.eq(heads().indexOf(label), -1, 'column remained after compare off');
     });
   });
 
-  H.g('Новый сторибук');
+  H.g('New storybook');
 
-  H.t('пункт меню открывает диалог, «Отмена» закрывает', function () {
-    /* Обе кнопки уже теряли обработчики при перестановке кода, и заметно
-       это было только руками: пункт молча ничего не делал. */
+  H.t('menu item opens dialog, Cancel closes', function () {
+    /* Both buttons already lost handlers when code was rearranged — only
+       noticeable by hand: menu item silently did nothing. */
     var doc = D();
     doc.getElementById('g-mark').click();
     doc.getElementById('g-new').click();
     return H.wait(250).then(function () {
-      H.eq(doc.getElementById('g-new-scrim').hidden, false, 'диалог не открылся');
+      H.eq(doc.getElementById('g-new-scrim').hidden, false, 'dialog did not open');
       doc.getElementById('g-new-close').click();
       return H.wait(200);
     }).then(function () {
-      H.eq(doc.getElementById('g-new-scrim').hidden, true, '«Отмена» не закрыла диалог');
+      H.eq(doc.getElementById('g-new-scrim').hidden, true, 'Cancel did not close dialog');
     });
   });
 
-  H.t('визард: выбор сценария → второй шаг → назад', function () {
+  H.t('wizard: pick scenario → step 2 → back', function () {
     var doc = D();
     doc.getElementById('g-mark').click();
     doc.getElementById('g-new').click();
 
     return H.wait(250).then(function () {
       var choices = doc.querySelector('#g-new-scrim .g-choices');
-      H.ok(choices.offsetHeight > 0, 'на первом шаге не видно сценариев');
-      H.eq(doc.getElementById('g-new-step2').offsetHeight, 0, 'второй шаг показан сразу');
+      H.ok(choices.offsetHeight > 0, 'scenarios not visible on step 1');
+      H.eq(doc.getElementById('g-new-step2').offsetHeight, 0, 'step 2 shown immediately');
 
       doc.getElementById('g-new-blank').click();
       return H.wait(200);
     }).then(function () {
-      /* Первый шаг обязан уйти: два экрана сразу — это не визард. */
+      /* First step must leave: two screens at once is not a wizard. */
       H.eq(doc.querySelector('#g-new-scrim .g-choices').offsetHeight, 0,
-         'сценарии остались на втором шаге');
-      H.ok(doc.getElementById('g-new-step2').offsetHeight > 0, 'второй шаг не показан');
-      H.ok(doc.getElementById('g-new-name').value.length > 0, 'имя не предзаполнено');
+         'scenarios still visible on step 2');
+      H.ok(doc.getElementById('g-new-step2').offsetHeight > 0, 'step 2 not shown');
+      H.ok(doc.getElementById('g-new-name').value.length > 0, 'name not prefilled');
+      H.eq(doc.getElementById('g-new-address-row').hidden, false, 'address hidden with name filled');
       H.ok(/^\/[a-z0-9-]+$/.test(doc.getElementById('g-new-address').textContent),
-         'адрес не показан: ' + doc.getElementById('g-new-address').textContent);
+         'address not shown: ' + doc.getElementById('g-new-address').textContent);
 
       doc.getElementById('g-new-back').click();
       return H.wait(200);
     }).then(function () {
       H.ok(doc.querySelector('#g-new-scrim .g-choices').offsetHeight > 0,
-         '«Назад» не вернул к выбору сценария');
+         'Back did not return to scenario pick');
+
+      doc.getElementById('g-new-css').click();
+      return H.wait(200);
+    }).then(function () {
+      H.eq(doc.getElementById('g-new-address-row').hidden, true,
+         'address visible before name in CSS scenario');
       doc.getElementById('g-new-close').click();
     });
   });
 
-  H.t('адрес считается из имени и транслитерируется', function () {
+  H.t('address derived from name and transliterated', function () {
     var G_ = G();
     H.eq(G_.ENGINE_SLUG.slug('New storybook'), 'new-storybook');
-    H.eq(G_.ENGINE_SLUG.slug('Мой бренд'), 'moy-brend', 'кириллица не транслитерируется');
-    H.eq(G_.ENGINE_SLUG.slug('   ---   '), 'storybook', 'пустое имя без отката');
+    H.eq(G_.ENGINE_SLUG.slug('\u041c\u043e\u0439 \u0431\u0440\u0435\u043d\u0434'), 'moy-brend', 'Cyrillic not transliterated');
+    H.eq(G_.ENGINE_SLUG.slug('   ---   '), 'storybook', 'empty name without fallback');
   });
 
-  /* Контракт: бренд обязан объявить токены, без которых не встаёт хром. */
+  /* Contract: brand must declare tokens required for chrome to render. */
   H.contractTests();
 
   H.run();

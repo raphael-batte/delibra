@@ -1,25 +1,25 @@
 /* ==========================================================================
-   SDM — авторский слой секций.
+   SDM — section authoring layer.
 
-   Здесь живут сборщики разметки (cover, prod, perk, step, …) и определения
-   секций. Это ЛОГИКА, поэтому её место в репозитории, а не в пакете бренда:
-   пакет содержит только данные и метаданные, иначе открыть присланный
-   сторибук значило бы выполнить чужой код.
+   Markup builders (cover, prod, perk, step, …) and section definitions live
+   here. This is LOGIC, so it belongs in the repo, not in the brand package:
+   packages hold data and metadata only; otherwise opening a shared storybook
+   would mean running someone else's code.
 
-   Правки делаются здесь, затем:
+   Edit here, then run:
        node tools/emit-sections.js sdm
-   и результат ложится в brands/sdm/sections.json.
+   Output lands in brands/sdm/sections.json (or DELIBRA_DATA when migrated).
 
-   Строки каталога (btnRow / tileRow / specRow) сюда не тянем: это хром
-   движка, и он остаётся дескриптором `rows` — иначе его вёрстка окажется
-   запечённой в каждом пакете.
+   Catalog rows (btnRow / tileRow / specRow) stay out of here — that chrome is
+   engine-owned via the `rows` descriptor; baking it into every package would
+   be wrong.
    ========================================================================== */
 'use strict';
 
 module.exports = function () {
 
-  /* Из движка нужен единственный хелпер — flex-ряд для мелких примеров
-     вроде бейджей. Остальная разметка ниже — брендовая. */
+  /* Only engine helper used here — flex row for small specimens like badges.
+     Everything below is brand-specific markup. */
   var row = require('../../packages/engine/rows.js').row;
 
 

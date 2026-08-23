@@ -8,30 +8,29 @@
 <title>Design System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Шрифт и токены подставляет брендовый загрузчик внизу страницы:
-     до чтения манифеста движок не знает ни гарнитуры, ни путей.
-     Токены нужны самой галерее (свотчи, типографика) — но НЕ участвуют
-     в рендере компонентов: те живут внутри iframe со своим набором стилей. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Brand font and tokens are injected by the brand loader at the bottom of the page:
+     until the manifest is read the engine knows neither typeface nor paths.
+     Tokens are needed by the gallery itself (swatches, typography) — but do NOT
+     participate in component rendering: those live inside iframe with their own styles. -->
 
 <style>
 /* ==========================================================================
-   Хром галереи. Префикс g- — ничего отсюда не попадает в компоненты.
+   Gallery chrome. g- prefix — nothing here reaches components.
    ========================================================================== */
-/* --g-sidebar-w — ПОЛНАЯ ширина колонки вместе с падингами и бордером:
-   от неё отступает .g-main, поэтому она обязана совпадать с тем, что
-   сайдбар занимает на экране. Отсюда box-sizing: border-box ниже —
-   при content-box падинги и полоса прокрутки прибавлялись к ширине,
-   сайдбар занимал 257px против объявленных 232, и шапка на эти 25px
-   уезжала под дерево. */
-/* [hidden] обязан прятать. Любое правило с display у элемента сильнее
-   браузерного [hidden] — на этом уже трижды ловились: скрытая настройка,
-   вкладки оверлея и выбор сценария в диалоге создания продолжали
-   показываться. Одно правило вместо трёх заплаток. */
+/* --g-sidebar-w is the FULL column width including padding and border:
+   .g-main offsets from it, so it must match what the sidebar occupies on screen.
+   Hence box-sizing: border-box below — with content-box padding and scrollbar
+   added to width, sidebar took 257px vs declared 232, and the header slid 25px
+   under the tree. */
+/* [hidden] must hide. Any display rule on an element beats browser [hidden] — we
+   caught this three times: hidden setting, overlay tabs, and scenario picker in
+   the create dialog kept showing. One rule instead of three patches. */
 [hidden] { display: none !important; }
 
-/* Собственные значения хрома. Раньше галерея целиком зависела от токенов
-   бренда: без открытой системы она превращалась в серое ничто — ни фона, ни
-   шрифта, ни границ. Бренд эти же имена переопределяет, когда загрузится. */
+/* Own chrome values. Previously the gallery depended entirely on brand tokens:
+   without an open system it turned grey — no background, font, or borders. The
+   brand overrides these same names when it loads. */
 :root {
   --bg:            #FBFCFD;
   --white-pure:    #FFFFFF;
@@ -41,6 +40,7 @@
   --border:        #E3E8F0;
   --text-primary:  #333333;
   --text-heading:  #000000;
+  --text-secondary:#555555;
   --text-muted:    #757575;
   --text-error:    #DF3500;
   --green:         #17AA26;
@@ -49,17 +49,17 @@
 
 :root {
   --g-sidebar-w: 257px;
-  --g-gutter:     32px;   /* поле контента внутри панели */
+  --g-gutter:     32px;   /* content padding inside the panel */
   --g-scrollbar:   0px;
-  --g-header-h:   56px;   /* высота обеих шапок: топбара и строки логотипа */
-  --g-inset:       8px;   /* поле панели от краёв окна */
-  --g-panel-r:    12px;   /* скругление канваса — из макета */
+  --g-header-h:   56px;   /* height of both headers: topbar and logo row */
+  --g-inset:       8px;   /* panel inset from window edges */
+  --g-panel-r:    12px;   /* canvas corner radius — from the design */
 }
 
 html { margin: 0; }
 body {
-  /* Страница не скроллится: прокрутка живёт внутри панели контента,
-     поэтому её полоса оказывается внутри скругления, а не по краю окна. */
+  /* Page does not scroll: scrolling lives inside the content panel, so its bar
+     sits inside the rounded corner, not along the window edge. */
   margin: 0; height: 100vh; overflow: hidden;
   background: var(--bg);
   color: var(--text-primary);
@@ -67,23 +67,23 @@ body {
   font-size: 14px;
 }
 
-/* ── Сайдбар ───────────────────────────────────────────────────────────── */
+/* ── Sidebar ───────────────────────────────────────────────────────────── */
 .g-sidebar {
   position: fixed; inset: 0 auto 0 0;
   box-sizing: border-box;
   width: var(--g-sidebar-w);
   padding: 0 16px 40px;
   overflow-y: auto;
-  background: transparent;   /* стоит на фоне страницы, панель рядом белая */
+  background: transparent;   /* sits on page background; panel beside is white */
   z-index: 100;
 }
 .g-sidebar-logo {
   margin: 0 0 4px 8px;
   font-size: 13px; font-weight: 700; color: var(--text-heading);
 }
-/* Заголовок группы набран как сами пункты — тот же размер и начертание,
-   только бледнее. Мелкие прописные с разрядкой вводят второй типографский
-   регистр там, где достаточно тона. */
+/* Group title matches nav items — same size and weight, just paler. Small caps
+   with letter-spacing would introduce a second typographic register where tone
+   is enough. */
 .g-sidebar-group {
   padding: 16px 8px 4px;
   font-size: 13px; font-weight: 400; color: var(--text-muted);
@@ -96,22 +96,21 @@ body {
 .g-sidebar a:hover { background: var(--card-gray); }
 .g-sidebar a.is-active { background: var(--card-gray); color: var(--text-heading); font-weight: 600; }
 
-/* ── Верхняя панель ────────────────────────────────────────────────────── */
+/* ── Top bar ────────────────────────────────────────────────────── */
 .g-topbar {
   position: relative; z-index: 60;
   display: flex; align-items: center; gap: 16px;
-  /* Высота ровно 56 — как строка логотипа в сайдбаре: обе шапки стоят на
-     одной горизонтали.
-     Шапка — отдельная строка панели, а не наложение поверх прокрутки: тогда
-     полоса начинается под ней. Фон сплошной: размывать нечего, контент под
-     шапку не уезжает, а полупрозрачность без этого — просто светлее белого. */
+  /* Height exactly 56 — same as logo row in sidebar: both headers align.
+     Header is its own panel row, not overlay on scroll: then the bar starts
+     below it. Solid background: nothing to blur, content does not slide under,
+     and without that semi-transparent is just lighter white. */
   flex: none; height: var(--g-header-h);
   padding: 0 var(--g-gutter);
   background: var(--white-pure);
   border-bottom: 1px solid var(--border);
   border-radius: var(--g-panel-r) var(--g-panel-r) 0 0;
 }
-/* Заголовок текущего раздела — слева, меняется при прокрутке */
+/* Current section title — left, updates on scroll */
 .g-current {
   margin: 0;
   font-size: 15px;
@@ -121,7 +120,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Приложить CSS: скрытый input + кнопка-обёртка */
+/* Attach CSS: hidden input + wrapper button */
 .g-attach { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .g-attach input { position: absolute; opacity: 0; width: 0; height: 0; }
 .g-attach__btn {
@@ -132,10 +131,18 @@ body {
 .g-attach:hover .g-attach__btn { border-color: var(--text-primary); }
 .g-attach__name { font-size: 11px; color: var(--text-muted); max-width: 220px;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-attach-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.g-attach-row .g-attach { margin-left: 0; }
+.g-attach__remove {
+  border: 0; border-radius: 6px; background: transparent; cursor: pointer;
+  padding: 4px 8px; font-family: var(--font-family); font-size: 12px; font-weight: 500;
+  color: var(--text-muted);
+}
+.g-attach__remove:hover { color: var(--text-error); background: var(--card-gray, var(--bg)); }
 
-/* Тоггл «Сравнить с кодом» — выключен, пока не приложен CSS.
-   Прижат к правому краю шапки: раньше его туда отодвигала кнопка
-   «Приложить CSS» своим margin-left:auto, а она уехала в настройки. */
+/* "Compare with code" toggle — disabled until CSS is attached.
+   Flush to the right of the header: previously "Attach CSS" pushed it there with
+   margin-left:auto before moving to settings. */
 .g-topbar .g-toggle { margin-left: auto; }
 
 .g-toggle {
@@ -151,10 +158,9 @@ body {
   transition: background-color .18s ease;
 }
 .g-toggle__track::after {
-  /* Положение ползунка — не отступ, а геометрия: он центрируется в треке.
-     Центрируем трансформом, а не числом: иначе при правке высоты трека
-     кружок снова сползёт вниз, как уже случилось при посадке отступов
-     на сетку 4. */
+  /* Thumb position is geometry, not margin: centered in the track.
+     Center with transform, not a pixel value: otherwise when track height changes
+     the knob drifts down again, as when padding was snapped to a 4px grid. */
   content: ""; position: absolute; top: 50%; left: 2px;
   width: 16px; height: 16px; border-radius: 50%;
   background: var(--white-pure);
@@ -169,8 +175,8 @@ body {
 .g-toggle.is-disabled { opacity: .45; cursor: not-allowed; }
 .g-toggle.is-disabled .g-toggle__track { background: var(--border); }
 
-/* Своя подсказка: нативный title на лейбле с disabled-инпутом
-   браузер показывает не всегда. */
+/* Custom hint: native title on a label with a disabled input
+   is not always shown. */
 .g-toggle { position: relative; }
 .g-toggle.is-disabled::after {
   content: attr(data-hint);
@@ -186,7 +192,7 @@ body {
 .g-toggle.is-disabled:hover::after { opacity: 1; visibility: visible; }
 .g-toggle input:focus-visible + .g-toggle__track { outline: 2px solid var(--text-primary); outline-offset: 2px; }
 
-/* ── Панель различий ─────────────────────────────────────────────────── */
+/* ── Diff panel ─────────────────────────────────────────────────── */
 .g-diff {
   margin-top: 8px;
   border: 1px solid var(--border);
@@ -210,12 +216,11 @@ body {
 .g-diff .was { color: #b26a00; }
 .g-diff .now { color: var(--green); }
 .g-diff-empty { padding: 8px 12px; font-size: 12px; color: var(--text-muted); }
-/* Масштаб выбирается прямо в шапке панели, на месте подписи «масштаб 75%» */
+/* Scale is chosen in the panel header, where "scale 75%" used to sit */
 .g-pane-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .g-scale {
-  /* Системную стрелку выключаем и рисуем свою: у нативной нельзя задать
-     ни размер, ни отступ от края, из-за чего она наезжала на текст.
-     Поля симметричные — 8 слева до текста, 8 справа до шеврона. */
+  /* Hide native arrow and draw our own: native size and edge inset cannot be set,
+     so it overlapped text. Symmetric padding — 8 left to text, 8 right to chevron. */
   appearance: none; -webkit-appearance: none;
   height: 24px; padding: 0 24px 0 8px;
   border: 1px solid var(--border); border-radius: 6px;
@@ -225,18 +230,24 @@ body {
 }
 .g-topbar-note b { color: var(--text-error); }
 
-/* ── Основная колонка ──────────────────────────────────────────────────── */
-/* Контент живёт в скруглённой панели со своей прокруткой: страница целиком
-   не скроллится, полоса остаётся внутри панели и не режет макет по краю окна.
-   Сайдбар при этом стоит на фоне страницы, а не на белом полотне. */
+/* ── Main column ──────────────────────────────────────────────────── */
+/* Content lives in a rounded panel with its own scroll: the page does not scroll,
+   the bar stays inside the panel and does not cut the layout at the window edge.
+   Sidebar sits on page background, not a white sheet. */
 .g-shell {
   position: fixed; inset: var(--g-inset) var(--g-inset) var(--g-inset)
                         calc(var(--g-sidebar-w) + var(--g-inset));
+  display: flex; flex-direction: column;
+}
+.g-shell.g-shell--empty {
+  /* Content area = page background; onboard block centers inside it. */
+  min-height: calc(100vh - 2 * var(--g-inset));
 }
 .g-panel {
   height: 100%; display: flex; flex-direction: column; overflow: hidden;
   border: 1px solid var(--border); border-radius: var(--g-panel-r);
   background: var(--white-pure);
+  flex: 1 1 auto; min-height: 0;
 }
 .g-scroll {
   flex: 1 1 auto; min-height: 0;
@@ -245,8 +256,8 @@ body {
 }
 
 .g-section { margin: 0 0 64px; scroll-margin-top: 72px; }
-/* Без линии под заголовком: разделы и так разведены отступом в 64px, а
-   черта добавляла второй разделитель там, где хватает одного. */
+/* No line under the heading: sections are already 64px apart; the rule added a
+   second divider where one was enough. */
 .g-section-head {
   display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
   margin: 0 0 12px;
@@ -260,14 +271,14 @@ body {
 .g-section-head .g-note { margin-left: auto; font-size: 11px; color: #b26a00; }
 .g-section-desc { margin: 8px 0 20px; font-size: 13px; line-height: 1.5; color: var(--text-muted); max-width: 780px; }
 
-/* ── Пример: мобайл + десктоп ──────────────────────────────────────────── */
+/* ── Example: mobile + desktop ──────────────────────────────────────────── */
 .g-example { margin: 0 0 28px; }
 .g-example-label { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
 .g-example-note  { margin: 0 0 8px; font-size: 11px; color: var(--text-muted); }
 
-/* Обе панели — одинаковые полосы во всю ширину колонки. Внутри содержимое
-   прижато к левому краю в обоих случаях, поэтому подписи и компоненты
-   мобильной и десктопной версии стоят на одной вертикали и сравнимы. */
+/* Both panels are equal-width strips across the column. Content is flush left in
+   both, so labels and components in mobile and desktop versions share one vertical
+   and are comparable. */
 .g-split { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
 .g-pane { width: 100%; }
 .g-pane .g-frame-wrap { position: relative; }
@@ -280,14 +291,14 @@ body {
   font-size: 10px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--text-muted);
 }
-/* Фон коробки совпадает с фоном body внутри фрейма (--bg), иначе справа от
-   узкого мобильного превью виден шов между #FBFCFD и белым. */
+/* Box background matches body inside the frame (--bg), otherwise beside a narrow
+   mobile preview you see a seam between #FBFCFD and white. */
 .g-frame-wrap { position: relative; overflow: hidden; width: 100%; background: var(--bg); }
-/* обе панели масштабируются одинаково, поэтому точка отсчёта — левый верхний
-   угол у обеих; иначе мобильный фрейм при ужимании съезжает вправо */
+/* both panels scale the same, so origin is top-left for both; otherwise the mobile
+   frame shifts right when shrunk */
 .g-frame { display: block; border: 0; transform-origin: 0 0; }
 
-/* ── Свотчи и таблицы токенов ──────────────────────────────────────────── */
+/* ── Swatches and token tables ──────────────────────────────────────────── */
 .g-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .g-swatch { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--white-pure); }
 .g-swatch-chip { height: 56px; }
@@ -304,16 +315,15 @@ body {
 .g-table th, .g-table td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
 .g-table th { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
 .g-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
-/* Пометки статуса в токен-секциях: не хром, а часть сообщения — «есть»,
-   «расходится», «нового в коде нет». Цвет здесь несёт смысл. */
-/* Три состояния сравнения: совпало, разошлось, добавлено. Расхождение —
-   всегда один цвет, независимо от того, отличается значение или его нет
-   вовсе: причина разобраться одна и та же. */
+/* Status notes in token sections: not chrome, part of the message — "present",
+   "mismatch", "not in code". Colour carries meaning here. */
+/* Three comparison states: match, mismatch, added. Mismatch is always one colour,
+   whether the value differs or is missing: same reason to investigate. */
 .g-ok   { color: var(--green); }
 .g-warn { color: #b26a00; }
 .g-add  { color: var(--text-muted); }
 
-/* ── Оверлей с кодом ───────────────────────────────────────────────────── */
+/* ── Code overlay ───────────────────────────────────────────────────── */
 .g-overlay {
   position: fixed; inset: 0; z-index: 200;
   display: flex; justify-content: flex-end;
@@ -337,8 +347,8 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px; color: var(--text-muted);
 }
-/* Кнопки действий и крестик — одной высоты: они стоят в ряд, и разнобой
-   виден сразу. 30px задаёт крестик, остальные равняются на него. */
+/* Action buttons and close — one height: they sit in a row and mismatch shows
+   immediately. 30px is set by close; others match it. */
 .g-overlay-actions { margin-left: auto; display: flex; gap: 8px; }
 .g-overlay-actions .g-copy {
   margin: 0; height: 30px; padding-inline: 12px;
@@ -378,8 +388,8 @@ body.g-no-scroll { overflow: hidden; }
   .g-main { margin-left: 0; padding: 24px 16px 120px; }
 }
 
-/* ── Оверлей живой перезагрузки ────────────────────────────────────────
-   Матовое стекло поверх всей галереи, пока файлы «успокаиваются». */
+/* ── Live reload overlay ────────────────────────────────────────
+   Frosted glass over the whole gallery while files "settle". */
 .g-reload {
   position: fixed; inset: 0; z-index: 2000;
   display: flex; align-items: center; justify-content: center;
@@ -412,17 +422,16 @@ body.g-no-scroll { overflow: hidden; }
 }
 @keyframes g-reload-spin { to { transform: rotate(360deg); } }
 
-/* Кому анимация мешает — оставляем только стекло. */
+/* For reduced motion — keep only the glass. */
 @media (prefers-reduced-motion: reduce) {
   .g-reload__spin { animation: none; }
   .g-reload { transition: none; }
 }
 
-/* ── Скроллбары ────────────────────────────────────────────────────────
-   Тонкие и проявляются только при наведении: в галерее две прокручиваемые
-   области рядом, и постоянные полосы режут сетку превью на глаз.
-   Firefox управляется двумя свойствами, WebKit — псевдоэлементами; заданы
-   оба набора, поведение одинаковое. */
+/* ── Scrollbars ────────────────────────────────────────────────────────
+   Thin and visible on hover only: the gallery has two scroll areas side by side,
+   and permanent bars cut the preview grid visually.
+   Firefox uses two properties, WebKit pseudo-elements; both sets give the same behaviour. */
 .g-sidebar, .g-overlay-body, .g-scroll { scrollbar-width: thin; scrollbar-color: transparent transparent; }
 .g-sidebar:hover, .g-overlay-body:hover, .g-scroll:hover { scrollbar-color: rgba(16,24,40,.28) transparent; }
 
@@ -449,11 +458,11 @@ body.g-no-scroll { overflow: hidden; }
 .g-overlay-body::-webkit-scrollbar-thumb:hover,
 .g-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 24, 40, .45); }
 
-/* Горизонтальную прокрутку внутри превью не трогаем — она часть компонента. */
+/* Do not touch horizontal scroll inside previews — it is part of the component. */
 
-/* ── Демонстрации токенов ──────────────────────────────────────────────
-   Раньше эти размеры жили инлайн-стилями внутри секций SDM. После разреза
-   разметку рисует движок, поэтому и оформление её демонстраций — здесь. */
+/* ── Token demonstrations ──────────────────────────────────────────────
+   These sizes used to live as inline styles inside SDM sections. After the split
+   the engine draws markup, so demo styling lives here. */
 .g-group-title { margin: 24px 0 8px; font-size: 13px; font-weight: 600; }
 .g-group-note  { font-weight: 400; color: var(--text-muted); }
 
@@ -465,7 +474,7 @@ body.g-no-scroll { overflow: hidden; }
 
 .g-gradborder-demo {
   margin: 16px; height: 64px; border-radius: 12px;
-  border: 2px solid transparent;   /* фон рисуется через background-clip */
+  border: 2px solid transparent;   /* background drawn via background-clip */
 }
 
 .g-blur-demo {
@@ -488,11 +497,11 @@ body.g-no-scroll { overflow: hidden; }
 .g-specimen__row { padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-heading); }
 
 .g-space-demo { padding: 16px; display: flex; align-items: center; }
-/* Полоса в шкале отступов показывает величину, а не бренд: нейтральный тон. */
+/* Bar in the spacing scale shows magnitude, not brand: neutral tone. */
 .g-space-bar  { height: 24px; background: var(--text-primary); border-radius: 2px; }
 
-/* Окно «О программе» — по образцу About This Mac: знак, имя, версия,
-   две строки о том, что это, и кнопка закрыть. */
+/* About window — like About This Mac: mark, name, version, two lines about
+   what it is, and a close button. */
 .g-about { text-align: center; }
 .g-about__mark {
   width: 56px; height: 56px; margin: 4px auto 16px;
@@ -506,19 +515,28 @@ body.g-no-scroll { overflow: hidden; }
   margin: 0 0 16px; font-size: 12px; color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
+.g-about__tagline {
+  margin: 0 0 12px; font-size: 13px; font-weight: 500; line-height: 1.4;
+  color: var(--text-primary);
+}
+.g-about__body {
+  margin: 0 auto 8px; max-width: 420px;
+  font-size: 13px; font-weight: 400; line-height: 1.5;
+  color: var(--text-secondary, var(--text-muted));
+}
 .g-about__lead { margin: 0 0 8px; font-size: 13px; color: var(--text-primary); }
 .g-about__note { margin: 0; font-size: 12px; color: var(--text-muted); }
 .g-about code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
 .g-about .g-dialog__actions { justify-content: center; }
 
-/* ── Переключатель сторибуков ──────────────────────────────────────── */
-/* Интервалы сняты с фрейма «SDM Design System» в Figma: плитка 32×32,
-   от неё до названия 8, от названия до шеврона 8, всё по центру строки. */
+/* ── Storybook switcher ──────────────────────────────────────── */
+/* Spacing from the "SDM Design System" frame in Figma: 32×32 tile, 8 to name,
+   8 name to chevron, all vertically centered in the row. */
 .g-brandbar { display: flex; align-items: center; gap: 0; height: var(--g-header-h); }
 
 .g-brandmark {
-  /* Плитка 32×32, радиус 6 как в макете. Подложка — состояние наведения,
-     а не оформление: в покое иконка стоит на фоне сайдбара. */
+  /* 32×32 tile, radius 6 as in the design. Background is hover state, not
+     decoration: at rest the icon sits on the sidebar background. */
   width: 32px; height: 32px; flex: none;
   display: grid; place-items: center;
   border: 0; border-radius: 6px;
@@ -533,7 +551,7 @@ body.g-no-scroll { overflow: hidden; }
   display: flex; align-items: center; gap: 8px; min-width: 0;
   padding: 4px 8px 4px 8px; border: 0; border-radius: 8px;
   background: transparent; cursor: pointer;
-  /* В макете название чёрное и полужирное 13/600 — не брендовый синий. */
+  /* In the design the name is black semibold 13/600 — not brand blue. */
   font-family: var(--font-family); font-size: 13px; font-weight: 600;
   color: var(--text-heading);
 }
@@ -566,11 +584,10 @@ body.g-no-scroll { overflow: hidden; }
 .g-mi[disabled]:hover { background: transparent; }
 .g-mi .tick { width: 14px; flex: none; color: var(--text-heading); font-weight: 700; }
 .g-mi .grow { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Бейдж без цвета: в меню цвет читается как состояние, а Library/Local
-   состоянием не является.
-   Удаление — исключение и останется им: красный здесь не оформление, а
-   предупреждение о необратимом действии. Следующая чистка цвета в хроме
-   не должна его снимать. */
+/* Badge without colour: in the menu colour reads as state, and Library/Local
+   are not states.
+   Delete stays the exception: red here is not decoration but warning of an
+   irreversible action. The next chrome colour cleanup must not remove it. */
 .g-mi.danger { color: var(--text-error); }
 
 .g-mi .badge {
@@ -580,7 +597,7 @@ body.g-no-scroll { overflow: hidden; }
   border: 1px solid var(--border);
 }
 
-/* ── Диалог настроек ───────────────────────────────────────────────── */
+/* ── Settings dialog ───────────────────────────────────────────────── */
 .g-scrim {
   position: fixed; inset: 0; z-index: 200;
   display: flex; align-items: center; justify-content: center;
@@ -592,8 +609,8 @@ body.g-no-scroll { overflow: hidden; }
 
 .g-dialog {
   width: min(460px, calc(100% - 48px));
-  /* Диалог не обязан помещаться в экран целиком: на невысоком окне шаги
-     онбординга обрезались сверху и снизу. */
+  /* Dialog need not fit the whole screen: on a short window onboarding steps
+     were clipped top and bottom. */
   max-height: calc(100vh - 48px); overflow-y: auto;
   padding: 24px; border-radius: 16px;
   background: var(--white-pure); border: 1px solid var(--border);
@@ -605,11 +622,11 @@ body.g-no-scroll { overflow: hidden; }
 .g-field { display: block; margin-bottom: 16px; }
 .g-field__label {
   display: block; margin-bottom: 8px;
-  font-size: 11px; font-weight: 600; letter-spacing: .04em;
-  text-transform: uppercase; color: var(--text-muted);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.006em;
+  text-transform: none; color: var(--text-muted);
 }
-/* border-box обязателен: у input по умолчанию content-box, и при одинаковой
-   ширине поле оказывалось шире соседнего блока ровно на паддинги с рамкой. */
+/* border-box required: input defaults to content-box, and at equal width the field
+   was wider than the neighbour by exactly padding plus border. */
 .g-field input[type="text"] {
   box-sizing: border-box;
   width: 100%; height: 34px; padding-inline: 8px;
@@ -618,9 +635,9 @@ body.g-no-scroll { overflow: hidden; }
   font-family: var(--font-family); font-size: 13px;
 }
 .g-field input[type="text"]:disabled { background: var(--bg); color: var(--text-muted); }
-/* Правый паддинг больше левого: стрелку селект рисует внутри поля, и
-   при симметричном отступе текст упирается в неё. */
-/* Тот же приём, что у выбора масштаба: своя стрелка, симметричные поля. */
+/* Right padding larger than left: select draws its arrow inside the field, and
+   symmetric padding makes text hit it. */
+/* Same trick as scale picker: custom arrow, symmetric fields. */
 .g-field select {
   appearance: none; -webkit-appearance: none;
   box-sizing: border-box;
@@ -631,6 +648,44 @@ body.g-no-scroll { overflow: hidden; }
   font-family: var(--font-family); font-size: 13px;
 }
 .g-field__hint { display: block; margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+
+/* Read-only path row: label + grey bar with value and inline copy. */
+.g-field--path {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 0; padding-top: 8px;
+}
+.g-field--path .g-field__label {
+  margin-bottom: 0;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06px;
+  color: var(--text-muted);
+}
+.g-field__value {
+  box-sizing: border-box;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 32px; padding: 6px 0 6px 8px;
+  border-radius: 6px; background: var(--card-gray);
+}
+.g-field__value code {
+  flex: 1 1 auto; min-width: 0;
+  font-family: var(--font-family); font-size: 12px; font-weight: 400;
+  line-height: 1.25; color: var(--text-primary);
+  word-break: break-all;
+}
+
+.g-btn-ghost {
+  flex: none;
+  height: 32px; padding: 8px 16px;
+  border: 0; border-radius: 20px;
+  background: transparent; cursor: pointer;
+  font-family: var(--font-family); font-size: 12px; font-weight: 500;
+  color: var(--text-heading);
+}
+.g-btn-ghost:hover:not(:disabled) { background: var(--card-gray); }
+.g-btn-ghost:disabled { opacity: .35; cursor: not-allowed; }
+.g-btn-ghost--inline {
+  height: auto; min-height: 31px; padding: 8px 10px; border-radius: 7px;
+  color: var(--text-primary);
+}
 
 .g-danger {
   margin-top: 24px; padding-top: 16px;
@@ -650,7 +705,7 @@ body.g-no-scroll { overflow: hidden; }
   height: 32px; padding-inline: 16px;
   border: 0; border-radius: 20px;
   background: var(--text-heading); color: var(--white-pure); cursor: pointer;
-  font-family: var(--font-family); font-size: 12px; font-weight: 600;
+  font-family: var(--font-family); font-size: 12px; font-weight: 500;
 }
 .g-btn-primary:disabled { opacity: .35; cursor: not-allowed; }
 .g-confirm__lead { margin: 0 0 16px; font-size: 13px; color: var(--text-primary); }
@@ -661,14 +716,56 @@ body.g-no-scroll { overflow: hidden; }
   font-size: 12px; color: var(--text-error);
 }
 
-/* Пустой сторибук: инструкция занимает место каталога, а не всплывает над
-   ним. Ширину держим читаемой — это текст, а не сетка карточек. */
-.g-empty { max-width: 640px; padding: 48px 0 0; }
-.g-empty h2 { margin: 0 0 4px; font-size: 20px; color: var(--text-heading); }
-.g-empty__lead { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); }
+/* Empty libra — full #FBFCFD canvas, no white panel card (unlike filled libra). */
+.g-shell.g-shell--empty .g-panel.g-panel--empty {
+  border: none; border-radius: 0;
+  background: transparent;
+  align-items: center;
+  overflow-y: auto;
+}
+.g-panel.g-panel--empty .g-topbar { display: none; }
+.g-scroll.g-scroll--empty {
+  flex: 0 0 auto;
+  margin: auto;
+  width: min(640px, calc(100% - 2 * var(--g-gutter)));
+  padding: var(--g-gutter);
+  box-sizing: border-box;
+}
+/* Sibling catalog host must not participate in centering. */
+.g-scroll.g-scroll--empty #g-sections:empty { display: none; }
+.g-empty {
+  display: flex; flex-direction: column; gap: 16px;
+  width: 100%;
+  margin: 0;
+}
+.g-empty h2 {
+  margin: 0; font-size: 20px; font-weight: 700;
+  letter-spacing: -0.45px; line-height: 1.2;
+  color: var(--text-heading);
+}
+.g-empty__lead {
+  margin: 0; padding-top: 4px;
+  font-size: 13px; font-weight: 400; line-height: 18.2px;
+  letter-spacing: -0.08px; color: var(--text-secondary);
+}
+/* Paths block + actions: 32px gap (Frame 105 in Figma). */
+.g-empty__tail {
+  display: flex; flex-direction: column; gap: 32px;
+}
+.g-empty__paths {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.g-empty .g-field__value {
+  height: 32px; min-height: 32px;
+  padding-top: 6px; padding-bottom: 6px;
+  box-sizing: border-box;
+}
+.g-empty__actions {
+  display: flex; justify-content: flex-end; align-items: center; gap: 4px;
+}
 
-/* Блок с шагами в онбординге: он единственный на экране, поэтому подан
-   спокойно — без соревнования с соседними вариантами. */
+/* Onboarding steps block: only thing on screen, so presented calmly — no
+   competing with neighbour options. */
 .g-primary {
   padding: 16px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--card-gray, var(--bg));
@@ -676,14 +773,12 @@ body.g-no-scroll { overflow: hidden; }
 .g-primary b { display: block; font-size: 14px; color: var(--text-heading); }
 .g-primary p { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
 
-.g-steps { margin: 12px 0 16px; padding-left: 20px; }
-.g-steps li { margin-bottom: 4px; font-size: 12px; color: var(--text-primary); }
-.g-steps li:last-child { margin-bottom: 0; }
+.g-connect { margin-bottom: 16px; }
 
-/* Адрес будущего сторибука: не поле ввода, а следствие имени. Показываем
-   его до создания — «как это будет называться» не должно выясняться потом. */
-/* border-box, иначе паддинги прибавляются к ширине и адрес оказывается шире
-   поля ввода, стоящего прямо над ним. */
+/* Future storybook address: not an input, a consequence of the name. Show it
+   before creation — "what it will be called" should not be discovered later. */
+/* border-box, otherwise padding adds to width and the address is wider than the
+   input field directly above it. */
 .g-address {
   box-sizing: border-box;
   padding: 8px 12px; border-radius: 8px;
@@ -694,9 +789,8 @@ body.g-no-scroll { overflow: hidden; }
 
 .g-choices { display: grid; gap: 8px; }
 .g-choice {
-  /* border-box обязателен: у <button> он по умолчанию, у <label> — нет, и
-     при width:100% рамка с паддингами вылезали за край диалога. Ровно та же
-     ловушка, что была с сайдбаром. */
+  /* border-box required: <button> has it by default, <label> does not, and at
+     width:100% border and padding overflow the dialog. Same trap as the sidebar. */
   box-sizing: border-box;
   display: block; width: 100%; text-align: left; cursor: pointer;
   padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px;
@@ -710,13 +804,12 @@ body.g-no-scroll { overflow: hidden; }
 <body>
 
 <nav class="g-sidebar">
-  <!-- Плитка — уровень воркспейса, имя с шевроном — уровень открытого
-       сторибука. Граница как у Figma: квадрат это приложение, имя это
-       документ. -->
+  <!-- Tile — workspace level; name with chevron — open storybook level.
+       Border like Figma: square is the app, name is the document. -->
   <div class="g-brandbar">
     <button class="g-brandmark" id="g-mark" aria-haspopup="true" aria-expanded="false">
-      <!-- Логотип из фрейма «SDM Design System» в Figma; канвас приведён
-           к квадрату 24×24, см. packages/engine/assets/logo.svg -->
+      <!-- Logo from the "SDM Design System" frame in Figma; canvas fitted to
+           24×24 square, see packages/engine/assets/logo.svg -->
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g transform="translate(3.765 2.508)"><path d="M0.914062 15.0293C0.369141 15.0293 0 14.502 0 13.7549V5.83594C0 4.86035 0.105469 4.69336 0.94043 4.20996L7.875 0.219727C8.13867 0.0703125 8.39355 0 8.62207 0C9.11426 0 9.49219 0.351562 9.47461 0.94043L1.80176 5.36133C1.49414 5.52832 1.43262 5.65137 1.43262 6.00293V14.8623C1.24805 14.9766 1.07227 15.0293 0.914062 15.0293ZM4.24512 16.9541C3.70898 16.9541 3.33105 16.4355 3.33105 15.6797V7.76074C3.33105 6.79395 3.42773 6.60938 4.27148 6.13477L11.2148 2.13574C11.4697 1.98633 11.7246 1.9248 11.9443 1.9248C12.4629 1.9248 12.8232 2.28516 12.8057 2.86523L5.13281 7.28613C4.81641 7.4707 4.76367 7.55859 4.76367 7.92773V16.7871C4.58789 16.9014 4.41211 16.9541 4.24512 16.9541ZM7.81348 18.9844C7.16309 18.9844 6.80273 18.4307 6.80273 17.4375V9.92285C6.80273 8.98242 7.0752 8.52539 7.88379 8.05957L14.3965 4.29785C14.8008 4.06934 15.1523 3.95508 15.4512 3.95508C16.0928 3.95508 16.4707 4.48242 16.4707 5.51953V13.0254C16.4707 13.9834 16.1982 14.4404 15.4072 14.8975L8.89453 18.6328C8.48145 18.8701 8.1123 18.9844 7.81348 18.9844Z"/></g></svg>
     </button>
     <button class="g-brandname" id="g-name" aria-haspopup="true" aria-expanded="false">
@@ -729,21 +822,21 @@ body.g-no-scroll { overflow: hidden; }
 
   <div class="g-menu" id="g-menu-workspace" role="menu">
     <button class="g-mi" id="g-new" role="menuitem">
-      <span class="tick"></span><span class="grow" data-i18n="menu.new"></span></button>
+      <span class="grow" data-i18n="menu.new"></span></button>
     <hr>
-    <div id="g-suite-list"></div>
-    <hr>
+    <button class="g-mi" id="g-home" role="menuitem">
+      <span class="grow" data-i18n="menu.home"></span></button>
     <button class="g-mi" id="g-ws-settings" role="menuitem">
-      <span class="tick"></span><span class="grow" data-i18n="menu.settings"></span></button>
+      <span class="grow" data-i18n="menu.settings"></span></button>
     <button class="g-mi" id="g-about" role="menuitem">
-      <span class="tick"></span><span class="grow" data-i18n="menu.about"></span></button>
+      <span class="grow" data-i18n="menu.about"></span></button>
   </div>
 
   <div class="g-menu" id="g-menu-suite" role="menu">
     <button class="g-mi" id="g-settings" role="menuitem">
       <span class="grow" data-i18n="menu.settings"></span></button>
-    <!-- CSS системы всегда под рукой: человек, который ею пользуется,
-         должен видеть код, а не только результат. -->
+    <!-- System CSS always at hand: someone using it should see code, not only
+         the result. -->
     <button class="g-mi" id="g-view-tokens" role="menuitem">
       <span class="grow" data-i18n="menu.viewTokens"></span></button>
     <button class="g-mi" id="g-view-components" role="menuitem">
@@ -753,11 +846,9 @@ body.g-no-scroll { overflow: hidden; }
       <span class="grow" data-i18n="menu.duplicate"></span></button>
     <button class="g-mi" id="g-export" role="menuitem">
       <span class="grow" data-i18n="menu.export"></span></button>
-    <button class="g-mi" id="g-copylink" role="menuitem">
-      <span class="grow" data-i18n="menu.copyLink"></span></button>
     <hr>
-    <!-- Библиотечный сторибук лежит папкой на диске: браузер её не удалит,
-         поэтому пункт выключен, а рабочий путь — копия. -->
+    <!-- Library storybook lives as a folder on disk: the browser will not delete it,
+         so the item is disabled; the working path is Duplicate. -->
     <button class="g-mi danger" id="g-delete" role="menuitem" disabled>
       <span class="grow" data-i18n="menu.delete"></span></button>
   </div>
@@ -765,9 +856,9 @@ body.g-no-scroll { overflow: hidden; }
   <div id="g-nav"></div>
 </nav>
 
-<!-- Пустой старт и «Новый сторибук» — один экран. Три пути, которыми
-     дизайн-система вообще может появиться: с нуля, из файла (пакет или чужой
-     CSS) и копией уже открытой. -->
+<!-- Empty start and "New storybook" — one screen. Three ways a design system can
+     appear: from scratch, from a file (package or foreign CSS), and by copying
+     an open one. -->
 <div class="g-scrim" id="g-new-scrim" hidden>
   <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-new-title">
     <h3 id="g-new-title" data-i18n="new.title"></h3>
@@ -775,12 +866,12 @@ body.g-no-scroll { overflow: hidden; }
 
     <div class="g-choices">
       <button class="g-choice" id="g-new-blank">
-        <b data-i18n="new.blank"></b>
-        <span data-i18n="new.blank.hint"></span>
+        <b data-i18n="new.fromDesign"></b>
+        <span data-i18n="new.fromDesign.hint"></span>
       </button>
       <button class="g-choice" id="g-new-css">
-        <b data-i18n="new.css"></b>
-        <span data-i18n="new.css.hint"></span>
+        <b data-i18n="new.fromCss"></b>
+        <span data-i18n="new.fromCss.hint"></span>
       </button>
       <button class="g-choice" id="g-new-file">
         <b data-i18n="new.import"></b>
@@ -788,35 +879,25 @@ body.g-no-scroll { overflow: hidden; }
       </button>
     </div>
 
-    <!-- Второй шаг: имя и источник. Показывается вместо выбора сценария,
-         поэтому диалог не растёт вниз и не заставляет прокручивать. -->
+    <!-- Second step: name and source. Shown instead of scenario picker so the
+         dialog does not grow downward and force scrolling. -->
     <div id="g-new-step2" hidden>
       <label class="g-field">
         <span class="g-field__label" data-i18n="new.name"></span>
         <input type="text" id="g-new-name" autocomplete="off">
       </label>
 
-      <div class="g-field">
+      <div class="g-field" id="g-new-address-row" hidden>
         <span class="g-field__label" data-i18n="new.address"></span>
         <div class="g-address" id="g-new-address"></div>
         <span class="g-field__hint" data-i18n="new.address.hint"></span>
       </div>
 
-      <label class="g-field">
+      <label class="g-field" id="g-new-design-row">
         <span class="g-field__label" data-i18n="new.design"></span>
-        <input type="text" id="g-new-design" autocomplete="off" placeholder="https://figma.com/design/…">
+        <input type="text" id="g-new-design" autocomplete="off" data-i18n-placeholder="new.design.placeholder">
         <span class="g-field__hint" data-i18n="new.design.hint"></span>
       </label>
-
-      <!-- Появляется только когда рядом отвечает мост. Его отсутствие —
-           норма: у агента свой доступ к макету. -->
-      <div class="g-field" id="g-new-bridge" hidden>
-        <span class="g-field__label" data-i18n="new.bridge"></span>
-        <select id="g-new-bridge-file"></select>
-        <button class="g-mi" id="g-new-bridge-pull" style="width:auto;margin-top:8px"
-                data-i18n="new.bridge.pull"></button>
-        <span class="g-field__hint" data-i18n="new.bridge.hint"></span>
-      </div>
 
       <div class="g-field" id="g-new-source" hidden>
         <span class="g-field__label" data-i18n="new.source"></span>
@@ -831,8 +912,8 @@ body.g-no-scroll { overflow: hidden; }
     <p class="g-dialog__error" id="g-new-error" hidden></p>
 
     <div class="g-dialog__actions" style="gap:8px">
-      <!-- Возврат на первый шаг: выбор сценария — не приговор, а ошибиться
-           в нём легко: три плитки похожи по весу. -->
+      <!-- Back to first step: scenario choice is not final — easy to pick wrong
+           when three tiles look equally weighted. -->
       <button class="g-mi" id="g-new-back" style="width:auto;margin-right:auto"
               hidden data-i18n="new.back"></button>
       <button class="g-mi" id="g-new-close" style="width:auto" data-i18n="confirm.cancel"></button>
@@ -841,8 +922,25 @@ body.g-no-scroll { overflow: hidden; }
   </div>
 </div>
 
-<!-- Подтверждение удаления. Слово вводится руками: удаление сторибука
-     необратимо, и «вы уверены?» нажимают не глядя. -->
+<!-- Duplicate libra — full copy with a new name. -->
+<div class="g-scrim" id="g-dup-scrim" hidden>
+  <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-dup-title">
+    <h3 id="g-dup-title" data-i18n="duplicate.title"></h3>
+    <p class="g-dialog__lead" data-i18n="duplicate.lead"></p>
+    <label class="g-field">
+      <span class="g-field__label" data-i18n="new.name"></span>
+      <input type="text" id="g-dup-name" autocomplete="off">
+    </label>
+    <p class="g-dialog__error" id="g-dup-error" hidden></p>
+    <div class="g-dialog__actions" style="gap:8px">
+      <button class="g-mi" id="g-dup-cancel" style="width:auto" data-i18n="confirm.cancel"></button>
+      <button class="g-btn-primary" id="g-dup-create" disabled data-i18n="new.create"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation. Word typed by hand: deleting a storybook is
+     irreversible, and "are you sure?" gets clicked without reading. -->
 <div class="g-scrim" id="g-confirm-scrim" hidden>
   <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-confirm-title">
     <h3 id="g-confirm-title"></h3>
@@ -858,10 +956,17 @@ body.g-no-scroll { overflow: hidden; }
   </div>
 </div>
 
-<!-- Общие настройки: про инструмент, а не про открытую систему. -->
+<!-- Global settings: about the tool, not the open system. -->
 <div class="g-scrim" id="g-ws-scrim" hidden>
   <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-ws-title">
     <h3 id="g-ws-title" data-i18n="ws.title"></h3>
+
+    <div class="g-field g-connect">
+      <span class="g-field__label" data-i18n="prompt.workspace.title"></span>
+      <span class="g-field__hint" data-i18n="prompt.workspace.hint"></span>
+      <button class="g-btn-primary" id="g-ws-copy-prompt" style="margin-top:12px"
+              data-i18n="prompt.workspace.copy"></button>
+    </div>
 
     <label class="g-field">
       <span class="g-field__label" data-i18n="ws.language"></span>
@@ -880,26 +985,26 @@ body.g-no-scroll { overflow: hidden; }
   </div>
 </div>
 
-<!-- О программе. Отдельный оверлей, а не строка в меню: это про инструмент
-     целиком, и читают его редко, зато целиком. -->
+<!-- About. Separate overlay, not a menu row: about the whole tool, read rarely
+     but in full. -->
 <div class="g-scrim" id="g-about-scrim" hidden>
   <div class="g-dialog g-about" role="dialog" aria-modal="true" aria-labelledby="g-about-title">
     <div class="g-about__mark">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <g transform="translate(3.765 2.508)"><path id="g-about-path" d=""/></g></svg>
     </div>
-    <h3 id="g-about-title">Storybook Library</h3>
+    <h3 id="g-about-title" data-i18n="product.name"></h3>
     <p class="g-about__ver" id="g-about-ver"></p>
-    <p class="g-about__lead" data-i18n="about.lead"></p>
+    <p class="g-about__tagline" data-i18n="product.tagline"></p>
+    <p class="g-about__body" data-i18n="about.body"></p>
     <div class="g-dialog__actions">
       <button class="g-mi" id="g-about-close" style="width:auto" data-i18n="about.close"></button>
     </div>
   </div>
 </div>
 
-<!-- Настройки открытого сторибука. Имя и файл для сравнения принадлежат
-     конкретной системе: общий на галерею CSS после переключения сравнивал бы
-     с чужим файлом. -->
+<!-- Open storybook settings. Name and comparison file belong to a specific
+     system: gallery-wide CSS after switching would compare against the wrong file. -->
 <div class="g-scrim" id="g-settings-scrim" hidden>
   <div class="g-dialog" role="dialog" aria-modal="true" aria-labelledby="g-settings-title">
     <h3 id="g-settings-title" data-i18n="settings.title"></h3>
@@ -911,32 +1016,44 @@ body.g-no-scroll { overflow: hidden; }
     </label>
 
     <label class="g-field">
+      <span class="g-field__label" data-i18n="settings.description"></span>
+      <input type="text" id="g-settings-description" autocomplete="off">
+      <span class="g-field__hint" data-i18n="settings.description.hint"></span>
+    </label>
+
+    <label class="g-field">
       <span class="g-field__label" data-i18n="new.design"></span>
       <input type="text" id="g-settings-design" autocomplete="off"
-             placeholder="https://figma.com/design/…">
+             data-i18n-placeholder="new.design.placeholder">
       <span class="g-field__hint" data-i18n="settings.design.hint"></span>
     </label>
 
     <div class="g-field">
       <span class="g-field__label" data-i18n="settings.compare"></span>
-      <label class="g-attach" data-i18n-title="topbar.attach.title">
-        <input type="file" id="g-css-file" accept=".css,text/css">
-        <span class="g-attach__btn" data-i18n="topbar.attach"></span>
-        <span class="g-attach__name" id="g-css-name"></span>
-      </label>
+      <div class="g-attach-row">
+        <label class="g-attach" data-i18n-title="topbar.attach.title">
+          <input type="file" id="g-css-file" accept=".css,text/css">
+          <span class="g-attach__btn" data-i18n="topbar.attach"></span>
+          <span class="g-attach__name" id="g-css-name"></span>
+        </label>
+        <button type="button" class="g-attach__remove" id="g-css-clear" hidden
+                data-i18n="settings.compare.remove"></button>
+      </div>
       <span class="g-field__hint" data-i18n="settings.compare.hint"></span>
     </div>
 
-    <!-- Опасная зона: отделена и подписана тем, что произойдёт на самом
-         деле. Для библиотечного сторибука это не удаление, а убирание из
-         этой галереи — папку на диске браузер не трогает. -->
+    <!-- Danger zone: separated and labelled with what actually happens. For a
+         library storybook this is not deletion but removal from this gallery —
+         the browser does not touch the folder on disk. -->
     <div class="g-danger">
       <span class="g-field__label" data-i18n="settings.danger"></span>
       <button class="g-btn-danger" id="g-settings-delete"></button>
       <span class="g-field__hint" id="g-settings-delete-hint"></span>
     </div>
 
-    <div class="g-dialog__actions" style="gap:8px">
+    <div class="g-dialog__actions" style="gap:8px;flex-wrap:wrap">
+      <button class="g-mi" id="g-settings-copy-prompt" style="width:auto;margin-right:auto"
+              data-i18n="prompt.fill.copy"></button>
       <button class="g-mi" id="g-settings-cancel" style="width:auto"
               data-i18n="confirm.cancel"></button>
       <button class="g-btn-primary" id="g-settings-save" disabled
@@ -956,25 +1073,54 @@ body.g-no-scroll { overflow: hidden; }
       <span data-i18n="topbar.compare"></span>
     </label>
   </div>
-  <!-- Прокручивается эта область, а не панель целиком: полоса начинается
-       под шапкой, а не идёт вдоль неё. -->
+  <!-- This area scrolls, not the whole panel: the bar starts below the header,
+       not along it. -->
   <div class="g-scroll" id="g-panel">
-    <!-- Пустой сторибук: вместо каталога — как его наполнить. Не оверлей:
-         это не сообщение поверх работы, а содержимое экрана, пока работы
-         ещё нет. -->
+    <!-- Empty storybook: instead of a catalog — how to fill it. Not an overlay:
+         not a message on top of work, but screen content while there is no work
+         yet. -->
     <div class="g-empty" id="g-onboard" hidden>
       <h2 data-i18n="onboard.title"></h2>
       <p class="g-empty__lead" data-i18n="onboard.lead"></p>
 
-      <div class="g-primary">
-        <b data-i18n="new.agent"></b>
-        <p data-i18n="new.agent.hint"></p>
-        <ol class="g-steps">
-          <li data-i18n="new.agent.s1"></li>
-          <li data-i18n="new.agent.s2"></li>
-          <li data-i18n="new.agent.s3"></li>
-        </ol>
-        <button class="g-btn-primary" id="g-copy-prompt" data-i18n="new.agent.copy"></button>
+      <div class="g-empty__tail">
+        <div>
+          <div class="g-empty__paths" id="g-onboard-paths">
+            <div class="g-field g-field--path" id="g-onboard-repo-field" hidden>
+              <span class="g-field__label" data-i18n="onboard.repo"></span>
+              <div class="g-field__value">
+                <code id="g-onboard-repo"></code>
+                <button type="button" class="g-btn-ghost g-btn-ghost--inline" data-copy="repo"
+                        data-i18n="onboard.copy"></button>
+              </div>
+            </div>
+            <div class="g-field g-field--path">
+              <span class="g-field__label" data-i18n="onboard.folder"></span>
+              <div class="g-field__value">
+                <code id="g-onboard-folder"></code>
+                <button type="button" class="g-btn-ghost g-btn-ghost--inline" data-copy="folder"
+                        data-i18n="onboard.copy"></button>
+              </div>
+            </div>
+            <div class="g-field g-field--path">
+              <span class="g-field__label" data-i18n="onboard.delibra"></span>
+              <div class="g-field__value">
+                <code id="g-onboard-delibra"></code>
+                <button type="button" class="g-btn-ghost g-btn-ghost--inline" data-copy="delibra"
+                        data-i18n="onboard.copy"></button>
+              </div>
+            </div>
+          </div>
+
+          <p class="g-field__hint" id="g-onboard-no-folder" hidden data-i18n="onboard.noFolder"></p>
+        </div>
+
+        <div class="g-empty__actions">
+          <button type="button" class="g-btn-ghost" id="g-onboard-settings"
+                  data-i18n="onboard.editSettings"></button>
+          <button type="button" class="g-btn-primary" id="g-copy-prompt"
+                  data-i18n="prompt.fill.copy"></button>
+        </div>
       </div>
     </div>
 
@@ -990,8 +1136,8 @@ body.g-no-scroll { overflow: hidden; }
         <div class="g-overlay-title" id="g-ov-title">—</div>
         <div class="g-overlay-sel" id="g-ov-sel"></div>
       </div>
-      <!-- Действия над файлом стоят в шапке, а не над кодом: там они не
-           уезжают вместе с прокруткой и не спорят за место с содержимым. -->
+      <!-- File actions live in the header, not above code: they do not scroll away
+           and do not fight content for space. -->
       <div class="g-overlay-actions" id="g-ov-actions"></div>
       <button class="g-overlay-close" id="g-ov-close" data-i18n-aria="overlay.close">×</button>
     </div>
@@ -1004,23 +1150,27 @@ body.g-no-scroll { overflow: hidden; }
 </div>
 
 <script>
-/* Сторибук читает CSS и свои же скрипты с диска на каждой перезагрузке.
-   Без этого браузер отдаёт закешированные скрипты и токены, и галерея
-   показывает вчерашнее состояние — молча, без единой ошибки. */
+/* Storybook reads CSS and its own scripts from disk on every reload.
+   Without this the browser serves cached scripts and tokens and the gallery
+   shows yesterday's state — silently, with no error. */
 window.GALLERY_BUST = '?t=' + Date.now();
 function gScript(src) {
   document.write('<scr' + 'ipt src="' + src + window.GALLERY_BUST + '"></scr' + 'ipt>');
 }
-/* Порядок важен: языковые паки, хранилище и формат пакета — до резолвера
-   бренда: он на старте может открыть сторибук прямо из хранилища. */
+/* Order matters: language packs, storage, and package format — before the brand
+   resolver: on start it may open a storybook straight from storage. */
 gScript('i18n/en.js');
 gScript('i18n/ru.js');
 gScript('slug.js');
+gScript('brand-scaffold.js');
+gScript('agent-prompt.js');
 gScript('bundle.js');
 gScript('registry.js');
+gScript('config-boot.js');
 gScript('brand.js');
 gScript('rows.js');
 gScript('sections-contract.js');
+gScript('package-archive.js');
 gScript('package-io.js');
 gScript('token-build.js');
 gScript('css-import.js');
@@ -1028,9 +1178,9 @@ gScript('figma-import.js');
 </script>
 
 <script>
-/* Второй блок: ENGINE_BRAND уже существует, можно читать данные бренда.
-   Манифест — данные, поэтому читается разбором, а не выполнением. Старая
-   форма manifest.js поддерживается для брендов, которые ещё не переехали. */
+/* Second block: ENGINE_BRAND exists — brand data can be read.
+   Manifest is data, so parsed not executed. Legacy manifest.js remains for
+   brands not yet migrated. */
 (function () {
   var B = window.ENGINE_BRAND;
   var data = B.source.json('manifest.json', window.GALLERY_BUST);
@@ -1040,27 +1190,27 @@ gScript('figma-import.js');
 </script>
 
 <script>
-/* Третий: манифест прочитан — подключаем шрифт, токены и данные бренда. */
+/* Third: manifest read — connect font, tokens, and brand data. */
 (function () {
   var B = window.ENGINE_BRAND, M = window.BRAND_MANIFEST;
 
-  /* Перевод статического хрома: атрибуты data-i18n* держат ключи, а не текст,
-     поэтому разметка одна на все языки. */
+  /* Static chrome i18n: data-i18n* attributes hold keys, not text, so markup is
+     one for all languages. */
   document.querySelectorAll('[data-i18n]').forEach(function (el) {
     el.textContent = B.t(el.getAttribute('data-i18n'));
   });
   [['data-i18n-title', 'title'], ['data-i18n-hint', 'data-hint'],
-   ['data-i18n-aria', 'aria-label']].forEach(function (pair) {
+   ['data-i18n-aria', 'aria-label'], ['data-i18n-placeholder', 'placeholder']].forEach(function (pair) {
     document.querySelectorAll('[' + pair[0] + ']').forEach(function (el) {
       el.setAttribute(pair[1], B.t(el.getAttribute(pair[0])));
     });
   });
 
 
-  /* Показывать нечего: либо первый заход без адреса, либо ссылка на пакет,
-     которого в этом браузере нет. Оба случая штатные, и объясняет их
-     switcher — здесь просто не грузим бренд. Строки хрома проставлены выше:
-     они не зависят от того, открыт ли сторибук. */
+  /* Nothing to show: first visit without address, or link to a package missing in
+     this browser. Both are normal; switcher explains — we simply do not load the
+     brand here. Chrome strings were set above: they do not depend on whether a
+     storybook is open. */
   if (!B.source.rel || B.missingSuite) return;
 
   var problem = B.incompatible(M);
@@ -1075,20 +1225,20 @@ gScript('figma-import.js');
     document.head.appendChild(l);
   }
   if (M.font && M.font.href) link(M.font.href);
-  /* Cache-buster нужен только файлу на сервере. У пакета адрес — blob:,
-     и «?t=…» превращает его в несуществующий: стили молча не применяются. */
+  /* Cache-buster only for server files. Package URL is blob:, and "?t=…" makes it
+     invalid: styles silently fail to apply. */
   if (M.css && M.css.tokens) {
     link(B.path(M.css.tokens) + (B.source.kind === 'folder' ? window.GALLERY_BUST : ''),
          'g-tokens-link');
   }
-  /* Показываем локальное имя, если сторибук переименовали. */
+  /* Show local name if the storybook was renamed. */
   var shownTitle = window.ENGINE_REGISTRY
     ? window.ENGINE_REGISTRY.displayName(B.source.id, M.title)
     : M.title;
   document.title = shownTitle || document.title;
 
-  /* Ширина полосы прокрутки — величина окружения, не дизайна. Мерить сразу
-     нельзя: секции ещё не отрисованы, страница короче экрана и полосы нет. */
+  /* Scrollbar width is environmental, not design. Cannot measure immediately:
+     sections are not drawn yet, page is shorter than the viewport, no bar. */
   function measureScrollbar() {
     var w = window.innerWidth - document.documentElement.clientWidth;
     document.documentElement.style.setProperty('--g-scrollbar', (w > 0 ? w : 0) + 'px');
@@ -1100,26 +1250,25 @@ gScript('figma-import.js');
 
   var logo = document.getElementById('g-logo');
   if (logo) logo.textContent = shownTitle || '';
-  /* Данные бренда: карта старых имён, дескриптор токенов, секции. Всё это
-     разбирается как JSON — пакет бренда не должен исполняться, иначе
-     открыть присланный файл значило бы запустить чужой код.
-     Поля legacyNames/tokenMap/specs с расширением .js — прежняя форма,
-     поддерживается, пока бренды переезжают. */
+  /* Brand data: legacy name map, token descriptor, sections. All parsed as JSON —
+     brand package must not execute, otherwise opening a sent file meant running
+     foreign code.
+     legacyNames/tokenMap/specs with .js extension — legacy form, supported while
+     brands migrate. */
   function brandData(file, target) {
     if (!file) return;
     if (/\.json$/.test(file)) {
       var data = B.source.json(file, window.GALLERY_BUST);
       if (data) window[target] = data;
     } else if (B.source.kind === 'folder') {
-      gScript(B.path(file));       // legacy: файл сам присваивает window[target]
+      gScript(B.path(file));       // legacy: file assigns window[target] itself
     }
   }
 
   brandData(M.legacyNames, 'BRAND_LEGACY');
   brandData(M.tokenMap,    'BRAND_TOKENS');
 
-  /* Рисовальщики идут после данных: на старте они читают карту старых имён
-     и сразу грузят CSS бренда. */
+  /* Renderers after data: on start they read the legacy map and load brand CSS. */
   gScript('engine-specs.js');
 
   brandData(M.sections || M.specs, 'BRAND_SECTIONS');

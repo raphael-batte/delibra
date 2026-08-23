@@ -1,14 +1,13 @@
 /* ==========================================================================
-   Строки каталога — разметка, которой движок показывает примеры.
+   Catalogue rows — the markup the engine shows examples with.
 
-   Это хром движка, а не компоненты бренда: слева колонка метаданных, справа
-   образец. Живёт отдельным модулем, потому что нужен в двух местах — в
-   галерее (engine-specs.js) и в скрипте сборки данных бренда
-   (tools/emit-sections.js), а дублировать разметку значит однажды
-   поправить её только в одном.
+   This is engine chrome, not brand components: metadata column on the left,
+   the sample on the right. It lives in its own module because two places need
+   it — the gallery (engine-specs.js) and the brand data build script
+   (tools/emit-sections.js).
 
-   Работает и в браузере, и в node: наружу отдаётся через window.ENGINE_ROWS
-   либо module.exports.
+   Runs in the browser and in node: exposed as window.ENGINE_ROWS or
+   module.exports.
    ========================================================================== */
 (function (root, factory) {
   'use strict';
@@ -23,9 +22,9 @@
       (gap || 12) + 'px;margin-bottom:12px">' + items.join('') + '</div>';
   }
 
-  /* Единая строка каталога: слева колонка метаданных, справа образец.
-     Одна сетка (.g-row) на оба брейкпоинта — и для кнопок, и для плиток,
-     чтобы подписи в мобильной и десктопной панелях стояли на одной вертикали. */
+  /* One catalogue row: metadata column left, sample right. A single grid
+     (.g-row) across both breakpoints, so labels in the mobile and desktop
+     panes line up vertically. */
   function specRow(name, cls, meta, sample) {
     return '<div class="g-row">' +
       '<div class="g-row__meta">' +
@@ -43,39 +42,37 @@
       '<a href="#" class="' + cls.replace(/^\./, 'btn ').replace(/\./g, ' ') + '">' + text + '</a>');
   }
 
-  /* Иконки берём из assets/icons — это те же файлы, что в вёрстке
-     (.perk — i-ban-01…03, .service — i-01…i-05,
-     .perk — i-ban-01…03), но с приведённым к квадрату канвасом:
-     в оригиналах он разный (37×50, 30×39, 47×37…), из-за чего иконки
-     одной высоты выглядели разными по величине. Пути не менялись,
-     только рамка viewBox. */
+  /* Icons come from assets/icons — the same files as in the markup
+     (.perk — i-ban-01…03, .service — i-01…i-05), but with the viewBox squared
+     off: the originals vary (37×50, 30×39, 47×37…), so icons of equal height
+     looked different in size. Only the viewBox changed, not the paths. */
   function tileRow(name, cls, size, sample) {
     return specRow(name, cls, size,
       '<span style="display:inline-flex;align-items:center;gap:12px;padding:12px 16px;' +
       'border-radius:12px;background:var(--card-gray)">' + sample + '</span>');
   }
 
-  /* Распорка между семействами примеров: называем её тем, что она есть,
-     вместо атрибута на соседней строке. */
+  /* Spacer between families of examples: named for what it is, instead of an
+     attribute on the neighbouring row. */
   function gap(size) {
     return '<div style="height:' + (size || 8) + 'px"></div>';
   }
 
-  /* Строка каталога из дескриптора. kind решает, какой из хелперов выше
-     вызвать: бренд отдаёт данные, разметку выбирает движок. */
+  /* A catalogue row from a descriptor. kind picks the helper above: the brand
+     supplies data, the engine picks the markup. */
   function renderRow(r) {
     switch (r.kind) {
       case 'btn':  return btnRow(r.size, r.cls, r.text, r.heights);
       case 'tile': return tileRow(r.name, r.cls, r.meta, r.sample);
       case 'spec': return specRow(r.name, r.cls, r.meta, r.sample);
       case 'gap':  return gap(r.size);
-      default:     throw new Error('неизвестный вид строки: ' + r.kind);
+      default:     throw new Error('unknown row kind: ' + r.kind);
     }
   }
 
-  /* Пример целиком: строки плюс необязательная обёртка бренда вокруг них
-     (тёмный контекст, цветная подложка). Обёртка — только оболочка: тег,
-     классы и data-pick, никакой логики. */
+  /* A whole example: rows plus an optional brand wrapper around them (dark
+     context, coloured backdrop). The wrapper is a shell only — tag, classes
+     and data-pick, no logic. */
   function renderRows(example) {
     var inner = (example.rows || []).map(renderRow).join('');
     var w = example.wrap;

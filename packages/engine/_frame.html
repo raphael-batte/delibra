@@ -5,22 +5,22 @@
 <meta http-equiv="Cache-Control" content="no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <title>preview frame</title>
-<!-- Шрифт и стайлшиты бренда подставляются из манифеста: движок не знает,
-     какой бренд он показывает. См. brand.js — пути резолвятся от папки бренда. -->
+<!-- Brand font and stylesheets come from the manifest: the engine does not know
+     which brand it shows. See brand.js — paths resolve from the brand folder. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script>
 (function () {
   var q = new URLSearchParams(location.search);
   var brand = q.get('brand');
-  /* Без пути к папке фрейм ничего не грузит: стили пакета приедут
-     сообщением g:brandcss от галереи. */
+  /* Without a folder path the frame loads nothing: package styles arrive via
+     g:brandcss from the gallery. */
   if (!brand) return;
   var base = new URL(brand.replace(/\/+$/, '') + '/', location.href).pathname;
 
-  /* <base> — ключевая деталь разреза: разметка бренда пишет пути вида
-     assets/icons/x.svg, а фрейм лежит в папке движка. Без базы они бы
-     резолвились в packages/engine и давали 404 на каждой иконке. */
+  /* <base> is the key split detail: brand markup uses paths like
+     assets/icons/x.svg, but the frame lives in the engine folder. Without base
+     they would resolve under packages/engine and 404 every icon. */
   var b = document.createElement('base');
   b.href = base;
   document.head.appendChild(b);
@@ -35,10 +35,9 @@
     return l;
   }
 
-  /* Манифест читаем синхронно: стайлшиты должны встать до первого g:render.
-     Именно читаем, а не выполняем — фрейм не запускает из бренда ничего.
-     Прежняя форма manifest.js остаётся, пока бренды переезжают, и только
-     она требует eval. */
+  /* Read manifest synchronously: stylesheets must load before the first g:render.
+     Read, do not execute — the frame runs nothing from the brand. Legacy manifest.js
+     remains while brands migrate; only it requires eval. */
   function read(file) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', base + file + bust, false);
@@ -64,51 +63,45 @@
   if (m.font && m.font.href) link('brand-font', m.font.href);
   if (m.css && m.css.tokens)     link('css-new-tokens', m.css.tokens);
   if (m.css && m.css.components) link('css-brand',      m.css.components);
-  // Сравнение с чужим CSS опционально: бренд может его не объявлять.
+  // Comparing with foreign CSS is optional: the brand may omit it.
   if (m.compare && m.compare.legacy) link('css-current', m.compare.legacy, true);
 })();
 </script>
 <style>
-  /* Хром песочницы. Ничего из этого не участвует в инспекции —
-     все правила помечены слоем g-chrome и отфильтровываются. */
+  /* Sandbox chrome. None of this participates in inspection —
+     all rules are in layer g-chrome and filtered out. */
   @layer g-chrome {
     html, body { margin: 0; }
     body { background: transparent; overflow-x: hidden; }
-    /* #root повторяет ширину контейнера бренда: min(--g-container, 100% − 40)
-       на десктопе и 100% − 32 на мобайле — иначе сетка карточек даёт не ту
-       ширину колонки. Значение приходит из манифеста, дефолт — на случай
-       бренда, который про превью ничего не сказал.
-       Но НЕ центрируем: в галерее содержимое прижато к левому краю, чтобы
-       мобильная и десктопная версии стояли на одной вертикали и их можно было
-       сравнивать построчно. На сайте контейнер по-прежнему центрируется. */
+    /* #root mirrors brand container width: min(--g-container, 100% − 40) on desktop
+       and 100% − 32 on mobile — otherwise the card grid gives wrong column width.
+       Value from manifest; default for brands that said nothing about preview.
+       Do NOT center: in the gallery content is flush left so mobile and desktop
+       versions share one vertical and can be compared line by line. On the site
+       the container stays centered. */
     #root { width: min(var(--g-container, 1170px), 100% - 40px); margin-inline: 0;
             padding: 16px 0 16px 16px;
-            /* content-box: 16px отступа добавляются СНАРУЖИ ширины контейнера.
-               При border-box они съедали её, и 3-колоночная сетка давала
-               374px вместо положенных 379.33.
-               !important нужен потому, что это правило лежит в @layer, а
-               `* { box-sizing: border-box }` из CSS бренда вне слоёв — и по
-               правилам каскада безслойные стили всегда сильнее слойных. */
+            /* content-box: 16px padding adds OUTSIDE container width.
+               With border-box it ate width and the 3-column grid gave 374px instead of 379.33.
+               !important because this rule is in @layer while brand
+               `* { box-sizing: border-box }` is unlayered — unlayered wins. */
             box-sizing: content-box !important; }
     @media (max-width: 900px) { #root { width: calc(100% - 32px); } }
-    /* Секции, которые на сайте идут во всю ширину экрана (обложка, ленты
-       со скроллом), не должны получать гаттер песочницы поверх своего
-       собственного паддинга — иначе контент вдвое уже реального. */
+    /* Sections full-bleed on the site (hero, scroll strips) must not get sandbox
+       gutter on top of their own padding — otherwise content is half as wide. */
     .g-bleed { margin-inline: calc(var(--gutter, 16px) * -1); }
 
-    /* Полноширинные секции (обложка) в галерее показываем как компонент:
-       скруглённая рамка и отступ слева, а не встык к краю песочницы. */
+    /* Full-width sections (hero) in the gallery shown as a component: rounded frame
+       and left inset, not flush to the sandbox edge. */
     .g-inset { border-radius: 24px; overflow: hidden; }
 
-    /* Строка «подпись + образец» — ОДНА сетка на оба брейкпоинта:
-       фиксированная колонка метаданных и колонка с самим компонентом.
-       Никаких медиазапросов: иначе подписи в мобильной и десктопной панелях
-       встают на разные вертикали и сравнивать их построчно нельзя. */
+    /* "Label + sample" row — ONE grid for both breakpoints: fixed metadata column
+       and component column. No media queries: otherwise labels in mobile and desktop
+       panels misalign and cannot be compared line by line. */
     .g-row {
       display: grid;
-      /* Ширина колонки метаданных фиксирована: раньше здесь стоял
-         var(--g-meta-w), которого не объявлял ни один бренд, — то есть
-         всегда работал фолбэк, а сама переменная вводила в заблуждение. */
+      /* Metadata column width is fixed: var(--g-meta-w) used to sit here but no
+         brand declared it — fallback always ran and the variable misled. */
       grid-template-columns: 180px 1fr;
       align-items: center;
       column-gap: 16px;
@@ -139,7 +132,7 @@
   var qs = new URLSearchParams(location.search);
   var root = document.getElementById('root');
 
-  // тот же cache-buster, что у галереи: иначе фрейм рисует старым CSS
+  // same cache-buster as the gallery: otherwise the frame draws stale CSS
   var t = qs.get('t');
   if (t) {
     ['css-new-tokens', 'css-brand', 'css-current'].forEach(function (id) {
@@ -148,9 +141,9 @@
     });
   }
 
-  /* ── Режим CSS ─────────────────────────────────────────────────────── */
-  /* Стайлшиты создаются из манифеста, поэтому какого-то из них может не быть:
-     бренд не обязан объявлять compare.legacy. Отсюда — null-safe хелпер. */
+  /* ── CSS mode ─────────────────────────────────────────────────────── */
+  /* Stylesheets come from the manifest, so one may be missing: the brand need not
+     declare compare.legacy. Hence a null-safe helper. */
   function sheet(id, off) {
     var l = document.getElementById(id);
     if (l) l.disabled = !!off;
@@ -164,13 +157,11 @@
     sheet('user-css',       true);
   }
 
-  /* Стили бренда, приехавшие пакетом: у него нет файлов на сервере, поэтому
-     токены и компоненты приходят текстом. Порядок тот же, что у ссылок:
-     сначала токены, потом компоненты. */
+  /* Brand styles delivered as a package: no server files, so tokens and components
+     arrive as text. Same order as links: tokens first, then components. */
   function applyBrandCss(d) {
-    /* Шрифт бренда: у папки его подключает загрузчик из манифеста, у пакета
-       ссылку присылает галерея — иначе превью рисуется системным шрифтом,
-       и сравнивать размеры бессмысленно. */
+    /* Brand font: folder loader connects it from manifest; package gets the URL from
+       the gallery — otherwise preview uses system font and size comparison is pointless. */
     if (d.font && !document.getElementById('bundle-font')) {
       var f = document.createElement('link');
       f.rel = 'stylesheet'; f.id = 'bundle-font'; f.href = d.font;
@@ -191,9 +182,8 @@
     }
   }
 
-  /* Произвольный CSS, приложенный пользователем: подменяет собой все
-     встроенные наборы. Так разработчик может сравнить свой файл с ДС,
-     не подкладывая его в репозиторий. */
+  /* Arbitrary user-attached CSS replaces all built-in sets. Lets a developer
+     compare their file to the DS without adding it to the repo. */
   function applyUserCss(text) {
     var el = document.getElementById('user-css');
     if (!el) {
@@ -209,7 +199,7 @@
   }
   applyCss(qs.get('css') || 'new');
 
-  /* ── Разметка приходит от родителя ─────────────────────────────────── */
+  /* ── Markup comes from the parent ─────────────────────────────────── */
   function setHtml(html) {
     root.innerHTML = html;
     Array.prototype.forEach.call(root.querySelectorAll('[data-pick]'), function (el) {
@@ -218,10 +208,9 @@
     reportHeight();
   }
 
-  /* Высоту сообщаем сразу и ещё раз через тик.
-     Через requestAnimationFrame делать нельзя: браузер тормозит rAF во
-     фреймах вне видимой области, сообщение не уходило, фрейм оставался
-     150px по умолчанию — и содержимое обрезалось. */
+  /* Report height immediately and again on a tick.
+     Do not use requestAnimationFrame: browsers throttle rAF in off-screen frames,
+     the message never sent, frame stayed 150px default — content clipped. */
   var lastH = -1;
   function reportHeight() {
     var h = document.documentElement.scrollHeight;
@@ -237,7 +226,7 @@
     parent.postMessage(msg, '*');
   }
 
-  /* ── Форматирование HTML ───────────────────────────────────────────── */
+  /* ── HTML formatting ───────────────────────────────────────────── */
   var VOID = { area:1, base:1, br:1, col:1, embed:1, hr:1, img:1, input:1,
                link:1, meta:1, source:1, track:1, wbr:1 };
 
@@ -253,7 +242,7 @@
     var attrs = Array.prototype.filter.call(node.attributes, function (a) {
       return a.name !== 'data-pick' && a.name.indexOf('data-g-') !== 0;
     }).map(function (a) {
-      // класс-подсветку песочницы не показываем
+      // hide sandbox highlight class
       if (a.name === 'class') {
         var cls = a.value.split(/\s+/).filter(function (c) { return c !== 'g-pick'; }).join(' ');
         return cls ? ' class="' + cls + '"' : '';
@@ -269,35 +258,35 @@
     }).filter(Boolean);
 
     if (!kids.length) return open + '</' + tag + '>';
-    // короткий однострочный текст оставляем в строке
+    // keep short single-line text inline
     if (kids.length === 1 && node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
       return open + kids[0].trim() + '</' + tag + '>';
     }
     return open + '\n' + kids.join('\n') + '\n' + pad + '</' + tag + '>';
   }
 
-  /* ── Сбор CSS-правил, реально относящихся к узлу ───────────────────── */
-  // Слишком общие селекторы (reset, базовая типографика тега) — не про этот
-  // компонент, и в панели они только мешают. Оставляем только то, что
-  // цепляется за класс, id, атрибут или псевдокласс состояния.
+  /* ── Collect CSS rules that actually apply to the node ───────────────────── */
+  // Overly generic selectors (reset, base tag typography) — not this
+  // component, and they only clutter the panel. Keep only what
+  // hooks class, id, attribute, or state pseudo-class.
   function isGeneric(probe) {
     return !/[.#\[:]/.test(probe);
   }
 
   function matchesAny(el, selector) {
-    // селектор может быть составным: "a, b, c"
+    // selector may be compound: "a, b, c"
     var parts = selector.split(',');
     for (var i = 0; i < parts.length; i++) {
       var s = parts[i].trim();
       if (!s) continue;
-      // убираем псевдоэлементы — el.matches их не понимает
+      // strip pseudo-elements — el.matches does not handle them
       var probe = s.replace(/::?(before|after|placeholder|marker|selection|first-line|first-letter)\b/g, '')
                    .replace(/:(hover|focus|focus-visible|active|disabled|checked|not\([^)]*\))/g, '')
                    .trim();
       if (!probe || isGeneric(probe)) continue;
       try {
         if (el.matches(probe) || el.querySelector(probe)) return s;
-      } catch (e) { /* невалидный после чистки — пропускаем */ }
+      } catch (e) { /* invalid after cleanup — skip */ }
     }
     return null;
   }
@@ -326,7 +315,7 @@
     for (var i = 0; i < rules.length; i++) {
       var r = rules[i];
 
-      // слой хрома песочницы игнорируем целиком
+      // ignore sandbox chrome layer entirely
       if (r.constructor && /CSSLayerBlockRule/.test(r.constructor.name) && r.name === 'g-chrome') continue;
 
       if (r.media) {                       // @media
@@ -346,7 +335,7 @@
     }
   }
 
-  /* ── Какие токены задействованы в этих правилах ────────────────────── */
+  /* ── Which tokens are used in these rules ────────────────────── */
   function usedTokens(rulesText) {
     var names = {};
     var re = /var\(\s*(--[\w-]+)/g, m;
@@ -357,7 +346,7 @@
     }).filter(function (t) { return t.value; });
   }
 
-  /* ── Клик по элементу ──────────────────────────────────────────────── */
+  /* ── Click on an element ──────────────────────────────────────────────── */
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-pick]');
     if (!el) return;
@@ -386,7 +375,7 @@
     return cls.length ? s + '.' + cls.join('.') : s;
   }
 
-  /* ── Канал с родителем ─────────────────────────────────────────────── */
+  /* ── Channel with parent ─────────────────────────────────────────────── */
   window.addEventListener('message', function (e) {
     var d = e.data || {};
     if (d.type === 'g:render') setHtml(d.html);

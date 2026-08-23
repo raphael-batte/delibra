@@ -1,6 +1,7 @@
 {
   "id": "_template",
   "title": "Template Design System",
+  "description": "Tokens and components",
   "version": "0.1.0",
   "engine": 1,
 

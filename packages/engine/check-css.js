@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /* ==========================================================================
-   check-css — компоненты бренда обязаны быть написаны токенами.
+   check-css — brand components must be written with tokens.
 
-   Ловит два вида сырых значений в файле компонентов:
-     · hex-цвет — цвет всегда обязан приходить из палитры;
-     · px вне var() — размер обязан приходить из шкалы.
+   Catches two kinds of raw value in the components file:
+     · a hex colour — colour must always come from the palette;
+     · px outside var() — size must come from the scale.
 
-   Разрешено осознанно:
-     0 и none                     — отсутствие величины, токенизировать нечего;
-     1px / 2px в border и outline — толщина линии, своей шкалы у неё нет;
-     значения внутри @media       — это сами брейкпоинты;
-     объявления --*: …            — файл компонентов вправе завести локальную
-                                     переменную (--step-i и подобные);
-     всё, что перечислено в css.allow.json бренда, с объяснением.
+   Deliberately allowed:
+     0 and none                   — absence of a value, nothing to tokenise;
+     1px / 2px in border, outline — line width has no scale of its own;
+     values inside @media         — those are the breakpoints themselves;
+     --*: … declarations          — the components file may declare a local
+                                    variable (--step-i and the like);
+     anything listed in the brand's css.allow.json, with a reason.
 
-   Запуск:  node packages/engine/check-css.js brands/sdm
+   Run:  node packages/engine/check-css.js brands/sdm
    ========================================================================== */
 'use strict';
 
@@ -25,7 +25,7 @@ const brandDir = path.resolve(process.argv[2] || 'brands/sdm');
 const manifest = require('./brand-node.js').readManifest(brandDir);
 const compFile = manifest.css && manifest.css.components;
 if (!compFile) {
-  console.error('в манифесте не объявлен css.components');
+  console.error('css.components is not declared in the manifest');
   process.exit(2);
 }
 
@@ -37,7 +37,7 @@ const allow = fs.existsSync(allowFile)
 const src = fs.readFileSync(path.join(brandDir, compFile), 'utf8');
 const lines = src.split('\n');
 
-/* Комментарии вырезаем построчно, чтобы номера строк остались настоящими. */
+/* Strip comments line by line so line numbers stay real. */
 let inComment = false;
 const clean = lines.map(line => {
   let out = '', i = 0;
@@ -65,22 +65,22 @@ clean.forEach((line, i) => {
   if (mediaDepth && /\}/.test(line)) mediaDepth--;
 
   const why = allow.lines && allow.lines[String(n)];
-  if (why) return;                                   // разрешено явно
+  if (why) return;                                   // explicitly allowed
 
-  if (/^\s*--[\w-]+\s*:/.test(line)) return;         // локальная переменная
+  if (/^\s*--[\w-]+\s*:/.test(line)) return;         // local variable
 
   const hex = line.match(/#[0-9a-fA-F]{3,8}\b/);
-  if (hex) problems.push([n, 'сырой цвет ' + hex[0], line]);
+  if (hex) problems.push([n, 'raw colour ' + hex[0], line]);
 
-  /* px вне var(): вырезаем содержимое var(), чтобы фолбэки не считались. */
+  /* px outside var(): strip var() contents so fallbacks do not count. */
   const noVars = line.replace(/var\([^)]*\)/g, 'var()');
-  if (/@media/.test(line)) return;                   // брейкпоинты — это и есть px
+  if (/@media/.test(line)) return;                   // breakpoints are px by nature
   const pxs = [...noVars.matchAll(/(-?\d*\.?\d+)px/g)].map(m => m[0]);
   pxs.forEach(v => {
     const num = parseFloat(v);
     const isHairline = (num === 1 || num === 2) && /border|outline|inset/.test(noVars);
     if (num === 0 || isHairline) return;
-    problems.push([n, 'сырой размер ' + v, line]);
+    problems.push([n, 'raw size ' + v, line]);
   });
 });
 
@@ -90,6 +90,6 @@ problems.forEach(([n, what, line]) =>
 
 const allowed = Object.keys(allow.lines || {}).length;
 console.log(problems.length
-  ? `\nнаходок: ${problems.length}` + (allowed ? ` · разрешено явно: ${allowed}` : '')
-  : `\nкомпоненты написаны токенами` + (allowed ? ` · разрешено явно: ${allowed}` : ''));
+  ? `\nfindings: ${problems.length}` + (allowed ? ` · explicitly allowed: ${allowed}` : '')
+  : `\ncomponents are written with tokens` + (allowed ? ` · explicitly allowed: ${allowed}` : ''));
 process.exit(problems.length ? 1 : 0);

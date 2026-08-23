@@ -1,13 +1,13 @@
 /* ==========================================================================
-   Переключатель сторибуков — поведение двух меню.
+   Storybook switcher — behaviour of the two menus.
 
-   Плитка  → воркспейс: создать, переключиться.
-   Шеврон  → активный сторибук: выгрузить, скопировать ссылку, удалить.
+   Tile   → workspace: create, switch.
+   Chevron → active storybook: export, delete.
 
-   Пункты, за которыми ещё нет механики (создание, импорт, удаление
-   локального), показаны выключенными с подписью «пока не сделано». Это
-   осознанно: пустое меню не объясняет, что будет, а живой пункт, который
-   ничего не делает, — врёт.
+   Items whose mechanics are not built yet (create, import, delete local)
+   are shown disabled with a "not built yet" label. That is intentional: an
+   empty menu does not explain what will happen, and a live item that does
+   nothing is misleading.
    ========================================================================== */
 (function () {
   'use strict';
@@ -16,12 +16,12 @@
   var R = window.ENGINE_REGISTRY;
   var t = B.t;
 
-  /* На пустом заходе манифеста нет: подставляем имя инструмента, чтобы в
-     шапке не висела пустота. */
+  /* On an empty first visit there is no manifest: substitute the tool name so
+     the header is not blank. */
   if (!window.BRAND_MANIFEST) {
     var logoEl = document.getElementById('g-logo');
-    if (logoEl) logoEl.textContent = 'Storybook Library';
-    document.title = 'Storybook Library';
+    if (logoEl) logoEl.textContent = t('product.name');
+    document.title = t('product.name');
   }
 
   var mark  = document.getElementById('g-mark');
@@ -30,7 +30,7 @@
   var menuS = document.getElementById('g-menu-suite');
   if (!mark || !name) return;
 
-  /* ── Открытие и закрытие ──────────────────────────────────────────── */
+  /* ── Open and close ──────────────────────────────────────────── */
   function closeAll() {
     [menuW, menuS].forEach(function (m) { m.classList.remove('is-open'); });
     [mark, name].forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
@@ -55,84 +55,73 @@
   document.addEventListener('click', closeAll);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
 
-  /* ── Список сторибуков ────────────────────────────────────────────── */
-  var list = document.getElementById('g-suite-list');
-
+  /* ── Workspace menu: home, settings — lib list lives on Home screen ─ */
   R.list().then(function (suites) {
-    /* Показывать нечего — открываем создание сразу: пустая галерея не
-       объясняет, что делать дальше. Условие именно такое: если адрес указан
-       явно (?brand= или ?suite=), человек знает, куда шёл, и диалог ему
-       мешает — даже если список пуст. */
-    /* Диалог создания открываем, когда показывать нечего или когда за ним
-       пришли по адресу /new с домашнего экрана. */
+    /* Nothing to show — open creation immediately: an empty gallery does not
+       explain what to do next. The condition is deliberate: if the address is
+       explicit (?brand= or ?suite=), the user knows where they were going and
+       the dialog gets in the way — even when the list is empty. */
+    /* Open the creation dialog when there is nothing to show or when the user
+       arrived at /new from the home screen. */
     var opened = B.source.rel || B.suiteId;
     if (!opened || location.pathname === '/new') openNew();
 
-    /* Адрес указывает на пакет, которого в этом браузере нет: чаще всего
-       ссылку прислали с другой машины. Говорим прямо и предлагаем завести
-       систему, а не показываем пустую галерею. */
+    /* The address points to a package missing in this browser: usually a link
+       sent from another machine. Say so plainly and offer to create a system,
+       instead of showing an empty gallery. */
     if (B.missingSuite) {
-      openNew();                                   // сначала открыть,
-      showError('missingSuite', { id: B.suiteId }); // потом объяснить: openNew
-    }                                              // сбрасывает прежнюю ошибку
+      openNew();                                   // open first,
+      showError('missingSuite', { id: B.suiteId }); // then explain: openNew
+    }                                              // clears the previous error
 
-    var current = B.source.base;      // абсолютный путь открытой папки
+    var current = B.source.base;      // absolute path of the open folder
 
     suites.forEach(function (suite) {
+      if (!suite.brandPath) return;
       var suiteBase = new URL(suite.brandPath.replace(/\/+$/, '') + '/', location.href).pathname;
-      var isActive = suiteBase === current;
-      if (isActive) R.setActive(suite.id);
-
-      var b = document.createElement('button');
-      b.className = 'g-mi';
-      b.setAttribute('role', 'menuitem');
-      b.innerHTML =
-        '<span class="tick">' + (isActive ? '✓' : '') + '</span>' +
-        '<span class="grow"></span>' +
-        '<span class="badge"></span>';
-      /* Имя приходит из данных бренда — вставляем текстом, не разметкой. */
-      b.querySelector('.grow').textContent = R.displayName(suite.id, suite.title);
-      /* См. домашний экран: подписываем только пакеты — папка это норма,
-         а «только в этом браузере» стоит сказать. */
-      b.querySelector('.badge').textContent =
-        suite.origin === 'library' ? '' : t('badge.browserOnly');
-
-      if (!isActive) b.addEventListener('click', function () { R.open(suite); });
-      list.appendChild(b);
+      if (suiteBase === current) R.setActive(suite.id);
     });
   });
 
-  /* ── Действия над активным ────────────────────────────────────────── */
-  /* ── Новый сторибук ────────────────────────────────────────────────
-     Один диалог на три ветки: создание и импорт — это одно намерение,
-     разводить их по пунктам меню значит требовать выбора до того, как
-     показали варианты. Он же служит экраном пустого старта. */
+  /* ── Actions on the active storybook ────────────────────────────────────────── */
+  /* ── New storybook ────────────────────────────────────────────────
+     One dialog for three branches: create and import are one intent — splitting
+     them into menu items means choosing before showing options. It also serves
+     as the empty-start screen. */
   var newScrim = document.getElementById('g-new-scrim');
   var newError = document.getElementById('g-new-error');
 
   function openNew() {
     newScrim.hidden = false;
-    /* Всегда начинаем с выбора сценария: диалог, открытый на середине
-       прошлого захода, — источник ошибок, а не экономия клика. */
+    /* Always start with scenario choice: a dialog left mid-flow from the last
+       visit is a source of errors, not a click saved. */
     backToChoices();
   }
   function closeNew() {
     newScrim.hidden = true;
-    /* Отказ от создания не должен оставлять человека на пустом экране: если
-       за диалогом ничего нет — уходим на список сторибуков. Раньше «Отмена»
-       на /new просто закрывала окно, и оставалась голая галерея. */
+    /* Cancelling creation must not leave the user on a blank screen: if there is
+       nothing behind the dialog — go to the storybook list. Previously Cancel on
+       /new just closed the window and left a bare gallery. */
     var opened = B.source.rel || B.suiteId;
     if (!opened || location.pathname === '/new') location.href = '/';
   }
 
-  /* Открыть и закрыть. Обработчики стоят рядом с самими функциями: в
-     прошлый раз они уехали вместе с вырезанным блоком, и пункт меню молча
-     перестал работать — ровно то, что теперь проверяется тестами. */
+  /* Open and close. Handlers sit next to the functions themselves: last time
+     they moved away with a cut block and the menu item silently stopped working —
+     exactly what tests now guard against. */
   document.getElementById('g-new').addEventListener('click', function (e) {
     e.stopPropagation();
     closeAll();
     openNew();
   });
+  var homeBtn = document.getElementById('g-home');
+  if (homeBtn) {
+    homeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeAll();
+      location.href = '/';
+    });
+  }
   document.getElementById('g-new-close').addEventListener('click', closeNew);
   newScrim.addEventListener('click', function (e) { if (e.target === newScrim) closeNew(); });
   document.addEventListener('keydown', function (e) {
@@ -144,40 +133,60 @@
     newError.hidden = false;
   }
 
-  /* ── Второй шаг: имя, адрес, файл ──────────────────────────────────
-     Сценарий выбран — дальше спрашиваем то, что нужно всем трём веткам, и
-     показываем будущий адрес до создания, а не после. */
+  /* ── Second step: name, address, file ──────────────────────────────────
+     Scenario chosen — next ask what all three branches need and show the future
+     address before creation, not after. */
   var step2   = document.getElementById('g-new-step2');
   var choices = newScrim.querySelector('.g-choices');
   var nameInput2 = document.getElementById('g-new-name');
   var addressEl  = document.getElementById('g-new-address');
+  var addressRow = document.getElementById('g-new-address-row');
   var sourceRow  = document.getElementById('g-new-source');
   var srcInput   = document.getElementById('g-new-src-file');
   var srcName    = document.getElementById('g-new-src-name');
   var designInput = document.getElementById('g-new-design');
+  var designRow   = document.getElementById('g-new-design-row');
   var createBtn  = document.getElementById('g-new-create');
   var backBtn    = document.getElementById('g-new-back');
   var leadEl     = document.getElementById('g-new-lead');
 
   var scenario = null;    // 'blank' | 'css' | 'import'
-  var srcText  = null;    // содержимое выбранного файла
+  var srcText  = null;    // contents of the chosen CSS file
+  var srcBlob  = null;    // .lbr for import
 
   function refreshAddress() {
-    var slug = window.ENGINE_SLUG.slug(nameInput2.value);
-    addressEl.textContent = '/' + slug;
-    var needsFile = scenario !== 'blank';
-    createBtn.disabled = !nameInput2.value.trim() || (needsFile && !srcText);
+    var title = nameInput2.value.trim();
+    var hasName = title.length > 0;
+    if (addressRow) addressRow.hidden = !hasName;
+    if (hasName) {
+      addressEl.textContent = '/' + window.ENGINE_SLUG.slug(title);
+    } else {
+      addressEl.textContent = '';
+    }
+    var needsFile = scenario === 'css' ? !srcText : (scenario === 'import' ? !srcBlob : false);
+    createBtn.disabled = !hasName || needsFile;
   }
   nameInput2.addEventListener('input', refreshAddress);
 
   srcInput.addEventListener('change', function (e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
+    if (scenario === 'import') {
+      srcBlob = file;
+      srcText = null;
+      srcName.textContent = file.name;
+      if (!nameInput2.__touched) {
+        nameInput2.value = file.name.replace(/\.[^.]+$/, '');
+      }
+      refreshAddress();
+      return;
+    }
     file.text().then(function (text) {
       srcText = text;
+      srcBlob = null;
       srcName.textContent = file.name;
-      /* Имя файла — лучшая догадка о названии, чем «New storybook», но
-         только пока человек не ввёл своё. */
+      /* Filename is a better guess at the title than "New storybook", but only
+         until the user typed their own. */
       if (!nameInput2.__touched) {
         nameInput2.value = file.name.replace(/\.[^.]+$/, '');
       }
@@ -186,82 +195,38 @@
   });
   nameInput2.addEventListener('input', function () { nameInput2.__touched = true; });
 
-  /* Мост показываем только там, где он к месту: пустой сторибук, который
-     сразу можно наполнить. Для импорта пакета и разбора CSS он не нужен. */
-  var bridgeRow  = document.getElementById('g-new-bridge');
-  var bridgeList = document.getElementById('g-new-bridge-file');
-  var bridgePull = document.getElementById('g-new-bridge-pull');
-
-  function offerBridge(which) {
-    bridgeRow.hidden = true;
-    if (which !== 'blank') return;
-
-    R.designSource().then(function (info) {
-      if (!info.connected) return;
-      return R.designFiles().then(function (out) {
-        var files = out.files || [];
-        if (!files.length) return;
-        bridgeList.innerHTML = '';
-        files.forEach(function (file) {
-          var option = document.createElement('option');
-          option.value = file.fileKey;
-          option.textContent = file.fileName;
-          bridgeList.appendChild(option);
-        });
-        bridgeRow.hidden = false;
-      });
-    });
-  }
-
-  bridgePull.addEventListener('click', function () {
-    var fileKey = bridgeList.value;
-    var fileName = bridgeList.options[bridgeList.selectedIndex].textContent;
-    bridgePull.disabled = true;
-
-    R.designVariables(fileKey).then(function (out) {
-      bridgePull.disabled = false;
-      if (out.error) { showError('createFailed', { error: out.error }); return; }
-
-      var built = window.ENGINE_FIGMA_IMPORT.build(
-        out.data, fileName, t, nameInput2.value.trim(), designInput.value.trim());
-      if (built.error) { showError(built.error); return; }
-
-      create(built.pack.files, nameInput2.value.trim());
-    }, function (err) {
-      bridgePull.disabled = false;
-      showError('createFailed', { error: err.message });
-    });
-  });
+  var SCENARIO_HINT = { blank: 'fromDesign', css: 'fromCss', import: 'import' };
 
   function step(which) {
     scenario = which;
     srcText = null;
+    srcBlob = null;
     srcName.textContent = '';
     srcInput.value = '';
     nameInput2.__touched = false;
     nameInput2.value = which === 'blank' ? t('new.blank.name') : '';
     designInput.value = '';
-    srcInput.accept = which === 'css' ? '.css,text/css' : '.json,application/json';
+    srcInput.accept = which === 'css' ? '.css,text/css'
+      : (which === 'import' ? '.lbr,.dsz,application/zip' : '');
 
     choices.hidden = true;
     step2.hidden = false;
     sourceRow.hidden = which === 'blank';
+    if (designRow) designRow.hidden = which !== 'blank';
     createBtn.hidden = false;
     backBtn.hidden = false;
     newError.hidden = true;
-    /* Подзаголовок напоминает, какой сценарий выбран: на втором шаге плиток
-       уже не видно, а «Название» одинаково для всех трёх. */
-    if (leadEl) leadEl.textContent = t('new.' + which + '.hint');
+    if (leadEl) leadEl.textContent = t('new.' + (SCENARIO_HINT[which] || which) + '.hint');
     refreshAddress();
-    offerBridge(which);
     nameInput2.focus();
   }
 
-  /* Первый шаг заново. Отдельная функция, потому что тем же путём диалог
-     открывается: состояние обязано быть одинаковым, откуда бы ни пришли. */
+  /* Back to the first step. Separate function because the dialog opens the same
+     way: state must match regardless of where we came from. */
   function backToChoices() {
     scenario = null;
     srcText = null;
+    srcBlob = null;
     srcName.textContent = '';
     srcInput.value = '';
     choices.hidden = false;
@@ -274,62 +239,29 @@
 
   backBtn.addEventListener('click', backToChoices);
 
-  /* Сборка файлов сторибука — по сценарию. Дальше все три ветки идут одним
-     путём: отдать серверу папку, не получилось — сложить пакет в браузер. */
+  /* Assemble storybook files by scenario. All three branches then share one path:
+     give the server a folder; if that fails — store a package in the browser. */
   function filesFor(title) {
     if (scenario === 'css') {
       var css = window.ENGINE_CSS_IMPORT.build(srcText, srcName.textContent, t, title);
       return css.error ? { error: css.error } : { files: css.pack.files };
     }
     if (scenario === 'import') {
-      var res = window.ENGINE_PACKAGE.parse(srcText);
-      if (res.error) return res;
-      var files = Object.assign({}, res.pack.files);
-      var m = JSON.parse(files['manifest.json']);
-      m.title = title;
-      files['manifest.json'] = JSON.stringify(m, null, 2);
-      return { files: files };
+      return { error: 'internal' };
     }
 
-    /* Пустой — значит пустой: ни одного токена, ни одной секции. Раньше сюда
-       копировался шаблон, и человек получал чужую палитру, принимая её за
-       свою. Каркас ровно такой, чтобы галерея открылась; чем его наполняют,
-       сказано в скилле движка и на экране пустого сторибука. */
-    var manifest = {
-      id: 'storybook',
+    /* Empty means empty. The shell itself lives in brand-scaffold.js, shared
+       with the server so both sides create the same storybook. */
+    return window.ENGINE_SCAFFOLD.emptyPackage({
       title: title,
-      version: '0.1.0',
-      engine: 1,
-      css: { tokens: 'tokens.css', components: 'components.css' },
-      sections: 'sections.json',
-      tokenMap: 'token-map.json',
-      legacyNames: null,
-      assetsBase: 'assets/',
-      font: { family: null, href: null },
-      breakpoints: { mobile: 900, desktopMin: 901 },
-      preview: { mobileWidth: 390, desktopWidth: 1440, container: 1170 },
-      compare: { legacy: null }
-    };
-    return { files: {
-      'manifest.json':  JSON.stringify(manifest, null, 2),
-      'tokens.css':     ':root {\n}\n',
-      'components.css': '',
-      'token-map.json': '{}',
-      'sections.json':  '[]'
-    } };
+      design: designInput.value.trim(),
+      source: designInput.value.trim() ? 'figma' : 'blank'
+    });
   }
 
-  /* Общий путь: собранные файлы → папка на сервере или пакет в браузере.
-     Им пользуются и кнопка «Создать», и импорт переменных из моста. */
+  /* Shared path: assembled files → folder on the server or package in the browser.
+     Used by both the Create button and variable import from the bridge. */
   function create(files, title) {
-    /* Ссылка на макет кладётся прямо в манифест: она часть системы, а не
-       настройка браузера, и уезжает вместе с пакетом. */
-    var design = designInput.value.trim();
-    if (design && files['manifest.json']) {
-      var m = JSON.parse(files['manifest.json']);
-      m.design = { url: design };
-      files['manifest.json'] = JSON.stringify(m, null, 2);
-    }
     var built = { files: files };
 
     createBtn.disabled = true;
@@ -338,11 +270,11 @@
         return R.createBrand(window.ENGINE_SLUG.slug(title), title, built.files)
           .then(function (id) {
             R.setActive(id);
-            location.href = R.addressOf({ id: id, brandPath: '../../brands/' + id });
+            location.href = R.addressOf({ id: id, brandPath: R.brandRel(id) });
           });
       }
-      /* Статике папку не создать: складываем пакет в браузер и говорим об
-         этом прямо — иначе человек будет ждать от агента невозможного. */
+      /* Static hosting cannot create a folder: store a package in the browser and
+         say so plainly — otherwise the user waits for the agent to do the impossible. */
       var pack = window.ENGINE_BUNDLE.empty();
       pack.files = built.files;
       var id = R.newId(title);
@@ -358,6 +290,34 @@
 
   createBtn.addEventListener('click', function () {
     var title = nameInput2.value.trim();
+
+    if (scenario === 'import' && srcBlob) {
+      createBtn.disabled = true;
+      var slug = window.ENGINE_SLUG.slug(title);
+      R.serverWritable().then(function (writable) {
+        if (writable) {
+          return window.ENGINE_PACKAGE.importToServer(srcBlob, title, slug)
+            .then(function (id) {
+              R.setActive(id);
+              location.href = R.addressOf({ id: id, brandPath: R.brandRel(id) });
+            });
+        }
+        return srcBlob.arrayBuffer().then(function (buf) {
+          var res = window.ENGINE_PACKAGE.unzip(new Uint8Array(buf));
+          if (res.error) { showError(res.error, res); createBtn.disabled = false; return; }
+          var files = Object.assign({}, res.pack.files);
+          var m = JSON.parse(files['manifest.json']);
+          m.title = title;
+          files['manifest.json'] = JSON.stringify(m, null, 2);
+          create(files, title);
+        });
+      }).catch(function (err) {
+        showError('createFailed', { error: err.message });
+        createBtn.disabled = false;
+      });
+      return;
+    }
+
     var built = filesFor(title);
     if (built.error) { showError(built.error, built); return; }
     create(built.files, title);
@@ -367,70 +327,129 @@
   document.getElementById('g-new-css').addEventListener('click', function () { step('css'); });
   document.getElementById('g-new-file').addEventListener('click', function () { step('import'); });
 
-  /* ── Пустой сторибук ───────────────────────────────────────────────
-     Открыт, но в нём ничего нет — вместо каталога показываем, чем его
-     наполняют. Условие именно такое: не «первый заход», а «нечего
-     показать»; наполнивший систему этого экрана больше не увидит. */
+  function copyFeedback(btn, text) {
+    navigator.clipboard.writeText(text).then(function () {
+      var was = btn.textContent;
+      btn.textContent = t('prompt.copied');
+      setTimeout(function () { btn.textContent = was; }, 1200);
+    });
+  }
+
+  function galleryUrl() {
+    return window.ENGINE_SHORT_URLS
+      ? location.origin + '/' + B.source.id
+      : location.href.split('#')[0];
+  }
+
+  function fillPrompt(opts) {
+    return window.ENGINE_PROMPT.buildFillPrompt({
+      brandId: B.source.id,
+      brandPath: opts.brandPath || '',
+      skillPath: opts.skillPath || 'packages/engine/ENGINE_SKILL.md',
+      manifest: window.BRAND_MANIFEST,
+      galleryUrl: galleryUrl()
+    });
+  }
+
+  function workspacePrompt(info) {
+    return window.ENGINE_PROMPT.buildWorkspacePrompt({
+      root: info.root,
+      brandsRoot: info.brandsRoot,
+      galleryOrigin: location.origin,
+      skillPath: info.root + '/packages/engine/ENGINE_SKILL.md'
+    });
+  }
+
+  /* ── Empty storybook — golden path: paths + copy prompt ─ */
   (function onboardEmpty() {
     if (!window.BRAND_MANIFEST) return;
     if ((window.GALLERY || []).length) return;
+    if (window.BRAND_SECTIONS && window.BRAND_SECTIONS.length) return;
+    if (window.BRAND_TOKENS && Object.keys(window.BRAND_TOKENS).length) return;
 
-    /* Шаги подставляем под конкретный сторибук: агенту нужен путь к файлам
-       и путь к скиллу движка. У пакета в браузере папки нет — так и
-       сказано, вместо пути. */
     var folder = B.source.kind === 'folder';
-    var skill = new URL('ENGINE_SKILL.md', location.href).pathname;
-    /* Пока сервер не ответил, показываем URL — он хотя бы не врёт про
-       структуру; настоящий путь на диске подставим, как только узнаем. */
-    var path = folder ? B.source.base : null;
-
-    function step(key, vars) {
-      var el = document.querySelector('[data-i18n="' + key + '"]');
-      if (el) el.textContent = t(key, vars);
-    }
-    var s1 = document.querySelector('[data-i18n="new.agent.s1"]');
-    if (s1) s1.textContent = folder ? t('new.agent.s1', { path: path })
-                                    : t('new.agent.noFolder');
-    step('new.agent.s2', { skill: skill });
-    step('new.agent.s3');
-
-    /* Промпт отдаём кнопкой: пересказывать его по памяти в чате — верный
-       способ потерять половину требований. */
+    var scroll = document.getElementById('g-panel');
+    var onboard = document.getElementById('g-onboard');
+    var repoField = document.getElementById('g-onboard-repo-field');
+    var folderEl = document.getElementById('g-onboard-folder');
+    var delibraEl = document.getElementById('g-onboard-delibra');
+    var repoEl = document.getElementById('g-onboard-repo');
+    var noFolderEl = document.getElementById('g-onboard-no-folder');
     var copyBtn = document.getElementById('g-copy-prompt');
-    if (copyBtn) {
-      /* Ссылка на макет идёт первой строкой задания: сейчас человек называет
-         файл голосом в чате, и агент угадывает. */
-      var design = (window.BRAND_MANIFEST.design || {}).url;
-      var prompt = (design ? t('new.agent.design', { url: design }) + ' ' : '') +
-                   t('new.agent.prompt', { skill: skill, path: path || '' });
-      copyBtn.addEventListener('click', function () {
-        navigator.clipboard.writeText(prompt).then(function () {
-          var was = copyBtn.textContent;
-          copyBtn.textContent = t('new.agent.copied');
-          setTimeout(function () { copyBtn.textContent = was; }, 1200);
-        });
+    var settingsBtn = document.getElementById('g-onboard-settings');
+
+    var paths = { repo: '', folder: '', delibra: galleryUrl() };
+
+    function setPath(key, value) {
+      paths[key] = value;
+      var el = key === 'folder' ? folderEl : (key === 'repo' ? repoEl : delibraEl);
+      if (el) el.textContent = value;
+    }
+
+    setPath('delibra', galleryUrl());
+
+    var ctx = {
+      brandPath: folder ? B.source.base : ('brands/' + B.source.id),
+      skillPath: new URL('ENGINE_SKILL.md', location.href).pathname
+    };
+
+    function refreshPrompt() {
+      if (copyBtn) copyBtn._prompt = fillPrompt(ctx);
+    }
+    refreshPrompt();
+
+    onboard.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-copy]');
+      if (!btn || btn.disabled) return;
+      var key = btn.getAttribute('data-copy');
+      if (paths[key]) copyFeedback(btn, paths[key]);
+    });
+
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', function () {
+        var scrim = document.getElementById('g-settings-scrim');
+        if (scrim) scrim.hidden = false;
       });
     }
 
-    document.getElementById('g-onboard').hidden = false;
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        if (!copyBtn._prompt || copyBtn.disabled) return;
+        copyFeedback(copyBtn, copyBtn._prompt);
+      });
+    }
 
-    /* Настоящий путь на диске: агент открывает папку, а не адрес. */
+    if (folder) {
+      setPath('folder', ctx.brandPath);
+      if (repoField) repoField.hidden = false;
+    } else {
+      setPath('folder', t('badge.browserOnly'));
+      noFolderEl.hidden = false;
+      if (copyBtn) copyBtn.disabled = true;
+    }
+
+    onboard.hidden = false;
+    if (scroll) scroll.classList.add('g-scroll--empty');
+    var sections = document.getElementById('g-sections');
+    if (sections) sections.hidden = true;
+    var panel = scroll && scroll.closest('.g-panel');
+    if (panel) panel.classList.add('g-panel--empty');
+    var shell = document.querySelector('.g-shell');
+    if (shell) shell.classList.add('g-shell--empty');
+
     if (folder) R.ping().then(function (info) {
       if (!info || !info.brandsRoot) return;
-      var disk = info.brandsRoot + '/' + B.source.id;
-      var skillDisk = info.root + '/packages/engine/ENGINE_SKILL.md';
-      if (s1) s1.textContent = t('new.agent.s1', { path: disk });
-      step('new.agent.s2', { skill: skillDisk });
-      if (copyBtn) {
-        prompt = (design ? t('new.agent.design', { url: design }) + ' ' : '') +
-                 t('new.agent.prompt', { skill: skillDisk, path: disk });
-      }
+      ctx.brandPath = info.brandsRoot + '/' + B.source.id;
+      ctx.skillPath = info.root + '/packages/engine/ENGINE_SKILL.md';
+      setPath('folder', ctx.brandPath);
+      setPath('repo', info.root);
+      refreshPrompt();
     });
   })();
 
-  /* ── Показать CSS системы ──────────────────────────────────────────
-     Человек, который пользуется дизайн-системой, должен видеть её код, а не
-     только результат: иначе «где это лежит» приходится спрашивать. */
+  /* ── Show system CSS ──────────────────────────────────────────
+     Someone using a design system should see its code, not only the result:
+     otherwise "where does this live?" has to be asked. */
   function showCode(file) {
     if (!file) return;
 
@@ -455,8 +474,8 @@
         });
       });
 
-      /* Открыть файл в проводнике: галерея показывает систему, но правят её
-         в файлах — и путь до них человек иначе ищет руками. */
+      /* Reveal file in Finder: the gallery shows the system, but edits happen in
+         files — otherwise the user hunts for the path by hand. */
       var revealBtn = actions.querySelector('[data-reveal]');
       if (revealBtn) revealBtn.addEventListener('click', function () {
         R.reveal(B.source.base + file).then(function (ok) {
@@ -480,54 +499,175 @@
   wireView('g-view-tokens', 'tokens');
   wireView('g-view-components', 'components');
 
-  /* ── Дублировать ───────────────────────────────────────────────────
-     Копия всегда пакет, даже если исходник — папка: браузер в папку не
-     пишет, а править копию человек хочет сразу. Для библиотечного бренда
-     это единственный путь к правкам, и он же делает осмысленным
-     выключенное удаление папки. */
-  document.getElementById('g-duplicate').addEventListener('click', function (e) {
-    e.stopPropagation();
-    closeAll();
-    var M = window.BRAND_MANIFEST || {};
-    var title = R.displayName(B.source.id, M.title) + t('menu.copySuffix');
-    window.ENGINE_PACKAGE
-      .build(B.source, M, window.BRAND_SECTIONS || [], title)
-      .then(function (pack) { adopt(pack, title); });
-  });
+  /* ── Duplicate ───────────────────────────────────────────────────
+     Full copy as a new libra. Folder sources export the whole tree via
+     serve.js; bundles copy in memory. */
+  (function duplicateLibra() {
+    var dupScrim = document.getElementById('g-dup-scrim');
+    var dupName  = document.getElementById('g-dup-name');
+    var dupError = document.getElementById('g-dup-error');
+    var dupCreate = document.getElementById('g-dup-create');
+    var dupCancel = document.getElementById('g-dup-cancel');
+    var dupBtn = document.getElementById('g-duplicate');
+    if (!dupScrim || !dupBtn) return;
 
-  /* ── Выгрузить файлом ──────────────────────────────────────────────── */
-  document.getElementById('g-export').addEventListener('click', function (e) {
-    e.stopPropagation();
-    closeAll();
-    var M = window.BRAND_MANIFEST || {};
-    window.ENGINE_PACKAGE
-      .build(B.source, M, window.BRAND_SECTIONS || [], R.displayName(B.source.id, M.title))
-      .then(function (pack) {
-        window.ENGINE_PACKAGE.download(pack, B.source.id + '.ds.json');
+    function refreshDupCreate() {
+      dupCreate.disabled = !dupName.value.trim();
+    }
+
+    function closeDup() {
+      dupScrim.hidden = true;
+      dupError.hidden = true;
+      dupCreate.disabled = false;
+    }
+
+    function openDup() {
+      var M = window.BRAND_MANIFEST || {};
+      dupName.value = R.displayName(B.source.id, M.title) + t('menu.copySuffix');
+      dupError.hidden = true;
+      refreshDupCreate();
+      dupScrim.hidden = false;
+      dupName.focus();
+      dupName.select();
+    }
+
+    function packFiles(pack, title) {
+      var files = Object.assign({}, pack.files);
+      var m = JSON.parse(files['manifest.json']);
+      m.title = title;
+      delete m.id;
+      m.design = Object.assign({}, m.design || {}, {
+        source: 'duplicate',
+        duplicatedFrom: B.source.id
       });
-  });
+      files['manifest.json'] = JSON.stringify(m, null, 2);
+      return files;
+    }
 
-  /* Пункт меню ведёт в опасную зону настроек: подтверждение и объяснение
-     последствий живут в одном месте, а не дублируются. */
-  var del = document.getElementById('g-delete');
-  if (del) {
-    del.disabled = false;
-    del.querySelector('.grow').textContent =
-      t(B.source.writable ? 'settings.delete' : 'settings.remove');
-    del.addEventListener('click', function (e) {
+    function goToBrand(id, brandPath) {
+      R.setActive(id);
+      location.href = R.addressOf({ id: id, brandPath: brandPath });
+    }
+
+    function copySuiteSettings(fromId, toId) {
+      var settings = R.suiteSettings(fromId);
+      if (settings && Object.keys(settings).length) {
+        R.saveSuiteSettings(toId, settings);
+      }
+      var css = R.compareCss(fromId);
+      if (css) {
+        R.saveCompareCss(toId, css, (settings || {}).compareName);
+      }
+    }
+
+    function runDuplicate(title) {
+      var slug = window.ENGINE_SLUG.slug(title);
+      var M = window.BRAND_MANIFEST || {};
+      var sourceId = B.source.id;
+      dupCreate.disabled = true;
+      dupError.hidden = true;
+
+      R.serverWritable().then(function (writable) {
+        if (writable && B.source.kind === 'folder') {
+          return R.duplicateBrand(sourceId, title, slug)
+            .catch(function () {
+              return window.ENGINE_PACKAGE.exportFromServer(sourceId)
+                .catch(function () {
+                  return window.ENGINE_PACKAGE.build(B.source, M, window.BRAND_SECTIONS || [], title)
+                    .then(function (pack) {
+                      return new Blob([window.ENGINE_PACKAGE.zip(pack.files)], {
+                        type: window.ENGINE_ARCHIVE.MIME
+                      });
+                    });
+                })
+                .then(function (blob) {
+                  return window.ENGINE_PACKAGE.importToServer(blob, title, slug);
+                });
+            })
+            .then(function (id) {
+              copySuiteSettings(sourceId, id);
+              goToBrand(id, R.brandRel(id));
+            });
+        }
+
+        var packPromise;
+        if (B.source.kind === 'bundle' && B.source.files) {
+          packPromise = Promise.resolve({
+            formatVersion: window.ENGINE_BUNDLE.FORMAT_VERSION,
+            files: JSON.parse(JSON.stringify(B.source.files))
+          });
+        } else {
+          packPromise = window.ENGINE_PACKAGE.build(B.source, M, window.BRAND_SECTIONS || [], title);
+        }
+
+        return packPromise.then(function (pack) {
+          var files = packFiles(pack, title);
+          if (writable) {
+            return R.createBrand(slug, title, files).then(function (id) {
+              copySuiteSettings(sourceId, id);
+              goToBrand(id, R.brandRel(id));
+            });
+          }
+          var id = R.newId(title);
+          var problem = R.saveBundle(id, {
+            formatVersion: pack.formatVersion || window.ENGINE_BUNDLE.FORMAT_VERSION,
+            files: files
+          }, title);
+          if (problem) throw new Error(t('new.err.' + problem.error, problem));
+          copySuiteSettings(sourceId, id);
+          goToBrand(id, null);
+        });
+      }).catch(function (err) {
+        dupError.textContent = t('duplicate.failed', { error: (err && err.message) || err });
+        dupError.hidden = false;
+        dupCreate.disabled = !dupName.value.trim();
+      });
+    }
+
+    dupBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       closeAll();
-      /* Ищем диалог по месту, а не по переменной выше: этот обработчик
-         объявлен раньше блока настроек, и связывать их порядком объявления
-         значит поставить мину под перестановку кода. */
-      document.getElementById('g-settings-scrim').hidden = false;
-      document.getElementById('g-settings-delete').focus();
+      openDup();
     });
-  }
+    dupCancel.addEventListener('click', closeDup);
+    dupScrim.addEventListener('click', function (e) { if (e.target === dupScrim) closeDup(); });
+    dupName.addEventListener('input', refreshDupCreate);
+    dupCreate.addEventListener('click', function () {
+      var title = dupName.value.trim();
+      if (!title) return;
+      runDuplicate(title);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !dupScrim.hidden) closeDup();
+    });
+  })();
 
-  /* ── Общие настройки ──────────────────────────────────────────────
-     Язык — свойство инструмента, а не системы: иначе, открыв рядом две
-     дизайн-системы, пользователь получил бы галерею на двух языках. */
+  /* ── Export as file ──────────────────────────────────────────────── */
+  (function () {
+    var exportBtn = document.getElementById('g-export');
+    if (!exportBtn) return;
+    var exportLabel = exportBtn.querySelector('.grow');
+    exportBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeAll();
+      var M = window.BRAND_MANIFEST || {};
+      window.ENGINE_PACKAGE.exportStorybook(
+        B.source,
+        M,
+        window.BRAND_SECTIONS || [],
+        B.source.id + window.ENGINE_PACKAGE.ext
+      ).catch(function (err) {
+        if (!exportLabel) return;
+        var was = exportLabel.textContent;
+        exportLabel.textContent = t('export.failed', { error: (err && err.message) || err });
+        setTimeout(function () { exportLabel.textContent = was; }, 2500);
+      });
+    });
+  })();
+
+  /* ── Global settings ──────────────────────────────────────────────
+     Language is a property of the tool, not the system: otherwise opening two
+     design systems side by side would show the gallery in two languages. */
   var wsBtn   = document.getElementById('g-ws-settings');
   var wsScrim = document.getElementById('g-ws-scrim');
   if (wsBtn && wsScrim) {
@@ -536,8 +676,8 @@
     var manifestLoc = (window.BRAND_MANIFEST || {}).locale || 'en';
     var saved = R.settings().locale || '';
 
-    /* Пустое значение — «как в сторибуке»: движок берёт locale манифеста.
-       Это не то же самое, что явно выбранный английский. */
+    /* Empty value means "as in the storybook": the engine takes the manifest locale.
+       That is not the same as explicitly chosen English. */
     var auto = document.createElement('option');
     auto.value = '';
     auto.textContent = t('ws.language.auto', { loc: manifestLoc });
@@ -553,18 +693,18 @@
 
     select.addEventListener('change', function () {
       R.saveSettings({ locale: select.value || null });
-      /* Строки хрома проставлены при загрузке — перерисовываем страницу
-         целиком, вместо того чтобы разыскивать их по одной. */
+      /* Chrome strings are set on load — reload the whole page instead of
+         hunting them down one by one. */
       location.reload();
     });
 
-    /* Скрытые библиотечные сторибуки возвращаются отсюда — иначе «убрать»
-       превращается в одностороннюю дверь. */
+    /* Hidden library storybooks are restored from here — otherwise "remove"
+       becomes a one-way door. */
     var hiddenRow = document.getElementById('g-ws-hidden');
     function paintHidden() {
       var n = R.hidden().length;
-      /* Пустая строка «ничего не скрыто» — сообщение ни о чём: настройка
-         существует, только когда есть что возвращать. */
+      /* An empty "nothing hidden" line says nothing: the setting exists only
+         when there is something to restore. */
       hiddenRow.hidden = !n;
       if (!n) return;
       hiddenRow.querySelector('.js-count').textContent = t('ws.hidden', { n: n });
@@ -575,6 +715,18 @@
       location.reload();
     });
     paintHidden();
+
+    var wsCopyBtn = document.getElementById('g-ws-copy-prompt');
+    if (wsCopyBtn) {
+      wsCopyBtn.addEventListener('click', function () {
+        R.ping().then(function (info) {
+          var text = info && info.root
+            ? workspacePrompt(info)
+            : window.ENGINE_PROMPT.buildWorkspacePrompt({ galleryOrigin: location.origin });
+          copyFeedback(wsCopyBtn, text);
+        });
+      });
+    }
 
     wsBtn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -587,15 +739,15 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeWs(); });
   }
 
-  /* About — про инструмент целиком: знак, имя, версия, две строки о том,
-     что это. Отдельным окном, а не строкой в меню: читают редко, но целиком. */
+  /* About — the whole tool: mark, name, version, two lines about what it is.
+     A separate window, not a menu row: read rarely, but in full. */
   var about      = document.getElementById('g-about');
   var aboutScrim = document.getElementById('g-about-scrim');
   if (about && aboutScrim) {
     document.getElementById('g-about-ver').textContent =
       t('about.version', { v: B.version, c: B.contract });
 
-    /* Знак берём из той же разметки, что и в сайдбаре, — один источник. */
+    /* Take the mark from the same markup as the sidebar — one source. */
     var srcPath = document.querySelector('.g-brandmark path');
     var dstPath = document.getElementById('g-about-path');
     if (srcPath && dstPath) dstPath.setAttribute('d', srcPath.getAttribute('d'));
@@ -615,8 +767,8 @@
     });
   }
 
-  /* Подтверждение вводом слова. «Вы уверены?» нажимают не глядя, поэтому
-     необратимое действие требует набрать слово руками. */
+  /* Confirm by typing a word. "Are you sure?" gets clicked without reading, so
+     irreversible actions require typing the word by hand. */
   function confirmWord(opts) {
     var scrim = document.getElementById('g-confirm-scrim');
     var input = document.getElementById('g-confirm-input');
@@ -647,27 +799,112 @@
     scrim.onclick = function (e) { if (e.target === scrim) close(); };
   }
 
-  /* ── Настройки сторибука ──────────────────────────────────────────
-     Имя и файл для сравнения — свойства конкретной системы, поэтому живут
-     здесь, а не в шапке галереи. */
+  /* Delete / remove — one confirm dialog for menu and settings danger zone. */
+  var deleteCanEraseFolder = false;
+  var deleteIsLibrary = !B.source.writable;
+
+  function refreshDeleteLabels() {
+    var erase = deleteIsLibrary && !deleteCanEraseFolder;
+    var action = t(erase ? 'settings.remove' : 'settings.delete');
+    var menuDel = document.getElementById('g-delete');
+    if (menuDel) {
+      var grow = menuDel.querySelector('.grow');
+      if (grow) grow.textContent = action;
+    }
+    var delBtn = document.getElementById('g-settings-delete');
+    var delHint = document.getElementById('g-settings-delete-hint');
+    if (delBtn) delBtn.textContent = action;
+    if (delHint) {
+      delHint.textContent = t(
+        erase ? 'settings.remove.hint'
+          : (deleteIsLibrary ? 'settings.deleteFolder.hint' : 'settings.delete.hint')
+      );
+    }
+  }
+
+  if (deleteIsLibrary) {
+    R.serverWritable().then(function (writable) {
+      deleteCanEraseFolder = writable;
+      refreshDeleteLabels();
+    });
+  }
+
+  function promptDeleteLibra(opts) {
+    opts = opts || {};
+    var suiteId = B.source.id;
+    var M2 = window.BRAND_MANIFEST || {};
+    var displayName = R.displayName(suiteId, M2.title);
+    var canDelete = deleteIsLibrary ? deleteCanEraseFolder : false;
+    var removeOnly = deleteIsLibrary && !canDelete;
+
+    confirmWord({
+      title:  t(removeOnly ? 'confirm.removeTitle' : 'confirm.deleteTitle',
+                { name: displayName }),
+      action: t(removeOnly ? 'settings.remove' : 'settings.delete'),
+      onConfirm: function () {
+        function leave() { location.href = '/'; }
+
+        if (B.source.kind === 'bundle') {
+          B.source.release();
+          R.deleteSuite(suiteId);
+          leave();
+          return;
+        }
+        if (canDelete) {
+          R.deleteBrand(suiteId).then(leave, function (err) {
+            if (opts.onError) opts.onError(err);
+          });
+          return;
+        }
+        if (deleteIsLibrary) R.hide(suiteId);
+        R.forget(suiteId);
+        leave();
+      }
+    });
+  }
+
+  var menuDelete = document.getElementById('g-delete');
+  if (menuDelete) {
+    menuDelete.disabled = false;
+    refreshDeleteLabels();
+    menuDelete.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeAll();
+      promptDeleteLibra({
+        onError: function (err) {
+          var delHint = document.getElementById('g-settings-delete-hint');
+          var settingsScrim = document.getElementById('g-settings-scrim');
+          if (delHint) delHint.textContent = t('settings.deleteFailed', { error: err.message });
+          if (settingsScrim) settingsScrim.hidden = false;
+        }
+      });
+    });
+  }
+
+  /* ── Storybook settings ──────────────────────────────────────────
+     Name and comparison file belong to a specific system, so they live here,
+     not in the gallery header. */
   var settingsBtn   = document.getElementById('g-settings');
   var settingsScrim = document.getElementById('g-settings-scrim');
   if (settingsBtn && settingsScrim) {
     var nameInput = document.getElementById('g-settings-name');
     var nameHint  = document.getElementById('g-settings-name-hint');
+    var descInput = document.getElementById('g-settings-description');
     var M2 = window.BRAND_MANIFEST || {};
 
-    var suiteId = B.source.id;      // папка, а не manifest.id — см. brand.js
+    var suiteId = B.source.id;      // folder id, not manifest.id — see brand.js
     nameInput.value = R.displayName(suiteId, M2.title);
+    descInput.value = (M2.description && M2.description.trim()) || '';
+    descInput.placeholder = t('libra.defaultDescription');
 
-    /* Для библиотечного бренда имя локальное: в манифест на диске браузер
-       не пишет. Поэтому переименование работает, но названо тем, что оно
-       есть, — а не выдаётся за правку пакета. */
-    if (!B.source.writable) nameHint.textContent = t('settings.nameLibrary');
+    /* For a library brand the name is local: the browser does not write to the
+       manifest on disk. Renaming works, but it is labelled for what it is —
+       not presented as editing the package. */
+    if (!B.source.writable) nameHint.textContent = t('settings.nameFolder');
 
-    /* Правки применяются по «Сохранить», а не на каждое нажатие клавиши:
-       иначе диалог меняет систему, пока человек ещё думает, и отменить
-       нечего. Кнопка мертва, пока ничего не изменилось. */
+    /* Changes apply on Save, not on every keystroke: otherwise the dialog changes
+       the system while the user is still thinking, with nothing to undo. The
+       button stays disabled until something changed. */
     var designField = document.getElementById('g-settings-design');
     designField.value = (M2.design && M2.design.url) || '';
 
@@ -675,35 +912,67 @@
     var cancelBtn = document.getElementById('g-settings-cancel');
     var cssInput  = document.getElementById('g-css-file');
     var cssName   = document.getElementById('g-css-name');
+    var cssClear  = document.getElementById('g-css-clear');
     var initialName = nameInput.value;
-    var pendingCss = null;      // выбранный, но ещё не сохранённый файл
+    var initialDescription = (M2.description && M2.description.trim()) || '';
+    var initialHasCompareCss = !!R.compareCss(suiteId);
+    var initialCompareName = (R.suiteSettings(suiteId) || {}).compareName || '';
+    var cssChange = null;      // null | 'clear' | { text, name }
 
     var initialDesign = designField.value;
 
+    function refreshCssUi() {
+      if (cssChange === 'clear') cssName.textContent = '';
+      else if (cssChange && cssChange.name) cssName.textContent = cssChange.name;
+      else cssName.textContent = initialCompareName;
+
+      var showClear = cssChange === 'clear' ? false
+        : (cssChange && cssChange.name) ? true
+        : initialHasCompareCss;
+      if (cssClear) cssClear.hidden = !showClear;
+    }
+
+    function cssDirty() {
+      if (cssChange === null) return false;
+      if (cssChange === 'clear') return initialHasCompareCss;
+      return true;
+    }
+
     function dirty() {
       return nameInput.value.trim() !== initialName.trim() ||
+             descInput.value.trim() !== initialDescription.trim() ||
              designField.value.trim() !== initialDesign.trim() ||
-             !!pendingCss;
+             cssDirty();
     }
     function refreshSave() { saveBtn.disabled = !dirty(); }
     nameInput.addEventListener('input', refreshSave);
+    descInput.addEventListener('input', refreshSave);
     designField.addEventListener('input', refreshSave);
 
-    /* Файл только запоминается: применяется и сохраняется по «Сохранить». */
+    /* File is only remembered: applied and saved on Save. */
     if (cssInput) cssInput.addEventListener('change', function (e) {
       var file = e.target.files && e.target.files[0];
       if (!file) return;
       file.text().then(function (text) {
-        pendingCss = { text: text, name: file.name };
-        cssName.textContent = file.name;
+        cssChange = { text: text, name: file.name };
+        refreshCssUi();
         refreshSave();
       });
     });
 
+    if (cssClear) cssClear.addEventListener('click', function () {
+      if (cssChange && cssChange.text) cssChange = initialHasCompareCss ? 'clear' : null;
+      else if (initialHasCompareCss) cssChange = 'clear';
+      else cssChange = null;
+      if (cssInput) cssInput.value = '';
+      refreshCssUi();
+      refreshSave();
+    });
+
     function applyName() {
       var value = nameInput.value.trim();
-      /* У пакета имя — часть его самого и уезжает вместе с файлом. У папки
-         в манифест на диске браузер не пишет, поэтому там имя локальное. */
+      /* For a package the name is part of it and travels with the file. For a
+         folder the browser does not write to the manifest on disk, so the name is local. */
       if (B.source.kind === 'bundle') {
         var pack = R.bundle(suiteId);
         if (pack) {
@@ -718,110 +987,118 @@
       var logo = document.getElementById('g-logo');
       if (logo) logo.textContent = shown;
       document.title = shown;
-      var row = document.querySelector('#g-suite-list .g-mi .tick');
-      if (row && row.textContent.trim() === '✓') {
-        row.parentNode.querySelector('.grow').textContent = shown;
-      }
       initialName = nameInput.value;
       refreshSave();
     }
 
     function applyCss() {
-      if (!pendingCss) return;
-      window.GALLERY_API.setCompareCss(pendingCss.text, pendingCss.name);
-      /* Приложенный файл принадлежит сторибуку и переживает перезагрузку. */
-      var problem = R.saveCompareCss(suiteId, pendingCss.text, pendingCss.name);
-      if (problem) cssName.textContent = pendingCss.name + ' — ' + t('settings.compare.tooBig');
-      pendingCss = null;
+      if (cssChange === 'clear') {
+        R.clearCompareCss(suiteId);
+        if (window.GALLERY_API) window.GALLERY_API.setCompareCss(null, '');
+        initialHasCompareCss = false;
+        initialCompareName = '';
+        cssChange = null;
+        refreshCssUi();
+        return;
+      }
+      if (!cssChange || !cssChange.text) return;
+      window.GALLERY_API.setCompareCss(cssChange.text, cssChange.name);
+      var problem = R.saveCompareCss(suiteId, cssChange.text, cssChange.name);
+      if (problem) cssName.textContent = cssChange.name + ' — ' + t('settings.compare.tooBig');
+      else {
+        initialHasCompareCss = true;
+        initialCompareName = cssChange.name;
+      }
+      cssChange = null;
+      refreshCssUi();
     }
 
-    /* Ссылку пишем в манифест — на диск через сервер или в пакет в
-       хранилище: она обязана пережить перезагрузку и уехать с пакетом. */
+    /* Write the link into the manifest — to disk via the server or into the
+       package in storage: it must survive reload and leave with the package. */
+    function applyDescription() {
+      var value = descInput.value.trim();
+      if (value === initialDescription) return;
+      initialDescription = value;
+      var fields = value ? { description: value } : { description: null };
+      R.saveManifest(suiteId, fields, B.source.kind === 'folder');
+      if (value) M2.description = value;
+      else delete M2.description;
+      if (window.GALLERY_API && window.GALLERY_API.setDefaultTitle) {
+        window.GALLERY_API.setDefaultTitle(value || t('libra.defaultDescription'));
+      }
+    }
+
     function applyDesign() {
       var value = designField.value.trim();
       if (value === initialDesign.trim()) return;
       initialDesign = value;
-      R.saveManifest(suiteId, { design: value ? { url: value } : null },
-                     B.source.kind === 'folder');
+      var prev = M2.design || {};
+      var design = null;
+      if (value) {
+        design = { url: value, source: prev.source || 'figma' };
+      } else if (prev.source && prev.source !== 'blank') {
+        design = { source: prev.source };
+      }
+      R.saveManifest(suiteId, { design: design }, B.source.kind === 'folder');
+      if (design && design.url) M2.design = design;
+      else if (!design) delete M2.design;
+    }
+
+    var settingsCopyBtn = document.getElementById('g-settings-copy-prompt');
+    if (settingsCopyBtn) {
+      settingsCopyBtn.addEventListener('click', function () {
+        var run = function (brandPath, skillPath) {
+          copyFeedback(settingsCopyBtn, fillPrompt({ brandPath: brandPath, skillPath: skillPath }));
+        };
+        if (B.source.kind === 'folder') {
+          R.ping().then(function (info) {
+            if (info && info.brandsRoot) {
+              run(info.brandsRoot + '/' + B.source.id,
+                  info.root + '/packages/engine/ENGINE_SKILL.md');
+            } else run(B.source.base, new URL('ENGINE_SKILL.md', location.href).pathname);
+          });
+        } else {
+          run('brands/' + B.source.id, new URL('ENGINE_SKILL.md', location.href).pathname);
+        }
+      });
     }
 
     saveBtn.addEventListener('click', function () {
       applyName();
+      applyDescription();
       applyDesign();
       applyCss();
       refreshSave();
       settingsScrim.hidden = true;
     });
     function discard() {
-      nameInput.value = initialName;   // введённое, но не сохранённое — забываем
+      nameInput.value = initialName;   // typed but unsaved — discard
+      descInput.value = initialDescription;
       designField.value = initialDesign;
-      pendingCss = null;
+      cssChange = null;
       if (cssInput) cssInput.value = '';
-      cssName.textContent = (R.suiteSettings(suiteId) || {}).compareName || '';
+      refreshCssUi();
       refreshSave();
     }
+
+    refreshCssUi();
 
     cancelBtn.addEventListener('click', function () {
       discard();
       settingsScrim.hidden = true;
     });
 
-    /* Что именно делает кнопка, зависит от вида сторибука: папку на диске
-       браузер удалить не может, поэтому для библиотечного это «убрать из
-       галереи», и подпись говорит ровно это. */
     var delBtn  = document.getElementById('g-settings-delete');
     var delHint = document.getElementById('g-settings-delete-hint');
-    var isLibrary = !B.source.writable;   // папка: браузер в неё не пишет
 
-    /* Что кнопка делает, решает сервер, а не догадки: со своим сервером
-       папка удаляется по-настоящему, под статикой — только пропадает из
-       списка. Подпись меняется вместе с поведением, чтобы не обещать
-       того, чего не будет. */
-    var canDelete = false;
-    delBtn.textContent  = t(isLibrary ? 'settings.remove' : 'settings.delete');
-    delHint.textContent = t(isLibrary ? 'settings.remove.hint' : 'settings.delete.hint');
-
-    if (isLibrary) {
-      R.serverWritable().then(function (writable) {
-        canDelete = writable;
-        if (!writable) return;
-        delBtn.textContent  = t('settings.delete');
-        delHint.textContent = t('settings.deleteFolder.hint');
-      });
-    }
+    refreshDeleteLabels();
 
     delBtn.addEventListener('click', function () {
       settingsScrim.hidden = true;
-      confirmWord({
-        title:  t(isLibrary && !canDelete ? 'confirm.removeTitle' : 'confirm.deleteTitle',
-                  { name: R.displayName(suiteId, M2.title) }),
-        action: t(isLibrary && !canDelete ? 'settings.remove' : 'settings.delete'),
-        onConfirm: function () {
-          /* Уходим на нейтральный адрес: остаться в удалённом сторибуке
-             нельзя, а гадать, какой открыть следующим, — не наше дело. */
-          /* Уходим на список сторибуков: остаться на адресе удалённого —
-             значит показать пустую галерею вместо объяснения. Раньше здесь
-             стоял location.pathname, то есть ровно этот мёртвый адрес. */
-          function leave() { location.href = '/'; }
-
-          /* Пакет живёт в браузере: удаление — это стереть его из хранилища,
-             никакого сервера для этого не нужно. */
-          if (B.source.kind === 'bundle') {
-            B.source.release();
-            R.deleteSuite(suiteId);
-            leave();
-            return;
-          }
-          if (canDelete) {
-            R.deleteBrand(suiteId).then(leave, function (err) {
-              delHint.textContent = t('settings.deleteFailed', { error: err.message });
-              settingsScrim.hidden = false;
-            });
-            return;
-          }
-          if (isLibrary) R.hide(suiteId);
-          R.forget(suiteId);
-          leave();
+      promptDeleteLibra({
+        onError: function (err) {
+          delHint.textContent = t('settings.deleteFailed', { error: err.message });
+          settingsScrim.hidden = false;
         }
       });
     });
@@ -843,23 +1120,4 @@
     });
   }
 
-  var copy = document.getElementById('g-copylink');
-  if (copy) {
-    copy.addEventListener('click', function () {
-      /* Адрес собирает реестр: он один знает, короткие ссылки доступны или
-         нет. Раньше здесь клеился свой, и на /sdm получалась ссылка вида
-         /sdm?brand=../../brands/sdm — рабочая, но показывающая кухню. */
-      var bundle = B.source.kind === 'bundle';
-      var url = location.origin + R.addressOf({
-        id: B.source.id,
-        brandPath: bundle ? null : B.source.rel
-      });
-      var label = copy.querySelector('.grow');
-      var before = label.textContent;
-      navigator.clipboard.writeText(url).then(function () {
-        label.textContent = t(bundle ? 'menu.copiedLocal' : 'menu.copied');
-        setTimeout(function () { label.textContent = before; closeAll(); }, 900);
-      });
-    });
-  }
 })();

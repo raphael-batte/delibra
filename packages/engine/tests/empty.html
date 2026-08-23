@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+<title>Empty libra tests</title>
+<link rel="stylesheet" href="harness.css">
+</head>
+<body>
+<h1>Empty libra</h1>
+<p class="sub">Onboard screen, centering, duplicate must not regress to empty state.
+<button id="rerun">Rerun</button></p>
+<div id="summary">Running…</div>
+<div id="out"></div>
+<div id="stage"></div>
+
+<script src="harness.js"></script>
+<script>
+(function () {
+  'use strict';
+  H.brand = '/__data/new-libra-4';
+
+  function D() { return H.gallery().doc; }
+  function G() { return H.gallery().win; }
+
+  H.g('Empty libra');
+  H.t('onboard visible, catalog hidden', function () {
+    var doc = D();
+    var onboard = doc.getElementById('g-onboard');
+    H.ok(onboard, 'missing #g-onboard');
+    H.ok(!onboard.hidden, 'onboard hidden');
+    H.eq(doc.querySelectorAll('.g-section').length, 0, 'catalog sections rendered');
+    var sections = doc.getElementById('g-sections');
+    H.ok(sections && sections.hidden, '#g-sections not hidden');
+  });
+
+  H.t('empty mode: flat canvas, no topbar', function () {
+    var doc = D();
+    H.ok(doc.querySelector('.g-shell--empty'), 'missing g-shell--empty');
+    H.ok(doc.querySelector('.g-panel--empty'), 'missing g-panel--empty');
+    H.ok(doc.querySelector('.g-scroll--empty'), 'missing g-scroll--empty');
+    var topbar = doc.querySelector('.g-topbar');
+    H.ok(topbar && doc.defaultView.getComputedStyle(topbar).display === 'none',
+       'topbar visible in empty mode');
+  });
+
+  H.t('onboard centered in content panel', function () {
+    var doc = D();
+    var panel = doc.querySelector('.g-panel');
+    var onboard = doc.getElementById('g-onboard');
+    H.ok(panel && onboard, 'missing panel or onboard');
+    var pr = panel.getBoundingClientRect();
+    var or = onboard.getBoundingClientRect();
+    var vOff = Math.abs((pr.top + pr.height / 2) - (or.top + or.height / 2));
+    var hOff = Math.abs((pr.left + pr.width / 2) - (or.left + or.width / 2));
+    H.ok(vOff < 48, 'not vertically centered: Δ' + Math.round(vOff) + 'px');
+    H.ok(hOff < 48, 'not horizontally centered: Δ' + Math.round(hOff) + 'px');
+  });
+
+  H.g('Duplicate must not show empty state');
+  H.t('sdm-copy-test has catalog, not onboard', function () {
+    return H.wait(100).then(function () {
+      var f = document.createElement('iframe');
+      f.style.cssText = 'width:1600px;height:900px;border:0';
+      f.src = H.galleryUrl + '?brand=' + encodeURIComponent('/__data/sdm-copy-test') +
+              '&css=new&test=1&t=' + Date.now();
+      document.getElementById('stage').appendChild(f);
+      return new Promise(function (resolve) {
+        f.addEventListener('load', function () {
+          var doc = f.contentDocument;
+          var win = f.contentWindow;
+          setTimeout(function () {
+            try {
+              H.ok(doc.getElementById('g-onboard').hidden, 'onboard on SDM copy');
+              H.ok(win.GALLERY.length > 0, 'copy has no catalog sections');
+              H.ok(!doc.querySelector('.g-shell--empty'), 'empty classes on full copy');
+            } finally {
+              f.remove();
+              resolve();
+            }
+          }, 5000);
+        });
+      });
+    });
+  });
+
+  H.run();
+})();
+</script>
+</body>
+</html>

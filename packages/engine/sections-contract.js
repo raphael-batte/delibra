@@ -1,11 +1,11 @@
 /* ==========================================================================
-   Контракт секций — общий для CLI и браузера.
+   The sections contract — shared by the CLI and the browser.
 
-   Одни и те же правила проверяют пакет в репозитории (check-sections.js) и
-   файл, который пользователь принёс через «Импорт». Разъехаться они не
-   должны: тогда импорт принимал бы то, что проверка отвергает.
+   The same rules validate a package in the repository (check-sections.js) and
+   a file brought in through Import. They must not drift apart, or the import
+   would accept what the check rejects.
 
-   Работает и в node (module.exports), и в браузере (window.…CONTRACT).
+   Runs in node (module.exports) and in the browser (window.…CONTRACT).
    ========================================================================== */
 (function (root, factory) {
   'use strict';
@@ -15,9 +15,9 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  /* Обязательные поля каждого вида строки каталога. Строка без cls
-     отрисуется, но кликнуть по ней будет нельзя; без text выйдет пустая
-     кнопка — то есть брак, который виден только глазами. */
+  /* Required fields per catalogue row kind. A row without cls renders but
+     cannot be clicked; without text it is an empty button — defects visible
+     only by eye. */
   var ROW_FIELDS = {
     btn:  ['size', 'cls', 'text', 'heights'],
     tile: ['name', 'cls', 'meta', 'sample'],
@@ -26,50 +26,50 @@
   };
   var KINDS = Object.keys(ROW_FIELDS);
 
-  /* Возвращает список проблем строками. Пустой список — секции годны. */
+  /* Returns problems as strings. An empty list means the sections are fine. */
   function check(sections) {
     var problems = [];
     var fail = function (m) { problems.push(m); };
 
-    if (!Array.isArray(sections)) return ['секции должны быть массивом'];
+    if (!Array.isArray(sections)) return ['sections must be an array'];
 
     sections.forEach(function (s, i) {
       var id = s.id || '#' + i;
-      if (!s.id)    fail('секция #' + i + ': нет id');
-      if (!s.title) fail(id + ': нет title');
-      if (s.render) fail(id + ': render() — рисование это дело движка, а не бренда');
-      if (!Array.isArray(s.examples) || !s.examples.length) fail(id + ': нет примеров');
+      if (!s.id)    fail('section #' + i + ': no id');
+      if (!s.title) fail(id + ': no title');
+      if (s.render) fail(id + ': render() — rendering is the engine\'s job, not the brand\'s');
+      if (!Array.isArray(s.examples) || !s.examples.length) fail(id + ': no examples');
 
       (s.examples || []).forEach(function (ex, j) {
         var where = id + '/' + (ex.label || '#' + j);
-        if (!ex.label) fail(id + ': пример #' + j + ' без label');
+        if (!ex.label) fail(id + ': example #' + j + ' has no label');
 
         var forms = ['html', 'rows'].filter(function (k) { return ex[k] !== undefined; });
         if (forms.length !== 1) {
-          fail(where + ': ровно одна форма тела — html ИЛИ rows (сейчас ' +
-               (forms.join(' + ') || 'ни одной') + ')');
+          fail(where + ': exactly one body form — html OR rows (now ' +
+               (forms.join(' + ') || 'neither') + ')');
         }
-        if (ex.wrap && !ex.rows) fail(where + ': wrap допустим только вместе с rows');
+        if (ex.wrap && !ex.rows) fail(where + ': wrap is only allowed together with rows');
 
         if (typeof ex.html === 'string') {
-          if (ex.html.indexOf('data-pick') < 0) fail(where + ': нет data-pick — пример не кликабелен');
-          if (/<script/i.test(ex.html)) fail(where + ': <script> в разметке примера');
+          if (ex.html.indexOf('data-pick') < 0) fail(where + ': no data-pick — the example is not clickable');
+          if (/<script/i.test(ex.html)) fail(where + ': <script> in example markup');
         }
         (ex.rows || []).forEach(function (r, k) {
           if (KINDS.indexOf(r.kind) < 0) {
-            fail(where + ': строка #' + k + ' неизвестного вида «' + r.kind + '»');
+            fail(where + ': row #' + k + ' of unknown kind "' + r.kind + '"');
             return;
           }
           var missing = ROW_FIELDS[r.kind].filter(function (f) {
             return r[f] === undefined || r[f] === '';
           });
           if (missing.length) {
-            fail(where + ': строка #' + k + ' (' + r.kind + ') без полей: ' + missing.join(', '));
+            fail(where + ': row #' + k + ' (' + r.kind + ') missing fields: ' + missing.join(', '));
           }
         });
-        /* Обёртка — оболочка, а не разметка: имя тега, классы, data-pick. */
+        /* The wrapper is a shell, not markup: tag name, classes, data-pick. */
         if (ex.wrap && ex.wrap.tag && !/^[a-z][a-z0-9]*$/.test(ex.wrap.tag)) {
-          fail(where + ': wrap.tag «' + ex.wrap.tag + '» — ожидается имя тега');
+          fail(where + ': wrap.tag "' + ex.wrap.tag + '" — expected a tag name');
         }
       });
     });

@@ -31,7 +31,7 @@ the dialog that offers them is also the empty-start screen.
 
 | Branch | Input | What you get |
 |---|---|---|
-| From a storybook file | `.ds.json` | the whole package, as it was exported |
+| From a storybook file | `.dsz` | the whole package, as it was exported |
 | From a CSS file | any stylesheet with custom properties | a token-only storybook, parsed |
 | From the template | nothing | neutral tokens and one button |
 

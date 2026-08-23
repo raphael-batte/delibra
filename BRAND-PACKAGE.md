@@ -4,7 +4,7 @@ This is the format an agent writes and the gallery reads. A person never edits
 it by hand — they read the result and hand the agent the next task.
 
 A brand is a set of files plus a manifest that says what they are. Where those
-files physically live — a folder on the server, one JSON file, a zip — is a
+files physically live — a folder on the server or a `.dsz` archive — is a
 transport detail. The engine talks to a `BrandSource`, never to a filesystem.
 
 ```
@@ -14,53 +14,33 @@ BrandSource
   text(path)        → file contents as a string
 ```
 
-Three transports, one contract:
+Two transports, one contract:
 
-| Transport | Status | `url()` returns | Good for |
-|---|---|---|---|
-| `folder` | shipped | `/brands/<id>/…` | development, the repo |
-| `.ds.json` | deferred | `blob:` from memory | exchange between machines |
-| `.dsz` (zip) | deferred | `blob:` from memory | heavy assets, arbitrary payload |
+| Transport | Role | Good for |
+|---|---|---|
+| `folder` | canonical at rest | development, the repo |
+| `.dsz` (zip) | **the only exchange format** | handoff, backup, import |
 
 **Canonical form is the plain folder.** A brand lives unpacked — readable,
 diffable, editable in place — and that is the only form the engine reads at
-rest. An archive is an *exchange* artifact: produced on export, consumed on
+rest. A `.dsz` file is an *exchange* artifact: produced on export, consumed on
 import, unpacked back into a folder. Nothing runs out of the archive, so the
 round trip must be lossless — export then import has to reproduce the folder
 byte for byte, including the opaque payload the engine never interprets.
 
-**Current decision: the folder is the only transport.** Export and import wait
-until the gallery can hold several design systems at once — until then there is
-no second slot to import into, and a bundle would only round-trip a folder to
-itself. This document exists so that when the work starts, the format is a
-decision already made rather than one improvised under deadline.
-
-What that defers, concretely: `BrandSource` is not extracted yet, the engine
-still resolves brand paths directly. The refactor is small and local to
-`brand.js`, and nothing else should grow a dependency on those paths meanwhile.
-
-## Why JSON first
-
-Not a rejection of a real container — the same contract, without the zip
-dependency. The engine has no build step and no dependencies; reading a zip in
-the browser means shipping a library or writing an inflater, and for a brand
-whose assets are SVG that buys nothing. JSON also diffs in git, which a zip
-does not.
-
-The move to zip is mechanical: the fields stay, the files become entries, and
-`BrandSource` does not change.
+With `node packages/engine/serve.js`, export zips the whole brand folder;
+import unpacks into a new folder under `brands/`.
 
 ## Layout
 
-Same shape in every transport — in `.ds.json` the tree is the `files` map, in
-`.dsz` it is the archive entries.
+Same tree in the folder and inside the archive:
 
 ```
 manifest.json        required — without it the file is a guess, not a brand
 tokens.css
 components.css
-sections.js
-token-map.js
+sections.json
+token-map.json
 assets/…
 optional/            opaque: carried, never interpreted
 ```
@@ -98,3 +78,4 @@ already heading — `token-map.js` is data, not code.
 - A binary blob with no schema. Unreadable in two years, by anyone.
 - Shipping the engine inside the package. That is an installer, not a brand.
 - Auto-discovery of files by naming convention, in place of the manifest.
+- A second exchange format (JSON bundle, etc.). One archive, one extension: `.dsz`.
