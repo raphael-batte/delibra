@@ -154,6 +154,7 @@
   var sourceRow  = document.getElementById('g-new-source');
   var srcInput   = document.getElementById('g-new-src-file');
   var srcName    = document.getElementById('g-new-src-name');
+  var designInput = document.getElementById('g-new-design');
   var createBtn  = document.getElementById('g-new-create');
   var backBtn    = document.getElementById('g-new-back');
   var leadEl     = document.getElementById('g-new-lead');
@@ -185,6 +186,53 @@
   });
   nameInput2.addEventListener('input', function () { nameInput2.__touched = true; });
 
+  /* Мост показываем только там, где он к месту: пустой сторибук, который
+     сразу можно наполнить. Для импорта пакета и разбора CSS он не нужен. */
+  var bridgeRow  = document.getElementById('g-new-bridge');
+  var bridgeList = document.getElementById('g-new-bridge-file');
+  var bridgePull = document.getElementById('g-new-bridge-pull');
+
+  function offerBridge(which) {
+    bridgeRow.hidden = true;
+    if (which !== 'blank') return;
+
+    R.designSource().then(function (info) {
+      if (!info.connected) return;
+      return R.designFiles().then(function (out) {
+        var files = out.files || [];
+        if (!files.length) return;
+        bridgeList.innerHTML = '';
+        files.forEach(function (file) {
+          var option = document.createElement('option');
+          option.value = file.fileKey;
+          option.textContent = file.fileName;
+          bridgeList.appendChild(option);
+        });
+        bridgeRow.hidden = false;
+      });
+    });
+  }
+
+  bridgePull.addEventListener('click', function () {
+    var fileKey = bridgeList.value;
+    var fileName = bridgeList.options[bridgeList.selectedIndex].textContent;
+    bridgePull.disabled = true;
+
+    R.designVariables(fileKey).then(function (out) {
+      bridgePull.disabled = false;
+      if (out.error) { showError('createFailed', { error: out.error }); return; }
+
+      var built = window.ENGINE_FIGMA_IMPORT.build(
+        out.data, fileName, t, nameInput2.value.trim(), designInput.value.trim());
+      if (built.error) { showError(built.error); return; }
+
+      create(built.pack.files, nameInput2.value.trim());
+    }, function (err) {
+      bridgePull.disabled = false;
+      showError('createFailed', { error: err.message });
+    });
+  });
+
   function step(which) {
     scenario = which;
     srcText = null;
@@ -192,6 +240,7 @@
     srcInput.value = '';
     nameInput2.__touched = false;
     nameInput2.value = which === 'blank' ? t('new.blank.name') : '';
+    designInput.value = '';
     srcInput.accept = which === 'css' ? '.css,text/css' : '.json,application/json';
 
     choices.hidden = true;
@@ -204,6 +253,7 @@
        уже не видно, а «Название» одинаково для всех трёх. */
     if (leadEl) leadEl.textContent = t('new.' + which + '.hint');
     refreshAddress();
+    offerBridge(which);
     nameInput2.focus();
   }
 
@@ -269,10 +319,18 @@
     } };
   }
 
-  createBtn.addEventListener('click', function () {
-    var title = nameInput2.value.trim();
-    var built = filesFor(title);
-    if (built.error) { showError(built.error, built); return; }
+  /* Общий путь: собранные файлы → папка на сервере или пакет в браузере.
+     Им пользуются и кнопка «Создать», и импорт переменных из моста. */
+  function create(files, title) {
+    /* Ссылка на макет кладётся прямо в манифест: она часть системы, а не
+       настройка браузера, и уезжает вместе с пакетом. */
+    var design = designInput.value.trim();
+    if (design && files['manifest.json']) {
+      var m = JSON.parse(files['manifest.json']);
+      m.design = { url: design };
+      files['manifest.json'] = JSON.stringify(m, null, 2);
+    }
+    var built = { files: files };
 
     createBtn.disabled = true;
     R.serverWritable().then(function (writable) {
@@ -296,6 +354,13 @@
       showError('createFailed', { error: err.message });
       createBtn.disabled = false;
     });
+  }
+
+  createBtn.addEventListener('click', function () {
+    var title = nameInput2.value.trim();
+    var built = filesFor(title);
+    if (built.error) { showError(built.error, built); return; }
+    create(built.files, title);
   });
 
   document.getElementById('g-new-blank').addEventListener('click', function () { step('blank'); });
@@ -333,7 +398,11 @@
        способ потерять половину требований. */
     var copyBtn = document.getElementById('g-copy-prompt');
     if (copyBtn) {
-      var prompt = t('new.agent.prompt', { skill: skill, path: path || '' });
+      /* Ссылка на макет идёт первой строкой задания: сейчас человек называет
+         файл голосом в чате, и агент угадывает. */
+      var design = (window.BRAND_MANIFEST.design || {}).url;
+      var prompt = (design ? t('new.agent.design', { url: design }) + ' ' : '') +
+                   t('new.agent.prompt', { skill: skill, path: path || '' });
       copyBtn.addEventListener('click', function () {
         navigator.clipboard.writeText(prompt).then(function () {
           var was = copyBtn.textContent;
@@ -353,7 +422,8 @@
       if (s1) s1.textContent = t('new.agent.s1', { path: disk });
       step('new.agent.s2', { skill: skillDisk });
       if (copyBtn) {
-        prompt = t('new.agent.prompt', { skill: skillDisk, path: disk });
+        prompt = (design ? t('new.agent.design', { url: design }) + ' ' : '') +
+                 t('new.agent.prompt', { skill: skillDisk, path: disk });
       }
     });
   })();
@@ -598,6 +668,9 @@
     /* Правки применяются по «Сохранить», а не на каждое нажатие клавиши:
        иначе диалог меняет систему, пока человек ещё думает, и отменить
        нечего. Кнопка мертва, пока ничего не изменилось. */
+    var designField = document.getElementById('g-settings-design');
+    designField.value = (M2.design && M2.design.url) || '';
+
     var saveBtn   = document.getElementById('g-settings-save');
     var cancelBtn = document.getElementById('g-settings-cancel');
     var cssInput  = document.getElementById('g-css-file');
@@ -605,11 +678,16 @@
     var initialName = nameInput.value;
     var pendingCss = null;      // выбранный, но ещё не сохранённый файл
 
+    var initialDesign = designField.value;
+
     function dirty() {
-      return nameInput.value.trim() !== initialName.trim() || !!pendingCss;
+      return nameInput.value.trim() !== initialName.trim() ||
+             designField.value.trim() !== initialDesign.trim() ||
+             !!pendingCss;
     }
     function refreshSave() { saveBtn.disabled = !dirty(); }
     nameInput.addEventListener('input', refreshSave);
+    designField.addEventListener('input', refreshSave);
 
     /* Файл только запоминается: применяется и сохраняется по «Сохранить». */
     if (cssInput) cssInput.addEventListener('change', function (e) {
@@ -657,14 +735,26 @@
       pendingCss = null;
     }
 
+    /* Ссылку пишем в манифест — на диск через сервер или в пакет в
+       хранилище: она обязана пережить перезагрузку и уехать с пакетом. */
+    function applyDesign() {
+      var value = designField.value.trim();
+      if (value === initialDesign.trim()) return;
+      initialDesign = value;
+      R.saveManifest(suiteId, { design: value ? { url: value } : null },
+                     B.source.kind === 'folder');
+    }
+
     saveBtn.addEventListener('click', function () {
       applyName();
+      applyDesign();
       applyCss();
       refreshSave();
       settingsScrim.hidden = true;
     });
     function discard() {
       nameInput.value = initialName;   // введённое, но не сохранённое — забываем
+      designField.value = initialDesign;
       pendingCss = null;
       if (cssInput) cssInput.value = '';
       cssName.textContent = (R.suiteSettings(suiteId) || {}).compareName || '';

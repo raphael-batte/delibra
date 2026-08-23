@@ -802,6 +802,22 @@ body.g-no-scroll { overflow: hidden; }
         <span class="g-field__hint" data-i18n="new.address.hint"></span>
       </div>
 
+      <label class="g-field">
+        <span class="g-field__label" data-i18n="new.design"></span>
+        <input type="text" id="g-new-design" autocomplete="off" placeholder="https://figma.com/design/…">
+        <span class="g-field__hint" data-i18n="new.design.hint"></span>
+      </label>
+
+      <!-- Появляется только когда рядом отвечает мост. Его отсутствие —
+           норма: у агента свой доступ к макету. -->
+      <div class="g-field" id="g-new-bridge" hidden>
+        <span class="g-field__label" data-i18n="new.bridge"></span>
+        <select id="g-new-bridge-file"></select>
+        <button class="g-mi" id="g-new-bridge-pull" style="width:auto;margin-top:8px"
+                data-i18n="new.bridge.pull"></button>
+        <span class="g-field__hint" data-i18n="new.bridge.hint"></span>
+      </div>
+
       <div class="g-field" id="g-new-source" hidden>
         <span class="g-field__label" data-i18n="new.source"></span>
         <label class="g-attach">
@@ -892,6 +908,13 @@ body.g-no-scroll { overflow: hidden; }
       <span class="g-field__label" data-i18n="settings.name"></span>
       <input type="text" id="g-settings-name">
       <span class="g-field__hint" id="g-settings-name-hint"></span>
+    </label>
+
+    <label class="g-field">
+      <span class="g-field__label" data-i18n="new.design"></span>
+      <input type="text" id="g-settings-design" autocomplete="off"
+             placeholder="https://figma.com/design/…">
+      <span class="g-field__hint" data-i18n="settings.design.hint"></span>
     </label>
 
     <div class="g-field">
@@ -999,7 +1022,9 @@ gScript('brand.js');
 gScript('rows.js');
 gScript('sections-contract.js');
 gScript('package-io.js');
+gScript('token-build.js');
 gScript('css-import.js');
+gScript('figma-import.js');
 </script>
 
 <script>

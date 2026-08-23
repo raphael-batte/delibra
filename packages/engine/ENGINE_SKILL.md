@@ -75,6 +75,7 @@ repository, under `tools/`.
   "legacyNames": null,
   "assetsBase": "assets/",
 
+  "design": { "url": "https://figma.com/design/…" },
   "font": { "family": "'Inter', sans-serif", "href": "https://fonts.googleapis.com/…" },
   "breakpoints": { "mobile": 900, "desktopMin": 901 },
   "preview": { "mobileWidth": 390, "desktopWidth": 1440, "container": 1170 },
@@ -83,7 +84,9 @@ repository, under `tools/`.
 ```
 
 `id` prefixes storage keys, `engine` is the contract major (see VERSIONING.md),
-`locale` may be omitted for English. The older `manifest.js` form still loads,
+`locale` may be omitted for English. `design.url` is optional and points at the
+file this system comes from — it is handed to you with the folder, and nothing
+fetches it on its own. The older `manifest.js` form still loads,
 but a brand in that shape cannot be exported or imported.
 
 Every path is relative **to the brand folder**, never to the engine. The engine

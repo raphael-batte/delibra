@@ -74,6 +74,51 @@
       });
     },
 
+    /* Отвечает ли рядом мост к макету. Спрашиваем один раз: ответ не
+       меняется в пределах сессии, а ходить в сеть на каждый шаг диалога
+       незачем. */
+    designSource: function () {
+      if (!Registry.__design) {
+        Registry.__design = fetch('/__api/design/source', { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : { connected: false }; })
+          .catch(function () { return { connected: false }; });
+      }
+      return Registry.__design;
+    },
+
+    designFiles: function () {
+      return fetch('/__api/design/files', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .catch(function () { return { connected: false }; });
+    },
+
+    designVariables: function (fileKey) {
+      return fetch('/__api/design/variables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileKey: fileKey })
+      }).then(function (r) { return r.json(); });
+    },
+
+    /* Записать поля в манифест. У папки — через сервер, у пакета — прямо в
+       нём: браузер в файлы на диске не пишет, а в своё хранилище пишет. */
+    saveManifest: function (id, fields, isFolder) {
+      if (!isFolder) {
+        var pack = Registry.bundle(id);
+        if (!pack) return Promise.resolve(false);
+        var m = JSON.parse(pack.files['manifest.json']);
+        Object.assign(m, fields);
+        pack.files['manifest.json'] = JSON.stringify(m, null, 2);
+        var problem = Registry.saveBundle(id, pack, m.title);
+        return Promise.resolve(!problem);
+      }
+      return fetch('/__api/brand/' + encodeURIComponent(id) + '/manifest', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields)
+      }).then(function (r) { return r.ok; }).catch(function () { return false; });
+    },
+
     /* Открыть файл в проводнике — только через свой сервер: страница сама
        ничего на диске не показывает. */
     reveal: function (relPath) {
