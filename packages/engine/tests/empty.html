@@ -8,7 +8,8 @@
 </head>
 <body>
 <h1>Empty libra</h1>
-<p class="sub">Onboard screen, centering, duplicate must not regress to empty state.
+<p class="sub">Onboard, settings, and duplicate-must-not-look-empty.
+Needs a writable <code>serve.js</code> — fixtures are created for the run and deleted after.
 <button id="rerun">Rerun</button></p>
 <div id="summary">Running…</div>
 <div id="out"></div>
@@ -18,10 +19,80 @@
 <script>
 (function () {
   'use strict';
-  H.brand = '/__data/new-libra-4';
+
+  var PREFIX = 't-empty-';
+  var fixtures = { empty: '', copy: '' };
 
   function D() { return H.gallery().doc; }
   function G() { return H.gallery().win; }
+
+  function api(method, path, body) {
+    var opts = { method: method, cache: 'no-store' };
+    if (body) {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function (r) {
+      return r.text().then(function (raw) {
+        var data = {};
+        try { data = raw ? JSON.parse(raw) : {}; } catch (e) { data = { error: raw }; }
+        if (!r.ok) {
+          throw new Error(path + ' ' + r.status + (data.error ? ' ' + data.error : ''));
+        }
+        return data;
+      });
+    });
+  }
+
+  function del(id) {
+    return fetch('/__api/brand/' + encodeURIComponent(id), {
+      method: 'DELETE', cache: 'no-store'
+    }).then(function () { /* leftover 404 is fine */ });
+  }
+
+  function sweep() {
+    return api('GET', '/__api/brands').then(function (data) {
+      var list = (data && data.brands) || [];
+      var stale = list.filter(function (b) {
+        return b.id && b.id.indexOf(PREFIX) === 0;
+      });
+      return Promise.all(stale.map(function (b) { return del(b.id); }));
+    });
+  }
+
+  function setup() {
+    return fetch('/__api/ping', { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error('need serve.js');
+      return r.json();
+    }, function () {
+      throw new Error('need serve.js');
+    }).then(function (info) {
+      if (!info || !info.writable) throw new Error('need serve.js');
+      return sweep();
+    }).then(function () {
+      var stamp = Date.now();
+      return Promise.all([
+        api('POST', '/__api/brand', {
+          title: 'Empty fixture',
+          slug: PREFIX + stamp
+        }),
+        api('POST', '/__api/brand/_template/duplicate', {
+          title: 'Copy fixture',
+          slug: PREFIX + 'copy-' + stamp
+        })
+      ]);
+    }).then(function (pair) {
+      if (!pair[0].id || !pair[1].id) throw new Error('fixture create returned no id');
+      fixtures.empty = pair[0].id;
+      fixtures.copy = pair[1].id;
+      H.brand = '/__data/' + fixtures.empty;
+    }).catch(function (err) {
+      if (String(err.message) === 'need serve.js') {
+        throw new Error('Need serve.js (writable gallery server) to run this suite.');
+      }
+      throw err;
+    });
+  }
 
   H.g('Empty libra');
   H.t('onboard visible, catalog hidden', function () {
@@ -58,32 +129,86 @@
     H.ok(hOff < 48, 'not horizontally centered on page: Δ' + Math.round(hOff) + 'px');
   });
 
+  H.g('Libra settings');
+  H.t('settings opens; field click does not close', function () {
+    var doc = D();
+    var btn = doc.getElementById('g-settings');
+    var scrim = doc.getElementById('g-settings-scrim');
+    H.ok(btn && !btn.hidden, 'settings hidden on writable libra');
+    H.ok(scrim, 'missing #g-settings-scrim');
+    btn.click();
+    H.eq(scrim.hidden, false, 'settings did not open');
+    doc.getElementById('g-settings-description').click();
+    H.eq(scrim.hidden, false, 'description click closed dialog');
+    doc.getElementById('g-settings-name').click();
+    H.eq(scrim.hidden, false, 'name click closed dialog');
+    doc.getElementById('g-settings-cancel').click();
+    H.eq(scrim.hidden, true, 'cancel did not close');
+  });
+  H.t('settings copy prompt contains Intake', function () {
+    var doc = D();
+    var captured = '';
+    var nav = G().navigator;
+    if (!nav.clipboard) nav.clipboard = {};
+    nav.clipboard.writeText = function (text) {
+      captured = text;
+      return Promise.resolve();
+    };
+    doc.getElementById('g-settings').click();
+    doc.getElementById('g-settings-copy-prompt').click();
+    return H.wait(800).then(function () {
+      H.ok(captured.indexOf('## Intake') >= 0,
+        'prompt missing Intake: ' + captured.slice(0, 120));
+      doc.getElementById('g-settings-cancel').click();
+    });
+  });
+
   H.g('Duplicate must not show empty state');
-  H.t('sdm-copy-test has catalog, not onboard', function () {
-    return H.wait(100).then(function () {
-      var f = document.createElement('iframe');
-      f.style.cssText = 'width:1600px;height:900px;border:0';
-      f.src = H.galleryUrl + '?brand=' + encodeURIComponent('/__data/sdm-copy-test') +
-              '&css=new&test=1&t=' + Date.now();
-      document.getElementById('stage').appendChild(f);
-      return new Promise(function (resolve) {
-        f.addEventListener('load', function () {
-          var doc = f.contentDocument;
-          var win = f.contentWindow;
-          setTimeout(function () {
-            try {
-              H.ok(doc.getElementById('g-onboard').hidden, 'onboard on SDM copy');
-              H.ok(win.GALLERY.length > 0, 'copy has no catalog sections');
-              H.ok(!doc.querySelector('.g-shell--empty'), 'empty classes on full copy');
-            } finally {
-              f.remove();
-              resolve();
-            }
-          }, 5000);
-        });
+  H.t('template copy has catalog, not onboard', function () {
+    H.ok(fixtures.copy, 'copy fixture missing');
+    var f = document.createElement('iframe');
+    f.style.cssText = 'width:1600px;height:900px;border:0';
+    f.src = H.galleryUrl + '?brand=' + encodeURIComponent('/__data/' + fixtures.copy) +
+            '&css=new&test=1&t=' + Date.now();
+    document.getElementById('stage').appendChild(f);
+    return new Promise(function (resolve) {
+      f.addEventListener('load', function () {
+        var doc = f.contentDocument;
+        var win = f.contentWindow;
+        setTimeout(function () {
+          try {
+            H.ok(doc.getElementById('g-onboard').hidden, 'onboard on template copy');
+            H.ok(win.GALLERY.length > 0, 'copy has no catalog sections');
+            H.ok(!doc.querySelector('.g-shell--empty'), 'empty classes on full copy');
+          } finally {
+            f.remove();
+            resolve();
+          }
+        }, 5000);
       });
     });
   });
+
+  H.g('Fixtures');
+  H.t('delete temporary libras', function () {
+    var ids = [fixtures.empty, fixtures.copy].filter(Boolean);
+    return Promise.all(ids.map(del)).then(function () {
+      fixtures.empty = '';
+      fixtures.copy = '';
+    });
+  });
+
+  var origRun = H.run;
+  H.run = function () {
+    var summary = document.getElementById('summary');
+    summary.textContent = 'Preparing fixtures…';
+    setup().then(function () {
+      origRun();
+    }, function (err) {
+      summary.textContent = err.message || String(err);
+      document.title = '✕ setup — ' + H.suite;
+    });
+  };
 
   H.run();
 })();

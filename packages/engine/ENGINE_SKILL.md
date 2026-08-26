@@ -167,7 +167,10 @@ blocks `fetch` of local files. The CSS tab and every token section come up empty
 packages/engine/
   ENGINE_SKILL.md   this file — router + intake + contract
   gallery.html      chrome, loader
-  gallery.js        sections, preview, diff, live reload
+  gallery.js        sections, preview, live reload
+  gallery-diff.js   compare CSS, hidden probes, queued diff
+  switcher.js       menus, new, onboard, export
+  switcher-settings.js  workspace + libra settings dialogs
   _frame.html       sandbox iframe — real @media
   engine-specs.js   token catalogue renderers
   parse-vars.js     :root + @media → token buckets
@@ -399,7 +402,7 @@ inside the brand package follow the brand’s `locale` — they are brand data.
 - Inventing token names, hex values, or components not read from a source and
   not approved via the mismatch protocol.
 - Writing raw `#hex` or raw `px`/`rem` in `components.css` (see `check-css.js`).
-- Editing `gallery.js`, `_frame.html`, or `engine-specs.js` to fix one brand.
+- Editing `gallery.js`, `gallery-diff.js`, `_frame.html`, or `engine-specs.js` to fix one brand.
 - A section example without `data-pick`.
 - Creating `brands/<id>/` outside the gallery flow without explicit user request.
 - Assuming `file://` or guessing Figma data when tools fail.

@@ -131,6 +131,29 @@ If they pass on SDM and fail on the template — the engine picked up an SDM dep
       H.eq(D().querySelectorAll('.g-diff').length, 0, 'panels not removed');
     });
   });
+  H.t('GALLERY_API keys and diff factory survive extract', function () {
+    var keys = Object.keys(G().GALLERY_API).sort();
+    H.eq(keys.join(','), [
+      'diffSection', 'frames', 'hasCompareCss', 'isDiffOn', 'openSource',
+      'sections', 'setCompareCss', 'setDefaultTitle', 'setDiff', 'spy'
+    ].sort().join(','));
+    H.eq(typeof G().ENGINE_GALLERY_DIFF.create, 'function',
+      'ENGINE_GALLERY_DIFF.create missing');
+  });
+  H.t('changing compare CSS while diff on clears probes', function () {
+    G().GALLERY_API.setCompareCss('.x { color: red }', 'a.css');
+    G().GALLERY_API.setDiff(true);
+    G().GALLERY_API.diffSection('buttons');
+    H.ok(D().querySelector('#buttons .g-diff'), 'loading panel missing');
+    G().GALLERY_API.setCompareCss('.x { color: blue }', 'b.css');
+    H.eq(D().querySelectorAll('.g-diff').length, 0, 'old panels remain');
+    var leftover = 0;
+    [].forEach.call(D().querySelectorAll('.g-example'), function (box) {
+      if (box.__probes) leftover++;
+    });
+    H.eq(leftover, 0, 'old probes remain');
+    H.eq(G().GALLERY_API.isDiffOn(), false, 'diff stayed on');
+  });
 
 
   /* ── Checks that were missing before ────────────────────────────── */

@@ -106,7 +106,7 @@ Browser suites (with `node packages/engine/serve.js` running):
 |------|----------------|
 | `packages/engine/tests/engine.html` | gallery on `_template` (`?id=_template`) |
 | `/__data/sdm/tests.html` or `?id=sdm` | SDM brand values (data home) |
-| `packages/engine/tests/empty.html` | onboard + centering on `new-libra-4`, duplicate regression |
+| `packages/engine/tests/empty.html` | onboard, settings, duplicate regression (creates temp libras via API) |
 
 Command-line checks (default libra: `$DELIBRA_DATA/sdm`, usually `~/.delibra/libras/sdm`):
 

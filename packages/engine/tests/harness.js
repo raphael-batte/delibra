@@ -38,7 +38,11 @@
     if (explicit) return Promise.resolve(explicit);
 
     var id = detectLibraId();
-    if (!id) return Promise.resolve('../../../brands/_template');
+    if (!id) {
+      /* A suite can pin a fixture before H.run() (empty.html sets H.brand). */
+      if (H.brand && H.brand.indexOf('_template') < 0) return Promise.resolve(H.brand);
+      return Promise.resolve('../../../brands/_template');
+    }
 
     return fetch('/__api/ping', { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -187,6 +191,6 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('rerun');
-    if (btn) btn.addEventListener('click', run);
+    if (btn) btn.addEventListener('click', function () { H.run(); });
   });
 })();
