@@ -160,6 +160,38 @@ If they pass on SDM and fail on the template — the engine picked up an SDM dep
     });
   });
 
+  H.t('source badge is a button and opens a file slice', function () {
+    var slice = G().ENGINE_SRC_SLICE;
+    H.ok(slice, 'ENGINE_SRC_SLICE missing');
+    var parsed = slice.parse('tokens.css §1–2', { tokens: 'tokens.css' });
+    H.eq(parsed.kind, 'range', 'did not parse § range');
+    H.eq(parsed.from, 1);
+    H.eq(parsed.to, 2);
+    var css = '/* skip */\n:root {\n' +
+      '/* --------------------------------------------------------------------------\n   1. Brand\n   -------------------------------------------------------------------------- */\n' +
+      '  --blue: #00f;\n' +
+      '/* --------------------------------------------------------------------------\n   2. Text\n   -------------------------------------------------------------------------- */\n' +
+      '  --text: #111;\n' +
+      '/* --------------------------------------------------------------------------\n   3. Other\n   -------------------------------------------------------------------------- */\n' +
+      '  --other: #eee;\n}\n';
+    var out = slice.slice(css, parsed);
+    H.ok(out.indexOf('--blue') >= 0, 'range missed section 1');
+    H.ok(out.indexOf('--text') >= 0, 'range missed section 2');
+    H.ok(out.indexOf('--other') < 0, 'range leaked section 3');
+
+    var badge = D().querySelector('.g-src-badge');
+    H.ok(badge && badge.tagName === 'BUTTON', 'badge is not a button');
+    badge.click();
+    return H.wait(400).then(function () {
+      var ov = D().getElementById('g-overlay');
+      H.ok(ov && ov.classList.contains('is-open'), 'drawer did not open');
+      var body = D().getElementById('g-ov-body');
+      H.ok(body && body.textContent.indexOf('--') >= 0, 'drawer has no CSS');
+      var close = D().getElementById('g-ov-close');
+      if (close) close.click();
+    });
+  });
+
   H.t('mountFrame is the only preview path', function () {
     /* Invariant held by convention. Every gallery iframe must be our frame with
        brand=: otherwise someone mounted a preview bypassing it and it gets no

@@ -181,6 +181,7 @@ window.ENGINE_I18N.en = {
   'overlay.close':          'Close',
   'overlay.noRules':        'No rules matched this element in the loaded stylesheets.',
   'overlay.fileProtocol':   'The browser withheld <code>cssRules</code>. This happens when the page is opened over <code>file://</code> — serve the gallery over <code>http://</code> and the rules will appear.',
+  'overlay.fileMissing':    'Could not read this file.',
 
   /* diff panel */
   'diff.computing':         'Computing differences…',

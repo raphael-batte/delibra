@@ -178,6 +178,7 @@
 
   function openOverlay(d) {
     current = d;
+    document.getElementById('g-ov-toolbar').hidden = false;
     document.getElementById('g-ov-tabs').hidden = false;
     document.getElementById('g-ov-actions').innerHTML = '';
     document.getElementById('g-ov-title').textContent = d.name || t('overlay.component');
@@ -201,10 +202,13 @@
       b.classList.toggle('is-on', b.dataset.tab === tab);
     });
 
+    var actions = document.getElementById('g-ov-tab-actions');
+    actions.innerHTML = '';
+
     if (tab === 'html') {
-      ovBody.innerHTML =
-        '<button class="g-copy" data-copy>' + t('overlay.copyHtml') + '</button>' +
-        '<pre class="g-code">' + esc(current.html) + '</pre>';
+      actions.innerHTML =
+        '<button class="g-copy" data-copy>' + t('overlay.copyHtml') + '</button>';
+      ovBody.innerHTML = '<pre class="g-code">' + esc(current.html) + '</pre>';
     } else {
       var body = '';
       if (current.cssBlocked) {
@@ -212,13 +216,14 @@
       } else if (!current.css) {
         body += '<div class="g-hint">' + t('overlay.noRules') + '</div>';
       } else {
-        body += '<button class="g-copy" data-copy>' + t('overlay.copyCss') + '</button>' +
-                '<pre class="g-code">' + esc(current.css) + '</pre>';
+        actions.innerHTML =
+          '<button class="g-copy" data-copy>' + t('overlay.copyCss') + '</button>';
+        body += '<pre class="g-code">' + esc(current.css) + '</pre>';
       }
       if (current.tokens && current.tokens.length) {
         body += '<div class="g-token-list"><h4>' + t('overlay.tokens') + '</h4><table class="g-table">' +
-          current.tokens.map(function (t) {
-            return '<tr><td><code>' + esc(t.name) + '</code></td><td><code>' + esc(t.value) + '</code></td></tr>';
+          current.tokens.map(function (tok) {
+            return '<tr><td><code>' + esc(tok.name) + '</code></td><td><code>' + esc(tok.value) + '</code></td></tr>';
           }).join('') + '</table></div>';
       }
       ovBody.innerHTML = body;
@@ -232,7 +237,7 @@
   document.getElementById('g-ov-close').addEventListener('click', closeOverlay);
   ov.addEventListener('click', function (e) { if (e.target === ov) closeOverlay(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeOverlay(); });
-  ovBody.addEventListener('click', function (e) {
+  document.getElementById('g-ov-toolbar').addEventListener('click', function (e) {
     if (!e.target.closest('[data-copy]')) return;
     var text = tab === 'html' ? current.html : current.css;
     navigator.clipboard.writeText(text).then(function () {
@@ -298,10 +303,21 @@
 
     var sec = el('section', 'g-section');
     sec.id = spec.id;
-    sec.appendChild(el('div', 'g-section-head',
-      '<h2>' + spec.title + '</h2>' +
-      (spec.code ? '<code>' + spec.code + '</code>' : '') +
-      (spec.note ? '<span class="g-note">' + spec.note + '</span>' : '')));
+    var head = el('div', 'g-section-head');
+    var h2 = document.createElement('h2');
+    h2.textContent = spec.title;
+    head.appendChild(h2);
+    if (spec.code) {
+      var badge = document.createElement('button');
+      badge.type = 'button';
+      badge.className = 'g-src-badge';
+      badge.textContent = spec.code;
+      badge.setAttribute('aria-haspopup', 'dialog');
+      badge.addEventListener('click', function () { openSourceBadge(spec.code); });
+      head.appendChild(badge);
+    }
+    if (spec.note) head.appendChild(el('span', 'g-note', spec.note));
+    sec.appendChild(head);
     if (spec.desc) sec.appendChild(el('div', 'g-section-desc', spec.desc));
 
     if (spec.render) {
@@ -450,7 +466,7 @@
      Last-Modified on sources and reload once something changed. */
   (function watch() {
     /* Engine files sit next door; brand files in the brand folder. */
-    var WATCH = ['gallery.html', 'gallery.js', '_frame.html', 'brand.js']
+    var WATCH = ['gallery.html', 'gallery.js', 'src-slice.js', '_frame.html', 'brand.js']
       .concat([M.sections || M.specs, M.tokenMap, M.legacyNames,
                M.css && M.css.tokens, M.css && M.css.components]
         .filter(Boolean).map(B.path));
@@ -768,19 +784,56 @@
   /* Show an arbitrary system file in the drawer. Same overlay as components: no
      need for a second one for file text — the user already knows this window.
      Hide tabs: a file has no second side. */
+  var fileCopyBound = false;
+  function bindFileCopy() {
+    if (fileCopyBound) return;
+    fileCopyBound = true;
+    document.getElementById('g-ov-actions').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-copy-file]');
+      if (!btn || !current || current.fileText == null) return;
+      navigator.clipboard.writeText(current.fileText).then(function () {
+        var was = btn.textContent;
+        btn.textContent = t('overlay.copied');
+        setTimeout(function () { btn.textContent = was; }, 1400);
+      });
+    });
+  }
+
   window.GALLERY_API_FILE = function (opts) {
-    current = null;
+    current = { fileText: opts.text || '' };
     document.getElementById('g-ov-title').textContent = opts.title || '';
     document.getElementById('g-ov-sel').textContent = opts.path || '';
+    document.getElementById('g-ov-toolbar').hidden = true;
     document.getElementById('g-ov-tabs').hidden = true;
 
-    document.getElementById('g-ov-actions').innerHTML = opts.actions || '';
+    document.getElementById('g-ov-actions').innerHTML = opts.actions ||
+      ('<button class="g-copy" data-copy-file>' + t('overlay.copyCss') + '</button>');
     ovBody.innerHTML = '<pre class="g-code">' + esc(opts.text || '') + '</pre>';
+    bindFileCopy();
 
     ov.classList.add('is-open');
     document.body.classList.add('g-no-scroll');
     return ovBody;
   };
+
+  function openSourceBadge(code) {
+    var cssFiles = (M.css || {});
+    var parsed = window.ENGINE_SRC_SLICE.parse(code, cssFiles);
+    Promise.resolve(B.source.text(parsed.file)).then(function (text) {
+      window.GALLERY_API_FILE({
+        title: code,
+        path: parsed.file,
+        text: window.ENGINE_SRC_SLICE.slice(text || '', parsed),
+        actions: '<button class="g-copy" data-copy-file>' + t('overlay.copyCss') + '</button>'
+      });
+    }).catch(function () {
+      window.GALLERY_API_FILE({
+        title: code,
+        path: parsed.file,
+        text: t('overlay.fileMissing')
+      });
+    });
+  }
 
   window.GALLERY_API = {
     setDiff: setDiff,
@@ -788,6 +841,7 @@
     spy: function () { pickActive(); return activeId || null; },
     setCompareCss: setCompareCss,
     setDefaultTitle: setDefaultTitle,
+    openSource: openSourceBadge,
     hasCompareCss: function () { return !!compareCss; },
     diffSection: function (id) {
       if (!diffOn) setDiff(true);

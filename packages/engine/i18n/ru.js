@@ -178,6 +178,7 @@ window.ENGINE_I18N.ru = {
   'overlay.close':          'Закрыть',
   'overlay.noRules':        'Для этого элемента не нашлось правил в подключённых стилях.',
   'overlay.fileProtocol':   'Браузер не отдал <code>cssRules</code> — так бывает при открытии по <code>file://</code>. Откройте галерею через <code>http://</code>, и правила появятся.',
+  'overlay.fileMissing':    'Не удалось прочитать этот файл.',
 
   'diff.computing':         'Считаю различия…',
   'diff.clean':             'Совпадает с приложенным CSS',

@@ -54,6 +54,7 @@
   --g-header-h:   56px;   /* height of both headers: topbar and logo row */
   --g-inset:       8px;   /* panel inset from window edges */
   --g-panel-r:    12px;   /* canvas corner radius — from the design */
+  --g-border-soft: color-mix(in srgb, var(--border) 50%, transparent);
 }
 
 html { margin: 0; }
@@ -107,13 +108,13 @@ body {
   flex: none; height: var(--g-header-h);
   padding: 0 var(--g-gutter);
   background: var(--white-pure);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--g-border-soft);
   border-radius: var(--g-panel-r) var(--g-panel-r) 0 0;
 }
 /* Current section title — left, updates on scroll */
 .g-current {
   margin: 0;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--text-heading);
   white-space: nowrap;
@@ -123,12 +124,8 @@ body {
 /* Attach CSS: hidden input + wrapper button */
 .g-attach { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .g-attach input { position: absolute; opacity: 0; width: 0; height: 0; }
-.g-attach__btn {
-  height: 30px; padding-inline: 12px; border: 1px solid var(--border); border-radius: 40px;
-  display: inline-flex; align-items: center;
-  background: var(--white-pure); font-size: 12px; font-weight: 500; color: var(--text-primary);
-}
-.g-attach:hover .g-attach__btn { border-color: var(--text-primary); }
+/* Visuals live with .g-btn-ghost — same secondary chip as "Choose file…". */
+.g-attach__btn { display: inline-flex; align-items: center; }
 .g-attach__name { font-size: 11px; color: var(--text-muted); max-width: 220px;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .g-attach-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -196,7 +193,7 @@ body {
 .g-diff {
   margin-top: 8px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--white-pure);
 }
@@ -245,7 +242,8 @@ body {
 }
 .g-panel {
   height: 100%; display: flex; flex-direction: column; overflow: hidden;
-  border: 1px solid var(--border); border-radius: var(--g-panel-r);
+  border: 1px solid var(--g-border-soft);
+  border-radius: var(--g-panel-r);
   background: var(--white-pure);
   flex: 1 1 auto; min-height: 0;
 }
@@ -263,18 +261,21 @@ body {
   margin: 0 0 12px;
 }
 .g-section-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--text-heading); }
-.g-section-head code {
-  padding: 4px 8px; border-radius: 4px;
+.g-src-badge {
+  padding: 4px 8px; border: 0; border-radius: 4px;
   background: var(--card-gray); color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+  cursor: pointer;
 }
+.g-src-badge:hover { color: var(--text-heading); }
+.g-src-badge:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
 .g-section-head .g-note { margin-left: auto; font-size: 11px; color: #b26a00; }
 .g-section-desc { margin: 8px 0 20px; font-size: 13px; line-height: 1.5; color: var(--text-muted); max-width: 780px; }
 
 /* ── Example: mobile + desktop ──────────────────────────────────────────── */
 .g-example { margin: 0 0 28px; }
-.g-example-label { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
-.g-example-note  { margin: 0 0 8px; font-size: 11px; color: var(--text-muted); }
+.g-example-label { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.g-example-note  { margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
 
 /* Both panels are equal-width strips across the column. Content is flush left in
    both, so labels and components in mobile and desktop versions share one vertical
@@ -283,13 +284,14 @@ body {
 .g-pane { width: 100%; }
 .g-pane .g-frame-wrap { position: relative; }
 
-.g-pane { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.g-pane { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg); }
 .g-pane-label {
-  padding: 8px 8px;
+  box-sizing: border-box;
+  padding: 8px 12px;
   background: var(--card-gray);
   border-bottom: 1px solid var(--border);
-  font-size: 10px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--text-muted);
+  font-size: 12px; font-weight: 600; letter-spacing: normal;
+  color: var(--text-primary);
 }
 /* Box background matches body inside the frame (--bg), otherwise beside a narrow
    mobile preview you see a seam between #FBFCFD and white. */
@@ -300,13 +302,13 @@ body {
 
 /* ── Swatches and token tables ──────────────────────────────────────────── */
 .g-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.g-swatch { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--white-pure); }
+.g-swatch { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--white-pure); }
 .g-swatch-chip { height: 56px; }
-.g-swatch-meta { padding: 8px 8px; }
+.g-swatch-meta { padding: 8px 8px; line-height: 1.4; }
 .g-swatch-name { font-size: 12px; font-weight: 600; }
 .g-swatch-val, .g-swatch-use {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px; color: var(--text-muted); word-break: break-all;
+  font-size: 12px; line-height: 1.4; color: var(--text-muted); word-break: break-all;
 }
 .g-swatch-use { font-family: var(--font-family); }
 .g-missing { background: repeating-linear-gradient(45deg, #eee 0 6px, #fafafa 6px 12px); }
@@ -314,7 +316,7 @@ body {
 .g-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .g-table th, .g-table td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
 .g-table th { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
-.g-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.g-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 /* Status notes in token sections: not chrome, part of the message — "present",
    "mismatch", "not in code". Colour carries meaning here. */
 /* Three comparison states: match, mismatch, added. Mismatch is always one colour,
@@ -342,40 +344,42 @@ body {
   display: flex; align-items: center; gap: 12px;
   padding: 16px 20px; border-bottom: 1px solid var(--border);
 }
-.g-overlay-title { font-size: 14px; font-weight: 600; }
+.g-overlay-heading {
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 0;
+}
+.g-overlay-title { font-size: 18px; font-weight: 600; color: var(--text-heading); }
 .g-overlay-sel {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px; color: var(--text-muted);
+  font-size: 12px; color: var(--text-muted);
 }
-/* Action buttons and close — one height: they sit in a row and mismatch shows
-   immediately. 30px is set by close; others match it. */
-.g-overlay-actions { margin-left: auto; display: flex; gap: 8px; }
-.g-overlay-actions .g-copy {
-  margin: 0; height: 30px; padding-inline: 12px;
-  display: inline-flex; align-items: center;
-}
+.g-overlay-sel:empty { display: none; }
+.g-overlay-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.g-overlay-actions .g-copy { margin: 0; }
 
 .g-overlay-close {
   width: 30px; height: 30px; border: 0; border-radius: 8px;
   background: var(--card-gray); font-size: 16px; line-height: 1; color: var(--text-muted); cursor: pointer;
 }
-.g-tabs { display: flex; gap: 4px; padding: 8px 20px 0; }
+.g-tabs { display: flex; gap: 4px; padding: 0; }
 .g-tabs button {
-  padding: 8px 12px; border: 0; border-radius: 6px 6px 0 0;
+  padding: 8px 12px; border: 0; border-radius: 6px;
   background: transparent; font-family: inherit; font-size: 12px; font-weight: 600;
   color: var(--text-muted); cursor: pointer;
 }
 .g-tabs button.is-on { background: var(--card-gray); color: var(--text-heading); }
+.g-overlay-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  flex: none; padding: 8px 20px;
+}
+.g-overlay-tab-actions { margin-left: auto; }
+.g-overlay-tab-actions .g-copy { margin: 0; }
 .g-overlay-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 32px; }
 .g-code {
   margin: 0; padding: 16px; border-radius: 8px;
   background: #1f2430; color: #d6deeb;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11.5px; line-height: 1.55; white-space: pre; overflow-x: auto;
-}
-.g-copy {
-  margin-bottom: 8px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
-  background: var(--white-pure); font-family: inherit; font-size: 11px; cursor: pointer;
 }
 .g-token-list { margin-top: 16px; }
 .g-token-list h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
@@ -465,7 +469,7 @@ body.g-no-scroll { overflow: hidden; }
    These sizes used to live as inline styles inside SDM sections. After the split
    the engine draws markup, so demo styling lives here. */
 .g-group-title { margin: 24px 0 8px; font-size: 13px; font-weight: 600; }
-.g-group-note  { font-weight: 400; color: var(--text-muted); }
+.g-group-note  { font-size: 13px; font-weight: 400; color: var(--text-muted); }
 
 .g-radius-pair { display: flex; gap: 8px; margin: 8px; }
 .g-radius-half { flex: 1; height: 56px; background: var(--card-blue, var(--border)); }
@@ -490,10 +494,10 @@ body.g-no-scroll { overflow: hidden; }
 .g-blur-demo__tag.is-right { right: 8px; color: var(--text-heading); }
 
 .g-specimen-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-.g-specimen-head { border: 1px solid var(--border); border-radius: 8px 8px 0 0; }
+.g-specimen-head { border: 1px solid var(--border); border-radius: 12px 12px 0 0; }
 .g-specimen {
   border: 1px solid var(--border); border-top: 0;
-  border-radius: 0 0 8px 8px; padding: 16px;
+  border-radius: 0 0 12px 12px; padding: 16px;
 }
 .g-specimen__row { padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-heading); }
 
@@ -575,7 +579,7 @@ body.g-no-scroll { overflow: hidden; }
 
 .g-mi {
   display: flex; align-items: center; gap: 8px; width: 100%;
-  padding: 8px 8px; border: 0; border-radius: 7px;
+  padding: 8px 8px; border: 0; border-radius: 6px;
   background: transparent; cursor: pointer; text-align: left;
   font-family: var(--font-family); font-size: 13px; font-weight: 500;
   color: var(--text-primary);
@@ -618,7 +622,7 @@ body.g-no-scroll { overflow: hidden; }
   box-shadow: 0 20px 60px rgb(16 24 40 / .22);
 }
 .g-dialog h3 { margin: 0 0 16px; font-size: 16px; color: var(--text-heading); }
-.g-dialog__actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+.g-dialog__actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 20px; }
 
 .g-field { display: block; margin-bottom: 16px; }
 .g-field__label {
@@ -630,7 +634,7 @@ body.g-no-scroll { overflow: hidden; }
    was wider than the neighbour by exactly padding plus border. */
 .g-field input[type="text"] {
   box-sizing: border-box;
-  width: 100%; height: 34px; padding-inline: 8px;
+  width: 100%; height: 32px; padding-inline: 8px;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--white-pure); color: var(--text-primary);
   font-family: var(--font-family); font-size: 13px;
@@ -663,7 +667,7 @@ body.g-no-scroll { overflow: hidden; }
 .g-field__value {
   box-sizing: border-box;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  min-height: 32px; padding: 6px 0 6px 8px;
+  min-height: 32px; padding: 4px 4px 4px 8px;
   border-radius: 6px; background: var(--card-gray);
 }
 .g-field__value code {
@@ -673,42 +677,80 @@ body.g-no-scroll { overflow: hidden; }
   word-break: break-all;
 }
 
-.g-btn-ghost {
+/* Buttons — Figma Frame 113: default left, hover right.
+   Primary 32: fill #333 / hover #000, radius 16 (half height)
+   Ghost   32: border --border / hover fill --card-gray
+   Danger  32: stroke+text --text-error / hover fill 10%
+   Copy    24: same as ghost, padding 8, radius 6
+   Disabled: gray and pale, no accent. */
+.g-btn-primary,
+.g-btn-ghost,
+.g-btn-danger,
+.g-attach__btn {
+  box-sizing: border-box;
   flex: none;
-  height: 32px; padding: 8px 16px;
-  border: 0; border-radius: 20px;
-  background: transparent; cursor: pointer;
-  font-family: var(--font-family); font-size: 12px; font-weight: 500;
-  color: var(--text-heading);
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 12px;
+  border-radius: 16px; /* half of 32 — pill */
+  font-family: var(--font-family); font-size: 12px; font-weight: 500; line-height: 1;
+  white-space: nowrap; cursor: pointer;
+  transition: background-color .12s, border-color .12s, color .12s;
 }
-.g-btn-ghost:hover:not(:disabled) { background: var(--card-gray); }
-.g-btn-ghost:disabled { opacity: .35; cursor: not-allowed; }
+.g-btn-primary {
+  border: 1px solid transparent;
+  background: var(--text-primary); color: var(--white-pure);
+}
+.g-btn-primary:hover:not(:disabled) { background: var(--text-heading); }
+.g-btn-ghost,
+.g-attach__btn {
+  border: 1px solid var(--border);
+  background: transparent; color: var(--text-heading);
+}
+.g-btn-ghost:hover:not(:disabled),
+.g-attach:hover .g-attach__btn { background: var(--card-gray); }
+.g-btn-danger {
+  border: 1px solid var(--text-error);
+  background: transparent; color: var(--text-error);
+}
+.g-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-error) 10%, transparent);
+}
+
+.g-copy,
 .g-btn-ghost--inline {
-  height: auto; min-height: 31px; padding: 8px 10px; border-radius: 7px;
-  color: var(--text-primary);
+  box-sizing: border-box;
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 24px; padding: 0 8px; margin: 0;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--text-heading);
+  font-family: var(--font-family); font-size: 12px; font-weight: 500; line-height: 1;
+  white-space: nowrap; cursor: pointer;
+  transition: background-color .12s, border-color .12s, color .12s;
+}
+.g-copy:hover:not(:disabled),
+.g-btn-ghost--inline:hover:not(:disabled) { background: var(--card-gray); }
+/* Copy sits on --card-gray in path rows — hover must lift off the bar. */
+.g-field__value .g-copy:hover:not(:disabled),
+.g-field__value .g-btn-ghost--inline:hover:not(:disabled) { background: var(--white-pure); }
+
+.g-btn-primary:disabled,
+.g-btn-ghost:disabled,
+.g-btn-danger:disabled,
+.g-copy:disabled,
+.g-btn-ghost--inline:disabled {
+  background: var(--card-gray);
+  border-color: var(--border);
+  color: var(--text-muted);
+  opacity: .55;
+  cursor: not-allowed;
 }
 
 .g-danger {
   margin-top: 24px; padding-top: 16px;
   border-top: 1px solid var(--border);
 }
-.g-btn-danger {
-  height: 32px; padding-inline: 16px; margin-top: 4px;
-  border: 1px solid var(--border); border-radius: 20px;
-  background: var(--white-pure); cursor: pointer;
-  font-family: var(--font-family); font-size: 12px; font-weight: 500;
-  color: var(--text-error, #DF3500);
-}
-.g-btn-danger:hover:not(:disabled) { border-color: var(--text-error, #DF3500); }
-.g-btn-danger:disabled { opacity: .4; cursor: not-allowed; }
-
-.g-btn-primary {
-  height: 32px; padding-inline: 16px;
-  border: 0; border-radius: 20px;
-  background: var(--text-heading); color: var(--white-pure); cursor: pointer;
-  font-family: var(--font-family); font-size: 12px; font-weight: 500;
-}
-.g-btn-primary:disabled { opacity: .35; cursor: not-allowed; }
+.g-danger .g-btn-danger { margin-top: 4px; }
 .g-confirm__lead { margin: 0 0 16px; font-size: 13px; color: var(--text-primary); }
 .g-dialog__lead  { margin: 0 0 16px; font-size: 13px; color: var(--text-muted); }
 .g-dialog__error {
@@ -761,11 +803,11 @@ body.g-no-scroll { overflow: hidden; }
 }
 .g-empty .g-field__value {
   height: 32px; min-height: 32px;
-  padding-top: 6px; padding-bottom: 6px;
+  padding: 4px 4px 4px 8px;
   box-sizing: border-box;
 }
 .g-empty__actions {
-  display: flex; justify-content: flex-end; align-items: center; gap: 4px;
+  display: flex; justify-content: flex-end; align-items: center; gap: 8px;
 }
 
 /* Onboarding steps block: only thing on screen, so presented calmly — no
@@ -785,7 +827,8 @@ body.g-no-scroll { overflow: hidden; }
    input field directly above it. */
 .g-address {
   box-sizing: border-box;
-  padding: 8px 12px; border-radius: 8px;
+  display: flex; align-items: center;
+  height: 32px; padding: 0 12px; border-radius: 8px;
   background: var(--card-gray, var(--bg));
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px; color: var(--text-primary);
@@ -925,12 +968,12 @@ body.g-no-scroll { overflow: hidden; }
 
     <p class="g-dialog__error" id="g-new-error" hidden></p>
 
-    <div class="g-dialog__actions" style="gap:8px">
+    <div class="g-dialog__actions">
       <!-- Back to first step: scenario choice is not final — easy to pick wrong
            when three tiles look equally weighted. -->
-      <button class="g-mi" id="g-new-back" style="width:auto;margin-right:auto"
+      <button class="g-btn-ghost" id="g-new-back" style="margin-right:auto"
               hidden data-i18n="new.back"></button>
-      <button class="g-mi" id="g-new-close" style="width:auto" data-i18n="confirm.cancel"></button>
+      <button class="g-btn-ghost" id="g-new-close" data-i18n="confirm.cancel"></button>
       <button class="g-btn-primary" id="g-new-create" hidden disabled data-i18n="new.create"></button>
     </div>
   </div>
@@ -946,8 +989,8 @@ body.g-no-scroll { overflow: hidden; }
       <input type="text" id="g-dup-name" autocomplete="off">
     </label>
     <p class="g-dialog__error" id="g-dup-error" hidden></p>
-    <div class="g-dialog__actions" style="gap:8px">
-      <button class="g-mi" id="g-dup-cancel" style="width:auto" data-i18n="confirm.cancel"></button>
+    <div class="g-dialog__actions">
+      <button class="g-btn-ghost" id="g-dup-cancel" data-i18n="confirm.cancel"></button>
       <button class="g-btn-primary" id="g-dup-create" disabled data-i18n="new.create"></button>
     </div>
   </div>
@@ -963,8 +1006,8 @@ body.g-no-scroll { overflow: hidden; }
       <span class="g-field__label" id="g-confirm-label"></span>
       <input type="text" id="g-confirm-input" autocomplete="off" spellcheck="false">
     </label>
-    <div class="g-dialog__actions" style="gap:8px">
-      <button class="g-mi" id="g-confirm-cancel" style="width:auto" data-i18n="confirm.cancel"></button>
+    <div class="g-dialog__actions">
+      <button class="g-btn-ghost" id="g-confirm-cancel" data-i18n="confirm.cancel"></button>
       <button class="g-btn-danger" id="g-confirm-ok" disabled></button>
     </div>
   </div>
@@ -990,11 +1033,11 @@ body.g-no-scroll { overflow: hidden; }
 
     <div class="g-field" id="g-ws-hidden">
       <span class="g-field__label js-count"></span>
-      <button class="g-mi" style="width:auto;padding-inline:0"></button>
+      <button class="g-btn-ghost"></button>
     </div>
 
     <div class="g-dialog__actions">
-      <button class="g-mi" id="g-ws-close" style="width:auto" data-i18n="settings.done"></button>
+      <button class="g-btn-ghost" id="g-ws-close" data-i18n="settings.done"></button>
     </div>
   </div>
 </div>
@@ -1022,7 +1065,7 @@ body.g-no-scroll { overflow: hidden; }
     <p class="g-about__tagline" data-i18n="product.tagline"></p>
     <p class="g-about__body" data-i18n="about.body"></p>
     <div class="g-dialog__actions">
-      <button class="g-mi" id="g-about-close" style="width:auto" data-i18n="about.close"></button>
+      <button class="g-btn-ghost" id="g-about-close" data-i18n="about.close"></button>
     </div>
   </div>
 </div>
@@ -1075,10 +1118,10 @@ body.g-no-scroll { overflow: hidden; }
       <span class="g-field__hint" id="g-settings-delete-hint"></span>
     </div>
 
-    <div class="g-dialog__actions" style="gap:8px;flex-wrap:wrap">
-      <button class="g-mi" id="g-settings-copy-prompt" style="width:auto;margin-right:auto"
+    <div class="g-dialog__actions" style="flex-wrap:wrap">
+      <button class="g-btn-ghost" id="g-settings-copy-prompt" style="margin-right:auto"
               data-i18n="prompt.fill.copy"></button>
-      <button class="g-mi" id="g-settings-cancel" style="width:auto"
+      <button class="g-btn-ghost" id="g-settings-cancel"
               data-i18n="confirm.cancel"></button>
       <button class="g-btn-primary" id="g-settings-save" disabled
               data-i18n="settings.save"></button>
@@ -1156,7 +1199,7 @@ body.g-no-scroll { overflow: hidden; }
 <div class="g-overlay" id="g-overlay">
   <div class="g-overlay-panel">
     <div class="g-overlay-head">
-      <div>
+      <div class="g-overlay-heading">
         <div class="g-overlay-title" id="g-ov-title">—</div>
         <div class="g-overlay-sel" id="g-ov-sel"></div>
       </div>
@@ -1165,9 +1208,12 @@ body.g-no-scroll { overflow: hidden; }
       <div class="g-overlay-actions" id="g-ov-actions"></div>
       <button class="g-overlay-close" id="g-ov-close" data-i18n-aria="overlay.close">×</button>
     </div>
-    <div class="g-tabs" id="g-ov-tabs">
-      <button data-tab="html" class="is-on">HTML</button>
-      <button data-tab="css">CSS</button>
+    <div class="g-overlay-toolbar" id="g-ov-toolbar">
+      <div class="g-tabs" id="g-ov-tabs">
+        <button data-tab="html" class="is-on">HTML</button>
+        <button data-tab="css">CSS</button>
+      </div>
+      <div class="g-overlay-tab-actions" id="g-ov-tab-actions"></div>
     </div>
     <div class="g-overlay-body" id="g-ov-body"></div>
   </div>
@@ -1300,6 +1346,7 @@ gScript('figma-import.js');
 </script>
 
 <script>
+gScript('src-slice.js');
 gScript('gallery.js');
 gScript('switcher.js');
 </script>
