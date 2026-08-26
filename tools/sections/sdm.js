@@ -160,10 +160,9 @@ module.exports = function () {
           { kind: 'btn', size: 'LG',  cls: '.btn-lg.btn-outline', text: 'Узнать больше', heights: '48 / 64' }
         ] },
       { label: 'Инверсия на тёмной обложке — те же три размера', mobileWidth: 900,
-        note: 'Контекст .card--dark инвертирует кнопки сам: primary становится белой с синим ' +
-              'текстом, outline получает белое кольцо. Руками красить ничего не нужно, ' +
-              'размеры и радиусы не меняются.',
-        wrap: { tag: 'div', class: 'card card--dark card--dark-blue', pick: '.card--dark' },
+        note: 'Превью под шапкой панели — тёмное (--g-surface-dark, по умолчанию #333). ' +
+              'Контекст .card--dark на кадре инвертирует кнопки: primary белая, outline с белым кольцом.',
+        surface: 'dark',
         rows: [
           { kind: 'btn', size: 'SM',  cls: '.btn-sm.btn-primary', text: 'Войти',                    heights: '40 / 40' },
           { kind: 'btn', size: 'MED', cls: '.btn-primary',        text: 'Оставить заявку',          heights: '48 / 52' },

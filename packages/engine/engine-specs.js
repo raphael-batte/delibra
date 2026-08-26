@@ -589,6 +589,6 @@
     sizeTable: sizeTable, vars: VARS,
     /* catalog rows — from the shared module */
     row: ROWS.row, specRow: ROWS.specRow, btnRow: ROWS.btnRow, tileRow: ROWS.tileRow,
-    renderRows: ROWS.renderRows
+    renderRows: ROWS.renderRows, renderExample: ROWS.renderExample
   };
 })();

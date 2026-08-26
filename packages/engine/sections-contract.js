@@ -50,6 +50,9 @@
                (forms.join(' + ') || 'neither') + ')');
         }
         if (ex.wrap && !ex.rows) fail(where + ': wrap is only allowed together with rows');
+        if (ex.surface && ex.surface !== 'light' && ex.surface !== 'dark') {
+          fail(where + ': surface must be "light" or "dark"');
+        }
 
         if (typeof ex.html === 'string') {
           if (ex.html.indexOf('data-pick') < 0) fail(where + ': no data-pick — the example is not clickable');

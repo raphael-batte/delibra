@@ -192,6 +192,86 @@ If they pass on SDM and fail on the template — the engine picked up an SDM dep
     });
   });
 
+  H.t('html examples share the catalogue row cell', function () {
+    var rows = G().ENGINE_ROWS;
+    H.ok(rows && rows.wrapBlock, 'ENGINE_ROWS.wrapBlock missing');
+    var wrapped = rows.wrapBlock('<div class="card" data-pick=".card">x</div>');
+    H.ok(wrapped.indexOf('g-row g-row--block') >= 0, 'html was not wrapped in a row');
+    H.ok(wrapped.indexOf('data-pick=".card"') >= 0, 'wrap stripped data-pick');
+    var bleed = rows.wrapBlock('<section class="hero g-inset" data-pick=".hero"></section>');
+    H.ok(bleed.indexOf('g-row--bleed') >= 0, 'hero/g-inset did not skip padding');
+    var dark = rows.wrapBlock('<div data-pick=".x">x</div>', { surface: 'dark' });
+    H.ok(dark.indexOf('g-row--dark') < 0, 'dark belongs on the frame, not the row');
+    var darkFrame = Array.prototype.find.call(D().querySelectorAll('iframe'), function (f) {
+      return f.src.indexOf('surface=dark') >= 0;
+    });
+    H.ok(darkFrame, 'template has no dark-surface frame');
+    var htmlEl = darkFrame.contentDocument && darkFrame.contentDocument.documentElement;
+    H.ok(htmlEl && htmlEl.classList.contains('g-surface-dark'), 'frame html missing g-surface-dark');
+    H.ok(htmlEl && htmlEl.classList.contains('card--dark'), 'frame html missing card--dark');
+    var f = D().querySelector('iframe');
+    var doc = f && f.contentDocument;
+    H.ok(doc && doc.querySelector('.g-row'), 'template frame has no .g-row');
+  });
+
+  H.t('short example pane hugs the cell', function () {
+    /* A short specimen must not sit in the iframe's ~150px default with a
+       hole under the hover. Height follows #root = the cell. */
+    return H.wait(400).then(function () {
+      var f = Array.prototype.find.call(D().querySelectorAll('iframe'), function (fr) {
+        return fr.src.indexOf('surface=dark') >= 0;
+      });
+      H.ok(f, 'template has no dark-surface frame');
+      var doc = f.contentDocument;
+      var rootEl = doc && doc.getElementById('root');
+      var row = doc && doc.querySelector('.g-row');
+      H.ok(rootEl && row, 'dark frame has no cell');
+      var iframeH = parseFloat(f.style.height);
+      var rootH = rootEl.getBoundingClientRect().height;
+      var cellH = row.getBoundingClientRect().height;
+      H.ok(iframeH > 0 && iframeH < 150, 'iframe still on default height: ' + iframeH);
+      H.ok(Math.abs(iframeH - rootH) <= 2, 'iframe ' + iframeH + ' vs root ' + rootH);
+      H.ok(Math.abs(rootH - cellH) <= 2, 'root taller than cell: ' + rootH + ' vs ' + cellH);
+    });
+  });
+
+  H.t('highlight is flush, no radius', function () {
+    var f = D().querySelector('iframe');
+    var doc = f && f.contentDocument;
+    var row = doc && doc.querySelector('.g-row');
+    H.ok(row, 'template frame has no .g-row');
+    var cs = doc.defaultView.getComputedStyle(row);
+    H.eq(parseFloat(cs.borderTopLeftRadius) || 0, 0, 'highlight still has radius');
+    var rr = row.getBoundingClientRect();
+    var ir = doc.documentElement.getBoundingClientRect();
+    H.ok(Math.abs(rr.left - ir.left) <= 1, 'left gap around highlight: ' + (rr.left - ir.left));
+    H.ok(Math.abs(rr.right - ir.right) <= 1, 'right gap around highlight: ' + (ir.right - rr.right));
+  });
+
+  H.t('row highlight spans the pane, not the viewport', function () {
+    return H.wait(400).then(function () {
+      var pane = D().querySelector('.g-pane--mobile');
+      H.ok(pane, 'no mobile pane');
+      var wrap = pane.querySelector('.g-frame-wrap');
+      var hits = wrap && wrap.querySelector('.g-row-hits');
+      var hit = hits && hits.querySelector('.g-row-hit');
+      H.ok(hit, 'mobile pane has no row hit');
+      var dw = wrap.getBoundingClientRect().width;
+      var hw = hit.getBoundingClientRect().width;
+      H.ok(Math.abs(hw - dw) <= 2, 'hit ' + hw + ' vs pane ' + dw);
+    });
+  });
+
+  H.t('desktop outer row fills the pane, not the mobile viewport', function () {
+    var pane = D().querySelector('.g-pane--desktop');
+    var wrap = pane && pane.querySelector('.g-frame-wrap');
+    var iframe = pane && pane.querySelector('iframe');
+    H.ok(wrap && iframe, 'no desktop pane');
+    var dw = wrap.getBoundingClientRect().width;
+    var iw = iframe.getBoundingClientRect().width;
+    H.ok(Math.abs(iw - dw) <= 2, 'desktop iframe ' + Math.round(iw) + ' vs pane ' + Math.round(dw));
+  });
+
   H.t('mountFrame is the only preview path', function () {
     /* Invariant held by convention. Every gallery iframe must be our frame with
        brand=: otherwise someone mounted a preview bypassing it and it gets no

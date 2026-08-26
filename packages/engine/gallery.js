@@ -2,9 +2,9 @@
    Storybook engine
    --------------------------------------------------------------------------
    Sections are described in gallery-specs.js (window.GALLERY).
-   Each example renders in iframe _frame.html: mobile 390px and desktop at the
-   brand container width (scaled with transform). Real @media fires on its own —
-   no !important mirrors.
+   Each example renders in iframe _frame.html: mobile viewport (default 900px)
+   and desktop at the brand preview width. The catalogue row is 100% of the
+   pane; viewport width applies only to the specimen so real @media fires.
    ========================================================================== */
 (function () {
   'use strict';
@@ -74,6 +74,8 @@
     var fromFolder = B.source.kind === 'folder';
     iframe.src = '_frame.html?' + (fromFolder ? 'brand=' + encodeURIComponent(B.rel) + '&' : '') +
                  'css=' + opts.cssMode + '&id=' + id +
+                 (opts.surface === 'dark' ? '&surface=dark' : '') +
+                 (opts.embed ? '&embed=1' : '') +
                  (window.GALLERY_BUST ? '&' + window.GALLERY_BUST.slice(1) : '');
     iframe.setAttribute('scrolling', 'no');
     iframe.setAttribute('title', opts.title || 'preview');
@@ -117,20 +119,89 @@
   }
 
   /* Visible preview in a gallery column */
-  function makeFrame(html, width, isDesktop) {
+  function makeFrame(html, width, isDesktop, surface) {
     var wrap = document.createElement('div');
-    wrap.className = 'g-frame-wrap';
+    wrap.className = 'g-frame-wrap' + (surface === 'dark' ? ' g-frame-wrap--dark' : '');
 
-    var rec = mountFrame({ html: html, width: width, cssMode: mode });
+    var rec = mountFrame({ html: html, width: width, cssMode: mode, surface: surface, embed: true });
     rec.iframe.className = 'g-frame' + (isDesktop ? ' g-frame--desktop' : '');
-    wrap.appendChild(rec.iframe);
-
     rec.wrap = wrap;
+    wrap.appendChild(rec.iframe);
+    bindHits(rec);
     rec.html = html;
     rec.desktop = isDesktop;
     rec.scale = defaultScale;
     frames.push(rec);
     return rec;
+  }
+
+  /* Catalogue row is 100% of the pane. Viewport width is only the iframe
+     (so brand @media still sees 900 / 1440). Highlight is painted here. */
+  function bindHits(rec) {
+    var layer = document.createElement('div');
+    layer.className = 'g-row-hits';
+    rec.wrap.insertBefore(layer, rec.iframe);
+    rec.hits = layer;
+    rec.wrap.addEventListener('mousemove', function (e) {
+      var k = rec.scale || 1;
+      var visW = rec.iframe.getBoundingClientRect().width;
+      var rect = rec.wrap.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      if (x <= visW) return;
+      var y = (e.clientY - rect.top) / k;
+      var boxes = rec.rowBoxes || [];
+      var idx = -1;
+      for (var i = 0; i < boxes.length; i++) {
+        if (y >= boxes[i].y && y < boxes[i].y + boxes[i].h) { idx = i; break; }
+      }
+      setHit(rec, idx);
+    });
+    rec.wrap.addEventListener('mouseleave', function () { setHit(rec, -1); });
+    rec.wrap.addEventListener('click', function (e) {
+      var k = rec.scale || 1;
+      var visW = rec.iframe.getBoundingClientRect().width;
+      var rect = rec.wrap.getBoundingClientRect();
+      if (e.clientX - rect.left <= visW) return;
+      var y = (e.clientY - rect.top) / k;
+      var boxes = rec.rowBoxes || [];
+      for (var i = 0; i < boxes.length; i++) {
+        if (y >= boxes[i].y && y < boxes[i].y + boxes[i].h) {
+          post(rec.iframe, { type: 'g:pickrow', index: i });
+          break;
+        }
+      }
+    });
+  }
+
+  function paintHits(rec) {
+    if (!rec.hits) return;
+    rec.hits.innerHTML = '';
+    (rec.rowBoxes || []).forEach(function () {
+      var hit = document.createElement('div');
+      hit.className = 'g-row-hit';
+      rec.hits.appendChild(hit);
+    });
+    layoutHits(rec);
+  }
+
+  function layoutHits(rec) {
+    if (!rec.hits) return;
+    var k = rec.scale || 1;
+    var kids = rec.hits.children;
+    var boxes = rec.rowBoxes || [];
+    for (var i = 0; i < kids.length; i++) {
+      var b = boxes[i];
+      if (!b) continue;
+      kids[i].style.top = (b.y * k) + 'px';
+      kids[i].style.height = (b.h * k) + 'px';
+    }
+  }
+
+  function setHit(rec, idx) {
+    if (!rec.hits) return;
+    Array.prototype.forEach.call(rec.hits.children, function (el, i) {
+      el.classList.toggle('is-on', i === idx);
+    });
   }
 
   /* One scale for BOTH panels.
@@ -142,17 +213,25 @@
      not fit the column — right edge is clipped (overflow: hidden), height follows
      content. Auto-shrink is forbidden: panels would land at different scales and
      comparing sizes would be impossible — exactly the old bug. */
-  /* Apply scale to one panel. At 100% a wide desktop frame may not fit the
-     column — right edge clipped by overflow:hidden, height from content. */
+  /* Scale is the same number in both panes so a 52px button is comparable.
+     Viewport width is only for the specimen: mobile iframe stays 900/390 so
+     @media (max-width: 900px) fires. The outer row is 100% of the pane —
+     desktop iframe is sized so after scale it fills the wrap, and does not
+     inherit the mobile viewport. */
   function applyFrameScale(f) {
     var k = f.scale || defaultScale;
-    f.iframe.style.transform = k === 1 ? 'none' : 'scale(' + k + ')';
-    // box always full panel width: otherwise beside a narrow mobile frame
-    // page background showed through and fill looked cropped.
-    // Frame flush left; excess width is clipped.
     f.wrap.style.width = '100%';
     f.wrap.style.overflow = 'hidden';
+    if (f.desktop) {
+      var paneW = f.wrap.clientWidth;
+      var cssW = (k && paneW) ? paneW / k : f.width;
+      f.iframe.style.width = cssW + 'px';
+    } else {
+      f.iframe.style.width = f.width + 'px';
+    }
+    f.iframe.style.transform = k === 1 ? 'none' : 'scale(' + k + ')';
     if (f.contentH) f.wrap.style.height = (f.contentH * k) + 'px';
+    layoutHits(f);
   }
 
   function applyScale() { frames.forEach(applyFrameScale); }
@@ -165,9 +244,12 @@
 
     if (d.type === 'g:height' && rec) {
       rec.contentH = d.height;
+      rec.rowBoxes = d.rows || rec.rowBoxes;
       rec.iframe.style.height = d.height + 'px';
       rec.wrap.style.height = d.height * (rec.scale || defaultScale) + 'px';
+      paintHits(rec);
     }
+    else if (d.type === 'g:rowhover' && rec) setHit(rec, d.index);
     else if (d.type === 'g:pick') openOverlay(d);
   });
 
@@ -332,10 +414,11 @@
       /* Each example has exactly one body shape: brand markup snapshot (html) or
          catalog row descriptor (rows) — the engine draws those so its own layout
          is not baked into every package. */
-      var html = ex.rows ? window.ENGINE_SPECS.renderRows(ex) : ex.html;
+      var html = window.ENGINE_SPECS.renderExample(ex);
       var htmlDesktop = ex.htmlDesktop || html;
 
-      box.__html = htmlDesktop;                 // needed by Figma ↔ code mode
+      box.__html = htmlDesktop;
+      box.__surface = ex.surface;
       if (ex.label) box.appendChild(el('p', 'g-example-label', ex.label));
       if (ex.note) box.appendChild(el('p', 'g-example-note', ex.note));
 
@@ -344,19 +427,18 @@
       if (!ex.wide) {
         var mp = el('div', 'g-pane g-pane--mobile');
         /* Mobile frame width can be set per example.
-           Blocks use 390 — a real phone. For primitives (buttons, tiles) with a
-           metadata column beside, a narrow viewport only gets in the way: the
-           component size matters, not the device. Use 900 — still the mobile
-           @media (max-width: 900px) branch, but enough room and layout matches desktop. */
-        var mw = ex.mobileWidth || 390;
-        var mRec = makeFrame(html, mw, false);
+           Default 900: still the @media (max-width: 900px) branch, and the
+           catalogue row is 100% of that container. Blocks that need a phone
+           pass mobileWidth (390 / 422). */
+        var mw = ex.mobileWidth || 900;
+        var mRec = makeFrame(html, mw, false, ex.surface);
         mp.appendChild(paneLabel(t('pane.mobile', { w: mw >= 900 ? '≤900' : mw }), mRec));
         mp.appendChild(mRec.wrap);
         split.appendChild(mp);
       }
 
       var dp = el('div', 'g-pane g-pane--desktop');
-      var dRec = makeFrame(htmlDesktop, DESKTOP_W, true);
+      var dRec = makeFrame(htmlDesktop, DESKTOP_W, true, ex.surface);
       dp.appendChild(paneLabel(t('pane.desktop', { w: DESKTOP_W, c: CONTAINER }), dRec));
       dp.appendChild(dRec.wrap);
       split.appendChild(dp);
@@ -451,7 +533,10 @@
 
   (document.getElementById('g-panel') || window)
     .addEventListener('scroll', scheduleSpy, { passive: true });
-  window.addEventListener('resize', scheduleSpy);
+  window.addEventListener('resize', function () {
+    applyScale();
+    scheduleSpy();
+  });
 
   // initial state: from hash, else from current position
   (function initSpy() {
@@ -660,13 +745,13 @@
      one with brand CSS, one with attached — and compare them. Previously the main
      frame was the reference and in "Current site" mode the button compared code to itself. */
   /* Hidden comparison reference — same mountFrame, just off-screen */
-  function makeProbe(html, cssMode) {
+  function makeProbe(html, cssMode, surface) {
     var host = document.createElement('div');
     host.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + DESKTOP_W +
                          'px;height:1400px;overflow:hidden;pointer-events:none';
 
     var rec = mountFrame({
-      html: html, width: DESKTOP_W, cssMode: cssMode,
+      html: html, width: DESKTOP_W, cssMode: cssMode, surface: surface,
       userCss: cssMode === 'current' ? compareCss : null,
       id: 'probe' + (++frameSeq), title: 'diff probe', settle: 350
     });
@@ -683,8 +768,8 @@
 
   function buildDiffFor(box, done) {
     var pr = box.__probes = {
-      ds:   makeProbe(box.__html, 'new'),
-      code: makeProbe(box.__html, 'current')
+      ds:   makeProbe(box.__html, 'new', box.__surface),
+      code: makeProbe(box.__html, 'current', box.__surface)
     };
     var finished = false;
 

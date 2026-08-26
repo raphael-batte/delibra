@@ -22,9 +22,8 @@
       (gap || 12) + 'px;margin-bottom:12px">' + items.join('') + '</div>';
   }
 
-  /* One catalogue row: metadata column left, sample right. A single grid
-     (.g-row) across both breakpoints, so labels in the mobile and desktop
-     panes line up vertically. */
+  /* One catalogue row: metadata column left, sample right. Layout lives in
+     _frame.html — the cell is 16 + sample + 16 so both panes stay aligned. */
   function specRow(name, cls, meta, sample) {
     return '<div class="g-row">' +
       '<div class="g-row__meta">' +
@@ -47,15 +46,17 @@
      off: the originals vary (37×50, 30×39, 47×37…), so icons of equal height
      looked different in size. Only the viewBox changed, not the paths. */
   function tileRow(name, cls, size, sample) {
-    return specRow(name, cls, size,
-      '<span style="display:inline-flex;align-items:center;gap:12px;padding:12px 16px;' +
-      'border-radius:12px;background:var(--card-gray)">' + sample + '</span>');
+    return specRow(name, cls, size, sample);
   }
 
   /* Spacer between families of examples: named for what it is, instead of an
      attribute on the neighbouring row. */
   function gap(size) {
     return '<div style="height:' + (size || 8) + 'px"></div>';
+  }
+
+  function isDark(example) {
+    return !!(example && example.surface === 'dark');
   }
 
   /* A catalogue row from a descriptor. kind picks the helper above: the brand
@@ -70,20 +71,36 @@
     }
   }
 
-  /* A whole example: rows plus an optional brand wrapper around them (dark
-     context, coloured backdrop). The wrapper is a shell only — tag, classes
-     and data-pick, no logic. */
+  /* A whole example: rows plus an optional brand wrapper. surface=dark is the
+     preview pane body (see _frame.html), not a tinted wrap around the rows. */
   function renderRows(example) {
     var inner = (example.rows || []).map(renderRow).join('');
     var w = example.wrap;
-    if (!w) return inner;
+    if (isDark(example) || !w) return inner;
     var tag = w.tag || 'div';
-    return '<' + tag + ' class="' + (w.class || '') + '"' +
-           (w.pick ? ' data-pick="' + w.pick + '"' : '') + '>' + inner + '</' + tag + '>';
+    var cls = ((w.class || '') + ' g-row-stack').trim();
+    return '<' + tag + ' class="' + cls + '">' + inner + '</' + tag + '>';
+  }
+
+  /* html examples get the same cell as catalogue rows — engine chrome, not
+     baked into the package. Bleed specimens (hero / g-inset / g-bleed) skip
+     the 16px padding so they keep their own frame. */
+  function wrapBlock(html, example) {
+    if (!html) return '';
+    if (/\bg-row\b/.test(html)) return html;
+    var bleed = /\b(g-bleed|g-inset|hero)\b/.test(html);
+    var cls = 'g-row g-row--block' + (bleed ? ' g-row--bleed' : '');
+    return '<div class="' + cls + '"><div class="g-row__sample">' + html + '</div></div>';
+  }
+
+  function renderExample(example) {
+    if (example && example.rows) return renderRows(example);
+    return wrapBlock(example && example.html, example);
   }
 
   return {
     row: row, specRow: specRow, btnRow: btnRow, tileRow: tileRow,
-    gap: gap, renderRow: renderRow, renderRows: renderRows
+    gap: gap, renderRow: renderRow, renderRows: renderRows,
+    wrapBlock: wrapBlock, renderExample: renderExample
   };
 }));

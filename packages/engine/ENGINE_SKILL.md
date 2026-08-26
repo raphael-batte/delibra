@@ -272,8 +272,16 @@ overwrites your changes.
 
 **Example shapes — exactly one per example:**
 
-- `html` — brand markup with `data-pick`.
+- `html` — brand markup with `data-pick`. The engine wraps it in the same
+  catalogue cell as `rows` (16px inset; hover fill is 100% of the pane, no
+  radius). Viewport width (`mobileWidth`) applies only to the specimen in
+  the mobile pane. The desktop outer row is 100% of that pane and does not
+  follow the mobile viewport. Light substrate is `--bg`.
 - `rows` — catalogue rows (`btn`, `tile`, `spec`, `gap`) with optional `wrap`.
+- `surface: "dark"` — optional. Paints the preview *body* (under the pane
+  header) with `--g-surface-dark` (default `#333`, override to recolour) and
+  adds `card--dark` on the frame so brand inversion still applies. `"light"`
+  is the default. Inner 16px of the cell stays; the fill itself is flush.
 
 Load-bearing rules:
 

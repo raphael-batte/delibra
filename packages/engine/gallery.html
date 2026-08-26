@@ -37,6 +37,7 @@
   --white-pure-rgb: 255 255 255;
   --white:         #FBFBFB;
   --card-gray:     #F3F5F8;
+  --g-surface-dark: #333333;
   --border:        #E3E8F0;
   --text-primary:  #333333;
   --text-heading:  #000000;
@@ -296,9 +297,19 @@ body {
 /* Box background matches body inside the frame (--bg), otherwise beside a narrow
    mobile preview you see a seam between #FBFCFD and white. */
 .g-frame-wrap { position: relative; overflow: hidden; width: 100%; background: var(--bg); }
+.g-frame-wrap--dark { background: var(--g-surface-dark, #333); }
+.g-row-hits { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.g-row-hit {
+  position: absolute; left: 0; right: 0;
+  border-radius: 0;
+}
+.g-row-hit.is-on { background: var(--card-gray, #F3F5F8); }
+.g-frame-wrap--dark .g-row-hit.is-on {
+  background: color-mix(in srgb, var(--g-surface-dark, #333) 78%, #000);
+}
 /* both panels scale the same, so origin is top-left for both; otherwise the mobile
    frame shifts right when shrunk */
-.g-frame { display: block; border: 0; transform-origin: 0 0; }
+.g-frame { display: block; border: 0; transform-origin: 0 0; position: relative; z-index: 1; background: transparent; }
 
 /* ── Swatches and token tables ──────────────────────────────────────────── */
 .g-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }

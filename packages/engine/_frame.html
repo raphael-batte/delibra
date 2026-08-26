@@ -71,22 +71,26 @@
   /* Sandbox chrome. None of this participates in inspection —
      all rules are in layer g-chrome and filtered out. */
   @layer g-chrome {
-    html, body { margin: 0; }
-    body { background: transparent; overflow-x: hidden; }
-    /* #root mirrors brand container width: min(--g-container, 100% − 40) on desktop
-       and 100% − 32 on mobile — otherwise the card grid gives wrong column width.
-       Value from manifest; default for brands that said nothing about preview.
-       Do NOT center: in the gallery content is flush left so mobile and desktop
-       versions share one vertical and can be compared line by line. On the site
-       the container stays centered. */
-    #root { width: min(var(--g-container, 1170px), 100% - 40px); margin-inline: 0;
-            padding: 16px 0 16px 16px;
-            /* content-box: 16px padding adds OUTSIDE container width.
-               With border-box it ate width and the 3-column grid gave 374px instead of 379.33.
-               !important because this rule is in @layer while brand
-               `* { box-sizing: border-box }` is unlayered — unlayered wins. */
-            box-sizing: content-box !important; }
-    @media (max-width: 900px) { #root { width: calc(100% - 32px); } }
+    html, body { margin: 0; height: auto; min-height: 100%; overflow-x: hidden; }
+    html { --g-surface-dark: #333333; }
+    /* Light substrate is brand --bg. Do not paint --card-gray here: that is
+       the row highlight, and it made a seam when the iframe was taller than
+       the rows. min-height 100% fills leftover iframe space; height still
+       comes from #root (reportHeight), so this does not inflate the pane. */
+    html, body { background: var(--bg, #FBFCFD) !important; }
+    html.g-surface-dark,
+    html.g-surface-dark body {
+      background: var(--g-surface-dark, #333) !important;
+    }
+    /* Visible gallery frames: wrap supplies --bg so the row highlight can
+       paint in the parent at 100% pane width. Viewport stays on the iframe. */
+    html.g-embed,
+    html.g-embed body { background: transparent !important; }
+    /* #root is the pane: full iframe, no outer gutter. Specimen width lives on
+       .g-row__sample (min(--g-container, 100%)), not here — otherwise the
+       highlight sat in a padded card with white around it. */
+    #root { width: 100%; margin: 0; padding: 0;
+            box-sizing: border-box !important; }
     /* Sections full-bleed on the site (hero, scroll strips) must not get sandbox
        gutter on top of their own padding — otherwise content is half as wide. */
     .g-bleed { margin-inline: calc(var(--gutter, 16px) * -1); }
@@ -95,30 +99,80 @@
        and left inset, not flush to the sandbox edge. */
     .g-inset { border-radius: 24px; overflow: hidden; }
 
-    /* "Label + sample" row — ONE grid for both breakpoints: fixed metadata column
-       and component column. No media queries: otherwise labels in mobile and desktop
-       panels misalign and cannot be compared line by line. */
+    /* Catalogue row: the cell is 16 + sample height + 16. Flush to the pane
+       (no radius, no outer margin). Hover paints --card-gray; idle is --bg.
+       Meta sits in a fixed left column and does not size the row.
+       Right padding 16 when the specimen fits; min-content lets it overflow
+       the right edge when it does not. */
     .g-row {
-      display: grid;
-      /* Metadata column width is fixed: var(--g-meta-w) used to sit here but no
-         brand declared it — fallback always ran and the variable misled. */
-      grid-template-columns: 180px 1fr;
-      align-items: center;
-      column-gap: 16px;
-      margin-bottom: 14px;
+      display: block;
+      position: relative;
+      isolation: isolate;
+      box-sizing: border-box;
+      width: 100%;
+      margin: 0;
+      /* 16 inside the highlight + 180 meta + 16 gap; 16 on the right */
+      padding: 16px 16px 16px 212px;
+      overflow: visible;
+      border-radius: 0;
+      cursor: pointer;
     }
-    .g-row__meta { min-width: 0; }
+    .g-row:hover { background: var(--card-gray, #F3F5F8); }
+    html.g-surface-dark .g-row { background: transparent; }
+    html.g-surface-dark .g-row:hover {
+      background: color-mix(in srgb, var(--g-surface-dark, #333) 78%, #000);
+    }
+    .g-row__meta {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      bottom: 16px;
+      width: 180px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      z-index: 1;
+    }
     .g-row__name { font-size: 13px; font-weight: 700; line-height: 1.3; color: var(--text-heading); }
     .g-row__cls  { font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.4;
                    color: var(--text-muted); }
     .g-row__meta-val { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
-    .g-row__sample { min-width: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .g-row__sample {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      width: 100%;
+      min-width: min-content;
+      box-sizing: border-box;
+    }
+    /* html examples: no meta column. Specimen stays on the brand container. */
+    .g-row--block { padding: 16px; }
+    .g-row--block .g-row__sample {
+      display: block;
+      width: min(var(--g-container, 1170px), 100%);
+    }
+    .g-row--bleed { padding: 0; }
+    .g-row--bleed .g-row__sample { width: 100%; }
+
+    .g-row-stack {
+      width: 100%;
+      margin: 0;
+      padding: 0 !important;
+      border-radius: 0 !important;
+    }
+    .g-row-stack > .g-row { width: 100%; }
+    .g-row-stack.g-pick:hover { outline: none; }
 
     .g-pick { cursor: pointer; }
     .g-pick:hover {
       outline: 2px solid var(--blue-accent, #0094FF);
       outline-offset: 4px;
     }
+    .g-row .g-pick:hover { outline: none; }
   }
 </style>
 </head>
@@ -131,6 +185,13 @@
 
   var qs = new URLSearchParams(location.search);
   var root = document.getElementById('root');
+
+  if (qs.get('surface') === 'dark') {
+    document.documentElement.classList.add('g-surface-dark', 'card--dark');
+  }
+  if (qs.get('embed') === '1') {
+    document.documentElement.classList.add('g-embed');
+  }
 
   // same cache-buster as the gallery: otherwise the frame draws stale CSS
   var t = qs.get('t');
@@ -208,16 +269,44 @@
     reportHeight();
   }
 
-  /* Report height immediately and again on a tick.
-     Do not use requestAnimationFrame: browsers throttle rAF in off-screen frames,
-     the message never sent, frame stayed 150px default — content clipped. */
+  /* Report the cell, not the iframe viewport.
+     documentElement.scrollHeight is at least the iframe's current height
+     (browser default ~150px). A short specimen then sits in a tall pane
+     with a hole under the hover. Measure #root instead.
+     Do not use requestAnimationFrame: browsers throttle rAF in off-screen
+     frames, the message never sent, frame stayed 150px — content clipped. */
   var lastH = -1;
+  var lastRows = '';
+  function measureHeight() {
+    var el = document.getElementById('root');
+    if (!el) return 1;
+    return Math.max(1, Math.ceil(el.getBoundingClientRect().height));
+  }
+  function rowBoxes() {
+    return Array.prototype.map.call(root.querySelectorAll('.g-row'), function (el) {
+      var r = el.getBoundingClientRect();
+      var b = root.getBoundingClientRect();
+      return { y: Math.round(r.top - b.top), h: Math.round(r.height) };
+    });
+  }
   function reportHeight() {
-    var h = document.documentElement.scrollHeight;
-    if (h !== lastH) { lastH = h; post({ type: 'g:height', height: h }); }
+    var h = measureHeight();
+    var rows = rowBoxes();
+    var key = JSON.stringify(rows);
+    if (h !== lastH || key !== lastRows) {
+      lastH = h;
+      lastRows = key;
+      post({ type: 'g:height', height: h, rows: rows });
+    }
     setTimeout(function () {
-      var h2 = document.documentElement.scrollHeight;
-      if (h2 !== lastH) { lastH = h2; post({ type: 'g:height', height: h2 }); }
+      var h2 = measureHeight();
+      var rows2 = rowBoxes();
+      var key2 = JSON.stringify(rows2);
+      if (h2 !== lastH || key2 !== lastRows) {
+        lastH = h2;
+        lastRows = key2;
+        post({ type: 'g:height', height: h2, rows: rows2 });
+      }
     }, 60);
   }
 
@@ -348,7 +437,8 @@
 
   /* ── Click on an element ──────────────────────────────────────────────── */
   document.addEventListener('click', function (e) {
-    var el = e.target.closest('[data-pick]');
+    var row = e.target.closest('.g-row');
+    var el = row ? row.querySelector('[data-pick]') : e.target.closest('[data-pick]');
     if (!el) return;
     e.preventDefault();
 
@@ -382,10 +472,28 @@
     else if (d.type === 'g:css') { applyCss(d.mode); reportHeight(); }
     else if (d.type === 'g:usercss') { applyUserCss(d.text); reportHeight(); }
     else if (d.type === 'g:brandcss') { applyBrandCss(d); reportHeight(); }
+    else if (d.type === 'g:pickrow') {
+      var row = root.querySelectorAll('.g-row')[d.index];
+      var el = row && row.querySelector('[data-pick]');
+      if (el) el.click();
+    }
+  });
+
+  var hoverIdx = -2;
+  function postHover(i) {
+    if (i === hoverIdx) return;
+    hoverIdx = i;
+    post({ type: 'g:rowhover', index: i });
+  }
+  root.addEventListener('mouseover', function (e) {
+    var row = e.target.closest('.g-row');
+    if (!row || !root.contains(row)) return postHover(-1);
+    var rows = root.querySelectorAll('.g-row');
+    postHover(Array.prototype.indexOf.call(rows, row));
   });
 
   window.addEventListener('load', reportHeight);
-  new ResizeObserver(reportHeight).observe(document.documentElement);
+  new ResizeObserver(reportHeight).observe(root);
   post({ type: 'g:ready' });
 })();
 </script>

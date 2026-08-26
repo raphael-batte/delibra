@@ -7,7 +7,35 @@
     "examples": [
       {
         "label": "Button",
-        "html": "<div style=\"display:flex; gap:12px; align-items:center\"><button class=\"t-btn\" data-pick=\".t-btn\">Primary</button><button class=\"t-btn t-btn--ghost\" data-pick=\".t-btn--ghost\">Ghost</button></div>"
+        "rows": [
+          {
+            "kind": "spec",
+            "name": "Primary",
+            "cls": ".t-btn",
+            "meta": "filled",
+            "sample": "<button class=\"t-btn\">Primary</button>"
+          },
+          {
+            "kind": "spec",
+            "name": "Ghost",
+            "cls": ".t-btn--ghost",
+            "meta": "outline",
+            "sample": "<button class=\"t-btn t-btn--ghost\">Ghost</button>"
+          }
+        ]
+      },
+      {
+        "label": "Dark surface",
+        "surface": "dark",
+        "rows": [
+          {
+            "kind": "spec",
+            "name": "Primary",
+            "cls": ".t-btn",
+            "meta": "on dark",
+            "sample": "<button class=\"t-btn\">Primary</button>"
+          }
+        ]
       }
     ]
   }
