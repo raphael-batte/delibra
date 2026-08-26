@@ -50,26 +50,26 @@ Ask the user **only** the items that those sources do not already answer
 explicitly. A user answer, a pasted snippet, or “they are in the CSS / in
 Figma” all count — then go read that place, do not guess.
 
-Empty-storybook defaults (`breakpoints.mobile: 900`, `preview.mobileWidth: 390`,
-`desktopWidth: 1440`, `container: 1170`) are **not** an answer. They are the
-shell. Ignore them until a source or the user confirms.
+Empty create does not write viewport numbers. If an old shell still has
+`390 / 1440 / 1170` in the manifest, that is not an answer — ignore it.
 
 | # | If Figma or CSS already shows | If they do not |
 |---|-------------------------------|----------------|
 | 1. **Mobile?** | `@media (max-width: …)`, mobile frames, or a stated mobile viewport → honour it | Ask: does this system have a mobile viewport (second gallery pane + mobile CSS)? |
-| 2. **Viewport breakpoints?** | The actual `max-width` / `min-width` (and a content container width if the layout uses one) → write `manifest.breakpoints` from those numbers | Ask: which viewport breakpoints? The user may type them, paste a snippet, or say they live in the CSS / Figma |
+| 2. **Viewport breakpoints?** | The actual `max-width` / `min-width` (and a content container width if the layout uses one) → write `manifest.breakpoints` from those numbers | Ask: which viewport breakpoints? The user may type them, paste a snippet, or say they live in the CSS / Figma. If they do not know — **900**, write it to the manifest |
 | 3. **Dark components?** | Dark cards, dark heroes, `--*-dark` / `--text-on-dark` / a dark context class → those are **dark specimens**, not an app theme | Ask: are there components that sit on a dark surface? Same: the user may say so, or point at Figma / CSS |
 
 Consequences once each item is resolved:
 
 - **No mobile** → omit `preview.mobileWidth` (`preview: {}` is valid). One
   fluid desktop pane. Do not invent `@media` or `--*-m` tokens.
-- **Has mobile** → `preview.mobileWidth` turns the Mobile pane on (the iframe
-  is wide enough for the CSS breakpoint to fire — do not invent a phone width).
-  Put **one** `@media (max-width: <manifest.breakpoints.mobile>px)` at the
-  **end** of `components.css`. Paired values live in tokens (`--x` / `--x-m`),
-  not duplicated rules. Omit `container` and `desktopWidth` unless the source
-  has a fixed content width or a device frame.
+- **Has mobile** → write `breakpoints.mobile` (from the source, or **900** if
+  nobody knows). `preview.mobileWidth` turns the Mobile pane on — the iframe
+  is that breakpoint, not a phone width. Put **one**
+  `@media (max-width: <manifest.breakpoints.mobile>px)` at the **end** of
+  `components.css`. Paired values live in tokens (`--x` / `--x-m`).
+  Omit `container` and `desktopWidth` unless the source has a fixed content
+  width or a device frame.
 - **No dark components** → do not add `surface: "dark"` examples or `--*-dark`
   tokens. `--g-surface-dark` is engine chrome for other brands’ dark previews,
   not a token of this brand.
@@ -169,7 +169,8 @@ packages/engine/
   gallery.html      chrome, loader
   gallery.js        sections, preview, diff, live reload
   _frame.html       sandbox iframe — real @media
-  engine-specs.js   var parser, swatches, token-section renderers
+  engine-specs.js   token catalogue renderers
+  parse-vars.js     :root + @media → token buckets
   brand-scaffold.js empty package shape (same as gallery create)
   token-build.js    CSS/Figma variables → token-map (deterministic)
 brands/<id>/        DATA ONLY — nothing here is executed
@@ -215,13 +216,17 @@ Desktop only, fluid pane — no mobile CSS, no second pane.
 
 ```json
 "breakpoints": { "mobile": 900, "desktopMin": 901 },
-"preview": { "mobileWidth": 390, "desktopWidth": 1440, "container": 1170 }
+"preview": { "mobileWidth": 900 }
 ```
 
-Numbers are **examples of shape**, not defaults to copy. Write the widths you
-read from Figma/CSS or that the user gave. Omit `container` when layout is not
-a fixed content width. Omit `desktopWidth` when the preview is the pane itself,
-not a device frame. Omit `mobileWidth` when there is no mobile viewport.
+`mobileWidth` here is the CSS breakpoint (and the Mobile pane iframe), not a
+phone frame. Write **900** only when mobile exists and the source did not
+name a width. Omit `container` / `desktopWidth` unless the source has a
+fixed content width or a device frame:
+
+```json
+"preview": { "mobileWidth": 900, "desktopWidth": 1440, "container": 1170 }
+```
 
 `design.source` is one of `blank`, `css`, `figma`, `import`. The gallery sets
 it when the storybook is created. **`id` in the file is overwritten to match the

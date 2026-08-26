@@ -53,11 +53,10 @@
      get its width and a 3-column grid gives honest columns. Value comes from the
      manifest; the engine has no default of its own. */
   var PREVIEW = M.preview || {};
-  /* Do not invent SDM's 390 / 1440 / 1170. A brand that omits these is
-     desktop-only and fluid — the pane is the viewport, not a fake device. */
-  var DESKTOP_W = PREVIEW.desktopWidth || 1440;
+  /* No desktopWidth → the pane is the viewport. Do not invent a device frame. */
+  var DESKTOP_W = PREVIEW.desktopWidth || null;
   var CONTAINER = PREVIEW.container || null;
-  var HAS_MOBILE = PREVIEW.mobileWidth != null;
+  var MOBILE_BP = (M.breakpoints && M.breakpoints.mobile) || 900;
 
   /* Preview scale is per panel: 50 / 75 / 100 %.
      Shared default from localStorage (starts at 75%), but choosing in one panel
@@ -100,9 +99,10 @@
                  (window.GALLERY_BUST ? '&' + window.GALLERY_BUST.slice(1) : '');
     iframe.setAttribute('scrolling', 'no');
     iframe.setAttribute('title', opts.title || 'preview');
-    iframe.style.width = opts.width + 'px';
+    if (opts.width) iframe.style.width = opts.width + 'px';
+    else iframe.style.width = '100%';
 
-    var rec = { id: id, iframe: iframe, width: opts.width, ready: false };
+    var rec = { id: id, iframe: iframe, width: opts.width || 0, ready: false };
 
     iframe.addEventListener('load', function () {
       var w = iframe.contentWindow;
@@ -157,7 +157,7 @@
   }
 
   /* Catalogue row is 100% of the pane. Viewport width is only the iframe
-     (so brand @media still sees 900 / 1440). Highlight is painted here. */
+     (so brand @media still sees the breakpoint). Highlight is painted here. */
   function bindHits(rec) {
     var layer = document.createElement('div');
     layer.className = 'g-row-hits';
@@ -235,8 +235,8 @@
      content. Auto-shrink is forbidden: panels would land at different scales and
      comparing sizes would be impossible — exactly the old bug. */
   /* Scale is the same number in both panes so a 52px button is comparable.
-     Viewport width is only for the specimen: mobile iframe stays 900/390 so
-     @media (max-width: 900px) fires. The outer row is 100% of the pane —
+     Viewport width is only for the specimen: the mobile iframe is the brand
+     breakpoint so its @media fires. The outer row is 100% of the pane —
      desktop iframe is sized so after scale it fills the wrap, and does not
      inherit the mobile viewport. */
   function applyFrameScale(f) {
@@ -245,10 +245,11 @@
     f.wrap.style.overflow = 'hidden';
     if (f.desktop) {
       var paneW = f.wrap.clientWidth;
-      var cssW = (k && paneW) ? paneW / k : f.width;
-      f.iframe.style.width = cssW + 'px';
+      if (k && paneW) f.iframe.style.width = (paneW / k) + 'px';
+      else if (f.width) f.iframe.style.width = f.width + 'px';
+      else f.iframe.style.width = '100%';
     } else {
-      f.iframe.style.width = f.width + 'px';
+      f.iframe.style.width = (f.width || MOBILE_BP) + 'px';
     }
     f.iframe.style.transform = k === 1 ? 'none' : 'scale(' + k + ')';
     if (f.contentH) f.wrap.style.height = (f.contentH * k) + 'px';
@@ -458,9 +459,14 @@
       var mobileW = ex.mobileWidth != null ? ex.mobileWidth : PREVIEW.mobileWidth;
       if (!ex.wide && mobileW != null) {
         var mp = el('div', 'g-pane g-pane--mobile');
-        var mw = ex.mobileWidth || (HAS_MOBILE ? 900 : mobileW);
+        var mw = ex.mobileWidth || MOBILE_BP;
         var mRec = makeFrame(html, mw, false, ex.surface);
-        mp.appendChild(paneLabel(t('pane.mobile', { w: mw >= 900 ? '≤900' : mw }), mRec));
+        /* Breakpoint pane: ≤N. Example override that is not the brand
+           breakpoint (phone frame 422) is the number as-is. */
+        var labelW = (ex.mobileWidth != null && ex.mobileWidth !== MOBILE_BP)
+          ? mw
+          : ('≤' + MOBILE_BP);
+        mp.appendChild(paneLabel(t('pane.mobile', { w: labelW }), mRec));
         mp.appendChild(mRec.wrap);
         split.appendChild(mp);
       }
@@ -774,12 +780,15 @@
      frame was the reference and in "Current site" mode the button compared code to itself. */
   /* Hidden comparison reference — same mountFrame, just off-screen */
   function makeProbe(html, cssMode, surface) {
+    /* Measuring stand, not a declared viewport — used only when the brand
+       omitted desktopWidth. */
+    var probeW = DESKTOP_W || 1280;
     var host = document.createElement('div');
-    host.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + DESKTOP_W +
+    host.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + probeW +
                          'px;height:1400px;overflow:hidden;pointer-events:none';
 
     var rec = mountFrame({
-      html: html, width: DESKTOP_W, cssMode: cssMode, surface: surface,
+      html: html, width: probeW, cssMode: cssMode, surface: surface,
       userCss: cssMode === 'current' ? compareCss : null,
       id: 'probe' + (++frameSeq), title: 'diff probe', settle: 350
     });

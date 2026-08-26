@@ -160,12 +160,14 @@
     });
 
     /* Same shell as an empty storybook, only with tokens in it: the manifest
-       shape lives in one place. */
+       shape lives in one place. Viewport numbers come from the stylesheet
+       (largest max-width), not from engine defaults. */
     var manifest = SCAFFOLD.manifest({
       title: meta.title,
       design: meta.designUrl,
       source: meta.source
     });
+    applyViewport(manifest, vars);
 
     var why = {};
     names.forEach(function (n) { why[n] = meta.deferred || meta.note || ''; });
@@ -190,6 +192,21 @@
     };
   }
 
+  /* Write breakpoints only when a max-width media was actually parsed.
+     900 is the fallback when mobile tokens exist but the width was not
+     recorded (Figma modes) — never when there is no mobile bucket. */
+  function applyViewport(manifest, vars) {
+    var n = vars && vars.mobileMax;
+    if (!(n > 0) && vars && Object.keys(vars.mobile || {}).length) n = 900;
+    if (!(n > 0)) {
+      manifest.preview = {};
+      delete manifest.breakpoints;
+      return;
+    }
+    manifest.breakpoints = { mobile: n, desktopMin: n + 1 };
+    manifest.preview = { mobileWidth: n };
+  }
+
   /* A stylesheet for values that never came from one — design variables. */
   function cssFrom(vars) {
     function block(set, indent) {
@@ -197,13 +214,15 @@
         return indent + n + ': ' + set[n] + ';';
       }).join('\n');
     }
+    var max = (vars.mobileMax > 0) ? vars.mobileMax : 900;
+    var min = max + 1;
     var out = ':root {\n' + block(vars.base, '  ') + '\n}\n';
     if (Object.keys(vars.desktop || {}).length) {
-      out += '\n@media (min-width: 901px) {\n  :root {\n' +
+      out += '\n@media (min-width: ' + min + 'px) {\n  :root {\n' +
              block(vars.desktop, '    ') + '\n  }\n}\n';
     }
     if (Object.keys(vars.mobile || {}).length) {
-      out += '\n@media (max-width: 900px) {\n  :root {\n' +
+      out += '\n@media (max-width: ' + max + 'px) {\n  :root {\n' +
              block(vars.mobile, '    ') + '\n  }\n}\n';
     }
     return out;

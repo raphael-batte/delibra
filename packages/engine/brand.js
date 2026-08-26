@@ -17,7 +17,7 @@
 
   /* Engine version and contract version are different things: the contract
      only moves when the manifest format breaks. See VERSIONING.md. */
-  var ENGINE_VERSION = '1.0.0';
+  var ENGINE_VERSION = '1.1.0';
   var CONTRACT_MAJOR = 1;
 
   /* Where the storybook was opened from: /sdm is the address people see,

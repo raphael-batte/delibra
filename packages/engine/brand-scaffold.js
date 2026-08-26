@@ -38,8 +38,7 @@
       legacyNames: null,
       assetsBase: 'assets/',
       font: { family: null, href: null },
-      breakpoints: { mobile: 900, desktopMin: 901 },
-      preview: { mobileWidth: 390, desktopWidth: 1440, container: 1170 },
+      preview: {},
       compare: { legacy: null }
     };
 

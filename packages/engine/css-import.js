@@ -2,8 +2,8 @@
    A design system out of a stylesheet.
 
    Most teams already have one — a list of custom properties in a file nobody
-   ever looks at. Parsing is already solved (parseVars in engine-specs reads
-   :root and both media queries), so the work here is only the wrapping.
+   ever looks at.    Parsing is already solved (parseVars). Viewport widths found in @media
+   are written into the manifest by token-build — not invented here.
    ========================================================================== */
 (function () {
   'use strict';

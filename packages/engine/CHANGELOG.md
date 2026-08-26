@@ -2,6 +2,27 @@
 
 Newest first. Versions only — the timeline lives in git.
 
+## 1.1.0
+
+### Added
+- Empty storybooks omit viewport numbers (`preview: {}`). A mobile pane appears
+  only when the libra sets `preview.mobileWidth`.
+- CSS import writes `breakpoints.mobile` from the largest `@media (max-width)`
+  in the file. `900` is used only when mobile tokens exist but the width was
+  not recorded.
+- Fill prompt starts at Intake and states whether mobile, breakpoints, and
+  dark specimens are already decided.
+
+### Changed
+- Desktop preview no longer falls back to a 1440 device frame when
+  `desktopWidth` is omitted — the pane is the viewport.
+- `parseVars` lives in `parse-vars.js` and treats any `max-width` / `min-width`
+  as mobile / desktop buckets.
+
+### Fixed
+- Mobile pane label: brand breakpoint is `≤N`; an example phone frame that is
+  not that breakpoint (e.g. 422) stays a plain width.
+
 ## 1.0.0
 
 First release as a standalone engine, extracted from the SDM storybook.

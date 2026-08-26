@@ -12,6 +12,7 @@ describe('agent-prompt', function () {
     assert.match(text, /Repository delibra/);
     assert.match(text, /DeLibra/);
     assert.match(text, /ENGINE_SKILL\.md/);
+    assert.match(text, /## Intake/);
   });
 
   it('fill prompt points at brand folder and skill router', function () {
@@ -22,6 +23,23 @@ describe('agent-prompt', function () {
     });
     assert.match(text, /brands\/sdm/);
     assert.match(text, /## Router/);
+    assert.match(text, /## Intake/);
     assert.match(text, /localhost:8777\/sdm/);
+    assert.match(text, /not decided yet/);
+  });
+
+  it('fill prompt names css source and breakpoint from the manifest', function () {
+    const text = PROMPT.buildFillPrompt({
+      brandPath: 'brands/acme',
+      manifest: {
+        design: { source: 'css' },
+        breakpoints: { mobile: 900, desktopMin: 901 },
+        preview: { mobileWidth: 900 }
+      }
+    });
+    assert.match(text, /imported stylesheet/);
+    assert.match(text, /Tokens are already/);
+    assert.match(text, /Breakpoint 900px/);
+    assert.match(text, /Dark components/);
   });
 });

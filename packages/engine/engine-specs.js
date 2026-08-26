@@ -31,44 +31,7 @@
   };
 
   function parseVars(css) {
-    var ctx = { base: {}, desktop: {}, mobile: {} };
-    // strip comments so commented-out tokens do not enter the parse
-    css = css.replace(/\/\*[\s\S]*?\*\//g, '');
-
-    // @media blocks with balanced braces
-    var mediaRe = /@media([^{]+)\{/g, m;
-    var spans = [];
-    while ((m = mediaRe.exec(css))) {
-      var depth = 1, i = mediaRe.lastIndex;
-      while (i < css.length && depth > 0) {
-        if (css[i] === '{') depth++;
-        else if (css[i] === '}') depth--;
-        i++;
-      }
-      spans.push({ cond: m[1], from: m.index, bodyFrom: mediaRe.lastIndex, to: i });
-      mediaRe.lastIndex = i;
-    }
-
-    function collect(chunk, bucket) {
-      var re = /:root\s*\{([^}]*)\}/g, r;
-      while ((r = re.exec(chunk))) {
-        var vre = /(--[\w-]+)\s*:\s*([^;]+);/g, v;
-        while ((v = vre.exec(r[1]))) bucket[v[1]] = v[2].trim();
-      }
-    }
-
-    // base — everything outside @media
-    var rest = '', cursor = 0;
-    spans.forEach(function (sp) { rest += css.slice(cursor, sp.from); cursor = sp.to; });
-    rest += css.slice(cursor);
-    collect(rest, ctx.base);
-
-    spans.forEach(function (sp) {
-      var body = css.slice(sp.bodyFrom, sp.to - 1);
-      if (/min-width\s*:\s*90[1-9]|min-width\s*:\s*9[1-9]\d/.test(sp.cond)) collect(body, ctx.desktop);
-      else if (/max-width\s*:\s*900/.test(sp.cond)) collect(body, ctx.mobile);
-    });
-    return ctx;
+    return window.ENGINE_PARSE_VARS.parseVars(css);
   }
 
   var BUST = window.GALLERY_BUST || '';
