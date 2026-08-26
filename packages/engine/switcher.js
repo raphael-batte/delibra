@@ -368,12 +368,27 @@
     });
   }
 
+  function cssHasTokens() {
+    var M = window.BRAND_MANIFEST || {};
+    var file = M.css && M.css.tokens;
+    if (!file || !B.source || typeof B.source.url !== 'function') return false;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', B.source.url(file) + (window.GALLERY_BUST || ''), false);
+    try { xhr.send(); } catch (e) { return false; }
+    if (xhr.status && xhr.status >= 400) return false;
+    var body = String(xhr.responseText || '').replace(/\/\*[\s\S]*?\*\//g, '');
+    return /--[\w-]+\s*:/.test(body);
+  }
+
   /* ── Empty storybook — golden path: paths + copy prompt ─ */
   (function onboardEmpty() {
     if (!window.BRAND_MANIFEST) return;
     if ((window.GALLERY || []).length) return;
     if (window.BRAND_SECTIONS && window.BRAND_SECTIONS.length) return;
     if (window.BRAND_TOKENS && Object.keys(window.BRAND_TOKENS).length) return;
+    /* Home counts tokens.css. Same rule here: one custom property is enough
+       to leave the onboard screen. token-map.json may still be empty. */
+    if (cssHasTokens()) return;
 
     var folder = B.source.kind === 'folder';
     var scroll = document.getElementById('g-panel');
@@ -1117,6 +1132,13 @@
     function closeSettings() {
       discard();
       settingsScrim.hidden = true;
+    }
+    /* Clicks inside the sheet must not count as "outside". A field click
+       bubbling to the scrim would close the dialog before the input focused. */
+    var settingsDialog = settingsScrim.querySelector('.g-dialog');
+    if (settingsDialog) {
+      settingsDialog.addEventListener('click', function (e) { e.stopPropagation(); });
+      settingsDialog.addEventListener('mousedown', function (e) { e.stopPropagation(); });
     }
     settingsScrim.addEventListener('click', function (e) {
       if (e.target === settingsScrim) closeSettings();

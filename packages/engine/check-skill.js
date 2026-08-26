@@ -35,6 +35,7 @@ const RULES = {
   'packages/engine/ENGINE_SKILL.md': {
     required: [
       [/## Router/i,                  'the scenario router agents must run first'],
+      [/## Intake/i,                  'ask mobile / breakpoints / dark only when Figma or CSS is silent'],
       [/manifest/i,                  'a section about the manifest'],
       [/token-map|descriptor/i,      'how token sections are described'],
       [/data-pick/,                  'the data-pick requirement in examples'],

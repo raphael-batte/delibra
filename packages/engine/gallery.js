@@ -21,22 +21,43 @@
     return;
   }
 
+  var M = window.BRAND_MANIFEST || {};
+  var t = B.t;
+
+  /* Token catalogue comes from token-map.json. If that file is still empty but
+     tokens.css already has custom properties, build a map from the stylesheet
+     so the gallery is a gallery — not the onboard screen. */
+  function tokenMapFromCss() {
+    var file = M.css && M.css.tokens;
+    var build = window.ENGINE_TOKEN_BUILD;
+    if (!file || !build || !build.toTokenMap || !B.source.url) return {};
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', B.source.url(file) + (window.GALLERY_BUST || ''), false);
+    try { xhr.send(); } catch (e) { return {}; }
+    if (xhr.status && xhr.status >= 400) return {};
+    var built = build.toTokenMap(window.ENGINE_SPECS.parseVars(xhr.responseText || ''));
+    return (built && built.map) || {};
+  }
+
+  var tokenMap = window.BRAND_TOKENS;
+  if (!tokenMap || !Object.keys(tokenMap).length) tokenMap = tokenMapFromCss();
+
   /* Catalog = token sections (engine draws them from the brand descriptor)
      plus the brand's component sections. Composition lives here, not in the brand:
      otherwise every new brand must remember to attach tokens. */
-  var SPECS = window.ENGINE_SPECS.tokenSections(window.BRAND_TOKENS)
+  var SPECS = window.ENGINE_SPECS.tokenSections(tokenMap)
                 .concat(window.BRAND_SECTIONS || []);
   window.GALLERY = SPECS;
-  var M = window.BRAND_MANIFEST || {};
-  var t = B.t;
 
   /* Desktop frame is the brand's real viewport: only there does the container
      get its width and a 3-column grid gives honest columns. Value comes from the
      manifest; the engine has no default of its own. */
   var PREVIEW = M.preview || {};
+  /* Do not invent SDM's 390 / 1440 / 1170. A brand that omits these is
+     desktop-only and fluid — the pane is the viewport, not a fake device. */
   var DESKTOP_W = PREVIEW.desktopWidth || 1440;
-  var MOBILE_W  = PREVIEW.mobileWidth  || 390;
-  var CONTAINER = PREVIEW.container    || 1170;
+  var CONTAINER = PREVIEW.container || null;
+  var HAS_MOBILE = PREVIEW.mobileWidth != null;
 
   /* Preview scale is per panel: 50 / 75 / 100 %.
      Shared default from localStorage (starts at 75%), but choosing in one panel
@@ -91,7 +112,7 @@
           type: 'g:brandcss',
           tokens: B.source.text(M.css.tokens) || '',
           components: B.source.text(M.css.components) || '',
-          container: CONTAINER,
+          container: CONTAINER || undefined,
           font: (M.font && M.font.href) || null
         }, '*');
       }
@@ -337,6 +358,14 @@
 
   /* Panel header: viewport label on the left, scale picker on the right.
      Selects in all panels show one value and change it globally. */
+  function desktopPaneText() {
+    if (PREVIEW.desktopWidth && CONTAINER)
+      return t('pane.desktop', { w: PREVIEW.desktopWidth, c: CONTAINER });
+    if (PREVIEW.desktopWidth)
+      return t('pane.desktopWidth', { w: PREVIEW.desktopWidth });
+    return t('pane.fluid');
+  }
+
   function paneLabel(text, rec) {
     var box = el('div', 'g-pane-label');
     box.appendChild(el('span', null, text));
@@ -424,13 +453,12 @@
 
       var split = el('div', 'g-split' + (ex.wide ? ' g-split--wide' : ''));
 
-      if (!ex.wide) {
+      /* Mobile pane only when the brand (or this example) declared a mobile
+         viewport. DeLibra-style fluid desktop has none — do not paint ≤900. */
+      var mobileW = ex.mobileWidth != null ? ex.mobileWidth : PREVIEW.mobileWidth;
+      if (!ex.wide && mobileW != null) {
         var mp = el('div', 'g-pane g-pane--mobile');
-        /* Mobile frame width can be set per example.
-           Default 900: still the @media (max-width: 900px) branch, and the
-           catalogue row is 100% of that container. Blocks that need a phone
-           pass mobileWidth (390 / 422). */
-        var mw = ex.mobileWidth || 900;
+        var mw = ex.mobileWidth || (HAS_MOBILE ? 900 : mobileW);
         var mRec = makeFrame(html, mw, false, ex.surface);
         mp.appendChild(paneLabel(t('pane.mobile', { w: mw >= 900 ? '≤900' : mw }), mRec));
         mp.appendChild(mRec.wrap);
@@ -439,7 +467,7 @@
 
       var dp = el('div', 'g-pane g-pane--desktop');
       var dRec = makeFrame(htmlDesktop, DESKTOP_W, true, ex.surface);
-      dp.appendChild(paneLabel(t('pane.desktop', { w: DESKTOP_W, c: CONTAINER }), dRec));
+      dp.appendChild(paneLabel(desktopPaneText(), dRec));
       dp.appendChild(dRec.wrap);
       split.appendChild(dp);
 

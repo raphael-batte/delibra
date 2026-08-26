@@ -209,5 +209,6 @@
     return out;
   }
 
-  return { buildPackage: buildPackage, cssFrom: cssFrom, TITLES: TITLES };
+  return { buildPackage: buildPackage, cssFrom: cssFrom, TITLES: TITLES,
+           toTokenMap: toTokenMap };
 }));

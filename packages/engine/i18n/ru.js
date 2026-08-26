@@ -166,6 +166,8 @@ window.ENGINE_I18N.ru = {
 
   'pane.mobile':            'Mobile · {w}px',
   'pane.desktop':           'Desktop · {w}px (контейнер {c})',
+  'pane.desktopWidth':      'Desktop · {w}px',
+  'pane.fluid':             'Desktop',
   'pane.scale.title':       'Масштаб этого превью',
 
   'overlay.component':      'Компонент',
@@ -202,6 +204,7 @@ window.ENGINE_I18N.ru = {
   /* Token sections: structure labels. Section content is brand-defined. */
   'tok.group':          'Токены',
   'tok.token':          'Токен',
+  'tok.size':           'Размер',
   'tok.mobile':         'Mobile ≤ 900',
   'tok.desktop':        'Desktop ≥ 901',
   'tok.mobileShort':    'Mobile',

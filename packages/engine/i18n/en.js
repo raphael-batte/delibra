@@ -168,6 +168,8 @@ window.ENGINE_I18N.en = {
   /* preview panes */
   'pane.mobile':            'Mobile · {w}px',
   'pane.desktop':           'Desktop · {w}px (container {c})',
+  'pane.desktopWidth':      'Desktop · {w}px',
+  'pane.fluid':             'Desktop',
   'pane.scale.title':       'Scale of this preview',
 
   /* code overlay */
@@ -208,6 +210,7 @@ window.ENGINE_I18N.en = {
   /* Token sections: structure labels. Section content is defined by the brand. */
   'tok.group':          'Tokens',
   'tok.token':          'Token',
+  'tok.size':           'Size',
   'tok.mobile':         'Mobile ≤ 900',
   'tok.desktop':        'Desktop ≥ 901',
   'tok.mobileShort':    'Mobile',

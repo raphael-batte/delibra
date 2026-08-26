@@ -181,6 +181,13 @@
     return { m: m, d: d, same: norm(m) === norm(d) };
   }
 
+  /* Mobile columns only when the brand declared a mobile viewport or has
+     @media token overrides. A fluid desktop libra has neither. */
+  function showMobileBp() {
+    if (MAN.preview && MAN.preview.mobileWidth != null) return true;
+    return !!(VARS.tokens && VARS.tokens.mobile && Object.keys(VARS.tokens.mobile).length);
+  }
+
   function bpCell(name) {
     var x = bp(name);
     if (x.m == null && x.d == null) return '<span class="g-warn">—</span>';
@@ -190,13 +197,13 @@
 
   /* Size table: one row per token, separate M and D columns */
   function sizeTable(rows) {
-    /* Attached-CSS column appears only when comparison is on: otherwise empty
-       for the whole table. */
     var compare = comparing();
+    var mobile = showMobileBp();
 
     return '<table class="g-table"><thead><tr>' +
-      '<th>' + t('tok.token') + '</th><th>' + t('tok.mobile') + '</th>' +
-      '<th>' + t('tok.desktop') + '</th>' +
+      '<th>' + t('tok.token') + '</th>' +
+      (mobile ? '<th>' + t('tok.mobile') + '</th>' : '') +
+      '<th>' + (mobile ? t('tok.desktop') : t('tok.size')) + '</th>' +
       (compare ? '<th>' + t('tok.inCode') + '</th>' : '') +
       '<th>' + t('tok.usage') + '</th>' +
       '</tr></thead><tbody>' +
@@ -204,7 +211,7 @@
         var x = bp(r[0]);
         var cls = x.same ? '' : ' class="g-add"';
         return '<tr><td><code>' + esc(r[0]) + '</code></td>' +
-          '<td><code>' + esc(x.m == null ? '—' : x.m) + '</code></td>' +
+          (mobile ? '<td><code>' + esc(x.m == null ? '—' : x.m) + '</code></td>' : '') +
           '<td' + cls + '><code>' + esc(x.d == null ? '—' : x.d) + '</code></td>' +
           (compare ? '<td>' + codeNote(r[0]) + '</td>' : '') +
           '<td>' + (r[1] || '') + '</td></tr>';
@@ -403,11 +410,17 @@
         return '<div class="g-radius-half" style="border-radius:' + (v || 0) + '"></div>';
       };
       return '<div class="g-swatch">' +
-        '<div class="g-radius-pair">' + half(x.m) + half(x.d) + '</div>' +
+        '<div class="g-radius-pair">' +
+          (showMobileBp() ? half(x.m) + half(x.d) : half(x.d || x.m)) +
+        '</div>' +
         '<div class="g-swatch-meta">' +
-          '<div class="g-swatch-name">' + esc(x.m || '—') + ' / ' + esc(x.d || '—') + '</div>' +
+          '<div class="g-swatch-name">' +
+            (showMobileBp() ? esc(x.m || '—') + ' / ' + esc(x.d || '—') : esc(x.d || x.m || '—')) +
+          '</div>' +
           '<div class="g-swatch-val">' + esc(name) + '</div>' +
-          '<div class="g-swatch-use">' + t(x.same ? 'tok.sameBoth' : 'tok.differs') + '</div>' +
+          '<div class="g-swatch-use">' +
+            (showMobileBp() ? t(x.same ? 'tok.sameBoth' : 'tok.differs') : '') +
+          '</div>' +
           (label ? '<div class="g-swatch-use">' + esc(label) + '</div>' : '') +
           noteRow(name) +
         '</div></div>';
@@ -419,7 +432,7 @@
                d.scale.map(function (n) { return box(n); }).join('') + '</div>';
       }
       if (d.semantic && d.semantic.length) {
-        out += h3(t('tok.semantics'), t('tok.mobileLeft')) + '<div class="g-swatches">' +
+        out += h3(t('tok.semantics'), showMobileBp() ? t('tok.mobileLeft') : '') + '<div class="g-swatches">' +
                d.semantic.map(function (r) { return box(r[0], r[1]); }).join('') + '</div>';
       }
       return out;
@@ -497,9 +510,11 @@
 
     function scaleTable() {
       var cmp = comparing();
+      var mobile = showMobileBp();
       return h3(t('tok.scale')) + '<table class="g-table"><thead><tr>' +
         '<th>' + t('tok.style') + '</th><th>' + t('tok.token') + '</th>' +
-        '<th>' + t('tok.mobileShort') + '</th><th>' + t('tok.desktopShort') + '</th>' +
+        (mobile ? '<th>' + t('tok.mobileShort') + '</th>' : '') +
+        '<th>' + (mobile ? t('tok.desktopShort') : t('tok.size')) + '</th>' +
         '<th>' + t('tok.weight') + '</th>' +
         (cmp ? '<th>' + t('tok.inCode') + '</th>' : '') +
         '<th>' + t('tok.usage') + '</th>' +
@@ -507,7 +522,7 @@
         rows.map(function (r) {
           return '<tr><td><b>' + esc(r[0]) + '</b></td>' +
             '<td><code>' + esc(r[1]) + '-size</code></td>' +
-            '<td><code>' + esc(val(r[1] + '-size', 'new', 'mobile')  || '—') + '</code></td>' +
+            (mobile ? '<td><code>' + esc(val(r[1] + '-size', 'new', 'mobile')  || '—') + '</code></td>' : '') +
             '<td><code>' + esc(val(r[1] + '-size', 'new', 'desktop') || '—') + '</code></td>' +
             '<td><code>' + r[3] + '</code></td>' +
             (cmp ? '<td>' + codeNote(r[1] + '-size') + '</td>' : '') +
@@ -535,10 +550,12 @@
     }
 
     return section('typography', d, function () {
+      var mobile = showMobileBp();
       return weightsTable() + scaleTable() +
         h3(t('tok.specimen')) +
         '<div class="g-specimen-cols">' +
-          column('mobile', t('tok.mobile')) + column('desktop', t('tok.desktop')) +
+          (mobile ? column('mobile', t('tok.mobile')) : '') +
+          column('desktop', mobile ? t('tok.desktop') : t('tok.specimen')) +
         '</div>' +
         (d.note ? '<div class="g-hint" style="margin-top:24px">' + d.note + '</div>' : '');
     });

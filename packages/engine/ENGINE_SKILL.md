@@ -2,7 +2,7 @@
 name: delibra-engine
 description: >
   Fill or extend a design-system libra — structured data an agent writes and a
-  person reads in DeLibra. Always start at ## Router. Use when filling a libra with
+  person reads in DeLibra. Always start at ## Router, then ## Intake. Use when filling a libra with
   tokens from a design or stylesheet, adding component sections, or working on
   the engine. Triggers: "fill this libra", "copy fill prompt", "create a
   design system from Figma", "take the tokens off the design", "add a section
@@ -16,7 +16,7 @@ to a brand arrives through a manifest. If a change to the engine mentions a
 brand by name, the change is in the wrong file.
 
 **Read this skill top-down. When the user gives a storybook folder path, start
-at [## Router](#router) — do not skip it.**
+at [## Router](#router), then [## Intake](#intake) — do not skip either.**
 
 ## Router
 
@@ -33,12 +33,53 @@ prompt).
 | 5 | User pasted a Figma URL in chat but manifest has none | Ask whether to add it to `manifest.design.url` (via gallery settings) or proceed with that URL only for this session — still **read** the file, do not guess. |
 | 6 | Folder was not created in the gallery | Do not create a libra folder by hand unless the user explicitly asks. Prefer the gallery or `POST /__api/brand` (writes under `DELIBRA_DATA`). |
 
+**Before writing `preview`, `breakpoints`, `@media`, or dark examples, follow
+[## Intake](#intake).** Do not treat empty-shell manifest numbers as the brand.
+
 **Gallery:** `http://localhost:8777/<id>` when `serve.js` runs — the tab reloads
 when files change. Open it to verify; do not describe pixels you have not checked
 there.
 
 **Done means:** all checks in [Checks](#checks) pass for that brand, not “looks
 about right”.
+
+## Intake
+
+Three facts decide how the gallery is shaped. **Read Figma and CSS first.**
+Ask the user **only** the items that those sources do not already answer
+explicitly. A user answer, a pasted snippet, or “they are in the CSS / in
+Figma” all count — then go read that place, do not guess.
+
+Empty-storybook defaults (`breakpoints.mobile: 900`, `preview.mobileWidth: 390`,
+`desktopWidth: 1440`, `container: 1170`) are **not** an answer. They are the
+shell. Ignore them until a source or the user confirms.
+
+| # | If Figma or CSS already shows | If they do not |
+|---|-------------------------------|----------------|
+| 1. **Mobile?** | `@media (max-width: …)`, mobile frames, or a stated mobile viewport → honour it | Ask: does this system have a mobile viewport (second gallery pane + mobile CSS)? |
+| 2. **Viewport breakpoints?** | The actual `max-width` / `min-width` (and a content container width if the layout uses one) → write `manifest.breakpoints` from those numbers | Ask: which viewport breakpoints? The user may type them, paste a snippet, or say they live in the CSS / Figma |
+| 3. **Dark components?** | Dark cards, dark heroes, `--*-dark` / `--text-on-dark` / a dark context class → those are **dark specimens**, not an app theme | Ask: are there components that sit on a dark surface? Same: the user may say so, or point at Figma / CSS |
+
+Consequences once each item is resolved:
+
+- **No mobile** → omit `preview.mobileWidth` (`preview: {}` is valid). One
+  fluid desktop pane. Do not invent `@media` or `--*-m` tokens.
+- **Has mobile** → `preview.mobileWidth` turns the Mobile pane on (the iframe
+  is wide enough for the CSS breakpoint to fire — do not invent a phone width).
+  Put **one** `@media (max-width: <manifest.breakpoints.mobile>px)` at the
+  **end** of `components.css`. Paired values live in tokens (`--x` / `--x-m`),
+  not duplicated rules. Omit `container` and `desktopWidth` unless the source
+  has a fixed content width or a device frame.
+- **No dark components** → do not add `surface: "dark"` examples or `--*-dark`
+  tokens. `--g-surface-dark` is engine chrome for other brands’ dark previews,
+  not a token of this brand.
+- **Has dark components** → tokenise what you read. `surface: "dark"` only on
+  those examples (paints the preview body, adds `card--dark` on the frame).
+  Dark is a context on the specimen, not a second theme for every component.
+
+Do not write `manifest.json` preview/breakpoints, the first `@media`, or a
+dark example until the three are resolved — from the source, or from the user
+where the source was silent.
 
 ## Output contract (strict — no hallucination)
 
@@ -75,11 +116,11 @@ a one-off landing page.
 
 - **Token-first:** declare values once in `tokens.css`; components consume
   `var(--*)` only.
-- **Desktop-first:** default rules for desktop; **one**
-  `@media (max-width: <manifest.breakpoints.mobile>px)` block at the **end** of
-  `components.css` for mobile overrides. Put paired mobile/desktop values in
-  tokens (`--x` / `--x-m` or separate custom properties), not duplicated rules
-  everywhere.
+- **Desktop-first when there is mobile** (see [Intake](#intake)): default
+  rules for desktop; **one** `@media (max-width: <manifest.breakpoints.mobile>px)`
+  block at the **end** of `components.css`. Paired values in tokens
+  (`--x` / `--x-m`), not duplicated rules. No mobile in the source → no
+  `@media` invented for completeness.
 - **Naming:** short BEM-like classes (`.card`, `.card__title`, `.btn--ghost`).
   One component family per block; modifiers with `--`. Match names already in
   the brand before inventing new ones.
@@ -124,7 +165,7 @@ blocks `fetch` of local files. The CSS tab and every token section come up empty
 
 ```
 packages/engine/
-  ENGINE_SKILL.md   this file — router + contract
+  ENGINE_SKILL.md   this file — router + intake + contract
   gallery.html      chrome, loader
   gallery.js        sections, preview, diff, live reload
   _frame.html       sandbox iframe — real @media
@@ -148,6 +189,8 @@ tools/
 
 ## The manifest
 
+Shared fields:
+
 ```json
 {
   "id": "acme",
@@ -158,11 +201,27 @@ tools/
   "css": { "tokens": "tokens.css", "components": "components.css" },
   "sections": "sections.json",
   "tokenMap": "token-map.json",
-  "design": { "source": "blank", "url": "https://figma.com/design/…" },
-  "breakpoints": { "mobile": 900, "desktopMin": 901 },
-  "preview": { "mobileWidth": 390, "desktopWidth": 1440, "container": 1170 }
+  "design": { "source": "blank", "url": "https://figma.com/design/…" }
 }
 ```
+
+Viewport fields come from [Intake](#intake), not from the empty shell. Two valid shapes:
+
+```json
+"preview": {}
+```
+
+Desktop only, fluid pane — no mobile CSS, no second pane.
+
+```json
+"breakpoints": { "mobile": 900, "desktopMin": 901 },
+"preview": { "mobileWidth": 390, "desktopWidth": 1440, "container": 1170 }
+```
+
+Numbers are **examples of shape**, not defaults to copy. Write the widths you
+read from Figma/CSS or that the user gave. Omit `container` when layout is not
+a fixed content width. Omit `desktopWidth` when the preview is the pane itself,
+not a device frame. Omit `mobileWidth` when there is no mobile viewport.
 
 `design.source` is one of `blank`, `css`, `figma`, `import`. The gallery sets
 it when the storybook is created. **`id` in the file is overwritten to match the
@@ -278,10 +337,11 @@ overwrites your changes.
   the mobile pane. The desktop outer row is 100% of that pane and does not
   follow the mobile viewport. Light substrate is `--bg`.
 - `rows` — catalogue rows (`btn`, `tile`, `spec`, `gap`) with optional `wrap`.
-- `surface: "dark"` — optional. Paints the preview *body* (under the pane
-  header) with `--g-surface-dark` (default `#333`, override to recolour) and
-  adds `card--dark` on the frame so brand inversion still applies. `"light"`
-  is the default. Inner 16px of the cell stays; the fill itself is flush.
+- `surface: "dark"` — only for a **dark specimen** (see [Intake](#intake)).
+  Paints the preview *body* (under the pane header) with `--g-surface-dark`
+  (default `#333`) and adds `card--dark` on the frame so brand inversion still
+  applies. `"light"` is the default. Do not add it to show a light component
+  “on dark for completeness”.
 
 Load-bearing rules:
 
@@ -317,7 +377,8 @@ brands — never a one-brand fork in the engine.
 1. User creates a storybook in the gallery → `brands/<id>/` + `index.json`.
 2. User opens this repo in their agent and copies the **fill prompt** (folder
    path + pointer to this skill).
-3. You run [## Router](#router), then write files.
+3. You run [## Router](#router), then [## Intake](#intake) (ask only what
+   Figma/CSS did not already answer), then write files.
 4. Gallery tab reloads; user reviews tokens and components there.
 
 Do not create parallel folders or skip the router because the prompt sounds
@@ -338,6 +399,8 @@ inside the brand package follow the brand’s `locale` — they are brand data.
 - Creating `brands/<id>/` outside the gallery flow without explicit user request.
 - Assuming `file://` or guessing Figma data when tools fail.
 - Describing the gallery state you have not verified after writing files.
+- Copying empty-shell `preview` / `breakpoints` numbers, or adding a mobile
+  pane, `@media`, or `surface: "dark"`, before [Intake](#intake) is resolved.
 
 ## Checks
 
