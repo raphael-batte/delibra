@@ -126,3 +126,7 @@ has since been applied but stayed on the list.
 
 `check-fonts.js` is a migration check against the live site, not a gate. It
 narrows and eventually dies as the site moves onto the design system.
+
+## License
+
+Copyright 2026 Raphael Batyrbaev. Licensed under the [Apache License 2.0](LICENSE).

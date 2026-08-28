@@ -1,6 +1,7 @@
 {
   "name": "delibra",
   "private": true,
+  "license": "Apache-2.0",
   "description": "DeLibra — design system engine",
   "scripts": {
     "test": "node --test test/*.test.js",
